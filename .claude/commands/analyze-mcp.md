@@ -74,26 +74,20 @@ cp -r /tmp/figma-assets/* src/generated/tests/node-{nodeId}/ 2>/dev/null || true
 
 2. **POUR CHAQUE NŒUD - UN PAR UN - SÉQUENTIEL:**
    - Appel `mcp__figma-desktop__get_design_context` avec nodeId du nœud
-   - IMMÉDIATEMENT après, sauvegarder: `cat > src/generated/tests/node-{nodeId}/chunks/NomNoeud.tsx << 'ENDOFCODE'\n[CODE]\nENDOFCODE`
+   - IMMÉDIATEMENT après, sauvegarder avec Write tool: `src/generated/tests/node-{nodeId}/chunks/NomNoeud.tsx` avec contenu MCP
    - **NE PAS PASSER AU NŒUD SUIVANT AVANT D'AVOIR SAUVEGARDÉ**
 
 3. Quand TOUS les chunks sont sauvegardés: `docker exec mcp-figma-v1 node scripts/mcp-direct-save.js assemble-chunks src/generated/tests/node-{nodeId} Component src/generated/tests/node-{nodeId}/chunks/*.tsx`
 
-#### 1.3 Sauvegarder avec Bash heredoc
+#### 1.3 Sauvegarder avec Write tool
+
+Sauvegarder les 3 fichiers en parallèle avec Write tool :
+
+1. `src/generated/tests/node-{nodeId}/Component.tsx` avec contenu de `get_design_context`
+2. `src/generated/tests/node-{nodeId}/variables.json` avec contenu de `get_variable_defs`
+3. `src/generated/tests/node-{nodeId}/metadata.xml` avec contenu de `get_metadata`
 
 ```bash
-cat > src/generated/tests/node-{nodeId}/Component.tsx << 'ENDOFCODE'
-[CODE COMPLET - jamais de placeholder]
-ENDOFCODE
-
-cat > src/generated/tests/node-{nodeId}/variables.json << 'ENDOFJSON'
-[VARIABLES]
-ENDOFJSON
-
-cat > src/generated/tests/node-{nodeId}/metadata.xml << 'ENDOFXML'
-[METADATA XML]
-ENDOFXML
-
 echo "✅ Phase 1 terminée"
 ```
 

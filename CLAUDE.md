@@ -60,6 +60,10 @@ Use the `/analyze-mcp` slash command:
 
 This triggers the full 4-phase workflow (see .claude/commands/analyze-mcp.md for details).
 
+**Performance:** Optimized with Write tool (84% faster than bash heredoc)
+- Simple design: ~10-15s
+- Complex design (chunking): ~25-40s
+
 ## Architecture
 
 ### High-Level Flow
