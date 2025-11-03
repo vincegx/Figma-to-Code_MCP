@@ -210,7 +210,7 @@ const allImageDeclarations = []
 for (const file of filesToProcess) {
   const componentCode = fs.readFileSync(file, 'utf-8')
 
-  // Pattern: const imgXXX = "./img/file.ext" OR const imgXXX = "/full/path/file.ext"
+  // Pattern 1: const imgXXX = "./img/file.ext" OR const imgXXX = "/full/path/file.ext"
   const imageConstPattern = /^const\s+(img\w*)\s*=\s*["'`]([^"'`]+\.(?:png|jpg|jpeg|svg|gif|webp))["'`];?$/gm
 
   let importMatch
@@ -225,9 +225,24 @@ for (const file of filesToProcess) {
       imagePath
     })
   }
+
+  // Pattern 2: ES6 imports - import imgXXX from "./img/file.ext"
+  const imageImportPattern = /^import\s+(img\w*)\s+from\s+["'`]([^"'`]+\.(?:png|jpg|jpeg|svg|gif|webp))["'`];?$/gm
+
+  while ((importMatch = imageImportPattern.exec(componentCode)) !== null) {
+    const varName = importMatch[1]      // img, img1, img2, imgFrame1008
+    const imagePath = importMatch[2]    // ./img/hash.svg or /full/path/hash.svg
+
+    allImageDeclarations.push({
+      file,
+      original: importMatch[0],
+      varName,
+      imagePath
+    })
+  }
 }
 
-console.log(`   Found ${allImageDeclarations.length} const declarations across all files`)
+console.log(`   Found ${allImageDeclarations.length} image declarations (const + ES6 imports) across all files`)
 
 // Map to track renames: { oldFilename: newFilename }
 const renameMap = new Map()

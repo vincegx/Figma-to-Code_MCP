@@ -507,31 +507,157 @@ function generateHTML(data) {
       margin-bottom: 32px;
     }
 
+    /* Stats Category Header */
+    .stats-category {
+      margin-top: 48px;
+      margin-bottom: 24px;
+    }
+
+    .stats-category:first-child {
+      margin-top: 0;
+    }
+
+    .category-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .category-icon {
+      font-size: 24px;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .category-icon.transformations {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+    }
+
+    .category-icon.design {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+    }
+
+    .category-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .category-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
     .stat-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 20px;
-      transition: all 0.2s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), #a855f7);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
     }
 
     .stat-card:hover {
-      box-shadow: var(--shadow-md);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
       border-color: var(--primary);
+      transform: translateY(-4px);
+    }
+
+    .stat-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .stat-icon {
+      font-size: 20px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover .stat-icon {
+      transform: scale(1.1) rotate(5deg);
+      background: linear-gradient(135deg, #eef2ff 0%, #ddd6fe 100%);
     }
 
     .stat-value {
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--primary);
+      font-size: 36px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       margin-bottom: 4px;
+      line-height: 1;
     }
 
     .stat-label {
       font-size: 13px;
       color: var(--text-secondary);
       font-weight: 500;
+      line-height: 1.4;
     }
+
+    /* Animations */
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .stat-card {
+      animation: slideInUp 0.4s ease backwards;
+    }
+
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.1s; }
+    .stat-card:nth-child(3) { animation-delay: 0.15s; }
+    .stat-card:nth-child(4) { animation-delay: 0.2s; }
+    .stat-card:nth-child(5) { animation-delay: 0.25s; }
+    .stat-card:nth-child(6) { animation-delay: 0.3s; }
 
     /* Color Swatches */
     .color-grid {
@@ -1018,22 +1144,154 @@ function generateHTML(data) {
         <p class="section-description">Analysis of ${data.nodeName || 'Component'} • Generated ${new Date(data.timestamp).toLocaleDateString()}</p>
       </div>
 
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value">${data.processingStats.classesOptimized || 0}</div>
-          <div class="stat-label">Classes Optimized</div>
+      <!-- Core Statistics -->
+      <div class="stats-category">
+        <div class="category-header">
+          <div class="category-icon">📊</div>
+          <div>
+            <div class="category-title">Core Metrics</div>
+            <div class="category-subtitle">Overall design analysis</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">${data.totalClasses}</div>
-          <div class="stat-label">Tailwind Classes</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">🎯</div>
+            </div>
+            <div class="stat-value">${data.processingStats.totalNodes || 0}</div>
+            <div class="stat-label">Total Nodes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">📦</div>
+            </div>
+            <div class="stat-value">${data.processingStats.sectionsDetected || 0}</div>
+            <div class="stat-label">Sections Detected</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">🖼️</div>
+            </div>
+            <div class="stat-value">${data.processingStats.imagesOrganized || 0}</div>
+            <div class="stat-label">Images Organized</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">✨</div>
+            </div>
+            <div class="stat-value">${data.processingStats.totalFixes || 0}</div>
+            <div class="stat-label">Total Fixes Applied</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">${data.colors.length}</div>
-          <div class="stat-label">Colors</div>
+      </div>
+
+      <!-- Transformation Statistics -->
+      <div class="stats-category">
+        <div class="category-header">
+          <div class="category-icon transformations">⚡</div>
+          <div>
+            <div class="category-title">AST Transformations</div>
+            <div class="category-subtitle">Code optimization pipeline</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">${data.imageFiles.length}</div>
-          <div class="stat-label">Assets</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">🔤</div>
+            </div>
+            <div class="stat-value">${data.processingStats.fontsConverted || 0}</div>
+            <div class="stat-label">Fonts Converted</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">🎨</div>
+            </div>
+            <div class="stat-value">${data.processingStats.classesFixed || 0}</div>
+            <div class="stat-label">Classes Fixed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">📐</div>
+            </div>
+            <div class="stat-value">${data.processingStats.wrappersFlattened || 0}</div>
+            <div class="stat-label">Wrappers Flattened</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">🔗</div>
+            </div>
+            <div class="stat-value">${data.processingStats.compositesInlined || 0}</div>
+            <div class="stat-label">SVG Composites Inlined</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">🌈</div>
+            </div>
+            <div class="stat-value">${data.processingStats.gradientsFixed || 0}</div>
+            <div class="stat-label">Gradients Fixed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">⭕</div>
+            </div>
+            <div class="stat-value">${data.processingStats.shapesFixed || 0}</div>
+            <div class="stat-label">Shapes Fixed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">🎭</div>
+            </div>
+            <div class="stat-value">${data.processingStats.blendModesVerified || 0}</div>
+            <div class="stat-label">Blend Modes Verified</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">💎</div>
+            </div>
+            <div class="stat-value">${data.processingStats.varsConverted || 0}</div>
+            <div class="stat-label">CSS Vars Converted</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">⚙️</div>
+            </div>
+            <div class="stat-value">${data.processingStats.classesOptimized || 0}</div>
+            <div class="stat-label">Tailwind Classes Optimized</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Design Tokens Statistics -->
+      <div class="stats-category">
+        <div class="category-header">
+          <div class="category-icon design">🎯</div>
+          <div>
+            <div class="category-title">Design Tokens</div>
+            <div class="category-subtitle">Extracted design system</div>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">🏷️</div>
+            </div>
+            <div class="stat-value">${data.totalClasses}</div>
+            <div class="stat-label">Tailwind Classes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">🎨</div>
+            </div>
+            <div class="stat-value">${data.colors.length}</div>
+            <div class="stat-label">Color Palette</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-icon">📁</div>
+            </div>
+            <div class="stat-value">${data.imageFiles.length}</div>
+            <div class="stat-label">Asset Files</div>
+          </div>
         </div>
       </div>
     </section>

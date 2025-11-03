@@ -12,11 +12,18 @@ interface Test {
   stats?: {
     totalNodes?: number
     sectionsDetected?: number
-    imagesCount?: number
-    svgIconsFlattened?: number
+    imagesOrganized?: number
+    totalFixes?: number
+    fontsConverted?: number
+    classesFixed?: number
+    wrappersFlattened?: number
+    compositesInlined?: number
+    gradientsFixed?: number
+    shapesFixed?: number
+    blendModesVerified?: number
+    varsConverted?: number
     classesOptimized?: number
-    textSizesConverted?: number
-    customCSSClasses?: number
+    customClassesGenerated?: number
   }
 }
 
@@ -223,11 +230,22 @@ function TestCard({ test, onSelect }: TestCardProps) {
     window.open(previewUrl, '_blank')
   }
 
+  const handleCardClick = () => {
+    onSelect()
+  }
+
+  const handleDetailsClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onSelect()
+  }
+
   // Chemin vers la miniature
   const thumbnailPath = `/src/generated/tests/${test.testId}/web-render.png`
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-300 transition-all overflow-hidden group">
+    <div
+      onClick={handleCardClick}
+      className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-300 transition-all overflow-hidden group cursor-pointer">
       {/* Thumbnail Preview */}
       <div className="relative w-full h-48 bg-gradient-to-br from-purple-100 to-blue-100 overflow-hidden">
         <img
@@ -245,7 +263,11 @@ function TestCard({ test, onSelect }: TestCardProps) {
         </div>
         {/* Badge ID */}
         <div className="absolute top-2 right-2 px-2 py-1 bg-black/50 backdrop-blur-sm text-white text-xs rounded font-mono">
-          {test.testId?.replace('node-', '')}
+          {(() => {
+            // Extract nodeId from testId: node-9-2654-1735689600 → 9-2654
+            const match = test.testId?.match(/^node-(.+)-\d+$/)
+            return match ? match[1] : test.testId?.replace('node-', '')
+          })()}
         </div>
       </div>
 
@@ -275,14 +297,14 @@ function TestCard({ test, onSelect }: TestCardProps) {
               📦 {test.stats.totalNodes} nodes
             </div>
           )}
-          {test.stats.imagesCount !== undefined && (
+          {test.stats.imagesOrganized !== undefined && (
             <div className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded font-medium">
-              🖼️ {test.stats.imagesCount} images
+              🖼️ {test.stats.imagesOrganized} images
             </div>
           )}
-          {test.stats.classesOptimized !== undefined && (
+          {(test.stats.totalFixes !== undefined || test.stats.classesOptimized !== undefined) && (
             <div className="px-2 py-1 bg-amber-50 text-amber-700 text-xs rounded font-medium">
-              ⚡ {test.stats.classesOptimized} fixes
+              ⚡ {test.stats.totalFixes || test.stats.classesOptimized || 0} fixes
             </div>
           )}
           {test.stats.sectionsDetected !== undefined && (
@@ -305,7 +327,7 @@ function TestCard({ test, onSelect }: TestCardProps) {
             </svg>
           </button>
           <button
-            onClick={onSelect}
+            onClick={handleDetailsClick}
             className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             <span>Détails</span>

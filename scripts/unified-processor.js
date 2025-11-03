@@ -209,6 +209,14 @@ if (fs.existsSync(variablesPath)) {
 
 console.log('\n🔄 Running transform pipeline...')
 
+// Pre-count nodes and images (simple regex-based counting)
+const totalNodes = (sourceCode.match(/<\w+/g) || []).length  // Count all JSX opening tags
+
+// Count images: ES6 imports + <img tags
+const es6ImageImports = (sourceCode.match(/^import\s+\w+\s+from\s+["']\.\/.*\.(png|jpg|jpeg|svg|gif|webp)["'];?$/gm) || []).length
+const imgTags = (sourceCode.match(/<img\s/g) || []).length
+const imagesCount = es6ImageImports + imgTags
+
 let result
 try {
   result = await runPipeline(sourceCode, {
@@ -219,8 +227,8 @@ try {
     metadataXmlPath,
     analysis: {
       sections: [],
-      totalNodes: 0,
-      imagesCount: 0
+      totalNodes,
+      imagesCount
     }
   }, defaultConfig)
 } catch (error) {
@@ -233,7 +241,15 @@ let outputCode = result.code
 const context = result.context
 
 console.log(`\n✅ Pipeline complete in ${result.totalTime}ms`)
-console.log('\n📊 Transform Stats:')
+
+// Analysis stats
+console.log('\n📊 Analysis:')
+console.log(`   Sections detected: ${context.analysis.sections?.length || 0}`)
+console.log(`   Total nodes: ${context.analysis.totalNodes || 0}`)
+console.log(`   Images count: ${context.analysis.imagesCount || 0}`)
+
+// Transform stats
+console.log('\n🔧 Transform Stats:')
 for (const [transformName, stats] of Object.entries(context.stats)) {
   console.log(`   ${transformName}: ${stats.executionTime}ms`)
 
@@ -246,6 +262,8 @@ for (const [transformName, stats] of Object.entries(context.stats)) {
   if (stats.wrappersFlattened) details.push(`${stats.wrappersFlattened} wrappers flattened`)
   if (stats.compositesInlined) details.push(`${stats.compositesInlined} composites inlined`)
   if (stats.gradientsFixed) details.push(`${stats.gradientsFixed} gradients`)
+  if (stats.shapesFixed) details.push(`${stats.shapesFixed} shapes`)
+  if (stats.blendModesVerified) details.push(`${stats.blendModesVerified} blend modes`)
   if (stats.classesOptimized) details.push(`${stats.classesOptimized} optimized`)
 
   if (details.length > 0) {
@@ -376,6 +394,84 @@ try {
 }
 
 console.log(`\n💾 Output saved: ${outputFile}`)
-console.log('✅ Unified processing complete!')
+
+// ═══════════════════════════════════════════════════════════════
+// GENERATE REPORTS (metadata.json, analysis.md, report.html)
+// ═══════════════════════════════════════════════════════════════
+
+if (figmaUrl) {
+  console.log('\n📊 Generating reports...')
+
+  // Collect all stats from context (merge all transformation stats)
+  const allStats = {
+    // Analysis stats (from context)
+    totalNodes: context.analysis.totalNodes || 0,
+    sectionsDetected: context.analysis.sections?.length || 0,
+    imagesOrganized: context.analysis.imagesCount || 0
+  }
+
+  // Merge all transformation stats
+  for (const [_transformName, stats] of Object.entries(context.stats)) {
+    Object.assign(allStats, stats)
+  }
+
+  // Add safety net stats
+  if (safetyNet.varsFixed > 0) {
+    allStats.cssVarsConverted = (allStats.cssVarsConverted || 0) + safetyNet.varsFixed
+  }
+
+  // Add custom CSS classes count
+  if (context.customCSSClasses && context.customCSSClasses.size > 0) {
+    allStats.customClassesGenerated = context.customCSSClasses.size
+  }
+
+  // Calculate total fixes for dashboard display
+  allStats.totalFixes =
+    (allStats.fontsConverted || 0) +
+    (allStats.classesFixed || 0) +
+    (allStats.wrappersFlattened || 0) +
+    (allStats.compositesInlined || 0) +
+    (allStats.gradientsFixed || 0) +
+    (allStats.shapesFixed || 0) +
+    (allStats.varsConverted || 0) +
+    (allStats.classesOptimized || 0)
+
+  const statsJson = JSON.stringify(allStats)
+
+  try {
+    // Generate metadata.json
+    execSync(
+      `node scripts/reporting/generate-metadata.js "${testDir}" "${figmaUrl}" '${statsJson}'`,
+      {
+        cwd: path.join(path.dirname(new URL(import.meta.url).pathname), '..'),
+        stdio: 'inherit'
+      }
+    )
+
+    // Generate analysis.md
+    execSync(
+      `node scripts/reporting/generate-analysis.js "${testDir}" "${figmaUrl}" '${statsJson}'`,
+      {
+        cwd: path.join(path.dirname(new URL(import.meta.url).pathname), '..'),
+        stdio: 'inherit'
+      }
+    )
+
+    // Generate report.html
+    execSync(
+      `node scripts/reporting/generate-report.js "${testDir}" '${statsJson}'`,
+      {
+        cwd: path.join(path.dirname(new URL(import.meta.url).pathname), '..'),
+        stdio: 'inherit'
+      }
+    )
+  } catch (error) {
+    console.error(`❌ Error generating reports: ${error.message}`)
+  }
+} else {
+  console.log('\n⚠️  Skipping reports generation (no Figma URL provided)')
+}
+
+console.log('\n✅ Unified processing complete!')
 
 process.exit(0)

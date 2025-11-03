@@ -81,7 +81,7 @@ src/
 │   ├── HomePage.tsx     # Test list view
 │   └── TestDetail.tsx   # Test detail with 4 tabs (Preview, Code, Report, Technical)
 ├── generated/tests/     # Generated test outputs (one folder per analysis)
-│   └── node-{nodeId}/   # Each test contains:
+│   └── node-{nodeId}-{timestamp}/   # Each test contains (e.g., node-104-13741-1735689600):
 │       ├── Component.tsx         # Original generated component
 │       ├── Component-fixed.tsx   # Post-processed component
 │       ├── Component-fixed.css   # Extracted CSS (fonts, variables)
@@ -190,10 +190,13 @@ The validation step ensures 100% fidelity:
 
 ## Test Naming Convention
 
-Tests are stored in `src/generated/tests/node-{nodeId}/` where:
+Tests are stored in `src/generated/tests/node-{nodeId}-{timestamp}/` where:
 - `nodeId` is from the Figma URL (e.g., `104-13741` from `node-id=104-13741`)
-- **Do NOT convert** the hyphen to colon in folder names
+- `timestamp` is a Unix timestamp (e.g., `1735689600`) to ensure uniqueness
+- Example: `node-104-13741-1735689600`
+- **Do NOT convert** the hyphen to colon in folder names for nodeId
 - Conversion to colon format (`104:13741`) only happens when calling MCP tools
+- Each test has a unique folder, even when analyzing the same Figma node multiple times
 
 ## Important Implementation Details
 

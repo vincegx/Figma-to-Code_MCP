@@ -44,7 +44,13 @@ function extractTimestamp(testId) {
     return parseInt(legacyMatch[1], 10)
   }
 
-  // New format: node-{nodeId} (e.g., node-9-2654)
+  // New format with timestamp: node-{nodeId}-{timestamp} (e.g., node-9-2654-1735689600)
+  const newMatch = testId.match(/node-.+-(\d+)$/)
+  if (newMatch) {
+    return parseInt(newMatch[1], 10)
+  }
+
+  // Old format without timestamp: node-{nodeId} (e.g., node-9-2654)
   // No embedded timestamp, use current time
   return Date.now()
 }
@@ -159,6 +165,22 @@ function main() {
   const { fileId, nodeId } = parseUrl(figmaUrl)
   const processingStats = JSON.parse(statsJson)
 
+  // Auto-count organized images from img/ directory
+  const imgDir = path.join(testDir, 'img')
+  let imagesOrganized = 0
+  if (fs.existsSync(imgDir)) {
+    const imgFiles = fs.readdirSync(imgDir).filter(f => {
+      const ext = path.extname(f).toLowerCase()
+      return ['.png', '.jpg', '.jpeg', '.svg', '.gif', '.webp'].includes(ext)
+    })
+    imagesOrganized = imgFiles.length
+  }
+
+  // Inject imagesOrganized into stats if not already present
+  if (!processingStats.hasOwnProperty('imagesOrganized')) {
+    processingStats.imagesOrganized = imagesOrganized
+  }
+
   // Auto-extract design references from metadata.xml
   const designReferences = extractDesignReferences(testDir)
 
@@ -168,6 +190,7 @@ function main() {
   // Build metadata object
   const metadata = {
     testId,
+    fileName: designReferences?.name || `Node ${nodeId}`,
     timestamp,
     createdAt: new Date(timestamp).toISOString(),
     figmaUrl,
