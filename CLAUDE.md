@@ -95,32 +95,71 @@ src/
 │       └── web-render.png        # Screenshot from web render
 
 scripts/
-├── unified-processor.js           # Main AST processor (combines all transformations)
-├── organize-images.js             # Organize images into img/ with Figma names
-├── fix-svg-vars.js                # Fix CSS variables in SVG files
-├── capture-web-screenshot.js      # Capture web render for validation
-├── mcp-direct-save.js             # Chunking utilities for large designs
-└── transformations/               # Modular AST transformations
-    ├── ast-cleaning.js            # Clean invalid classes, add utilities
-    ├── post-fixes.js              # Fix gradients, shapes, blend modes
-    ├── css-vars.js                # Convert CSS variables to values
-    ├── tailwind-optimizer.js      # Optimize Tailwind classes
-    └── svg-icon-fixes.js          # Flatten and inline SVG composites
+├── unified-processor.js           # Main entry point (CLI, CSS generation, safety net)
+├── pipeline.js                    # Simple transform orchestrator (92 lines)
+├── config.js                      # Transform configuration (enable/disable)
+│
+├── transformations/               # AST transformations (1 file = 1 transform)
+│   ├── font-detection.js          # Priority 0: Convert font-[...] to inline styles
+│   ├── ast-cleaning.js            # Priority 10: Clean invalid classes, add utilities
+│   ├── svg-icon-fixes.js          # Priority 20: Flatten and inline SVG composites
+│   ├── post-fixes.js              # Priority 25: Fix gradients, shapes, blend modes
+│   ├── css-vars.js                # Priority 30: Convert CSS variables to values
+│   └── tailwind-optimizer.js      # Priority 40: Optimize Tailwind (runs last)
+│
+├── post-processing/               # Pre/post-processing scripts
+│   ├── organize-images.js         # Organize images (pre-unified-processor)
+│   ├── fix-svg-vars.js            # Fix CSS vars in SVG (post-unified-processor)
+│   └── capture-screenshot.js      # Screenshot validation
+│
+├── reporting/                     # Report generation
+│   ├── generate-metadata.js       # Generate metadata.json
+│   ├── generate-analysis.js       # Generate analysis.md
+│   └── generate-report.js         # Generate report.html
+│
+└── utils/                         # Utilities
+    └── chunking.js                # Chunking for large designs (extract/assemble)
 ```
 
-### Processing Pipeline (unified-processor.js)
+### Processing Pipeline (Simple Architecture)
 
-The unified processor performs **single-pass AST traversal** with these transformations:
+**Single-pass AST traversal** orchestrated by [pipeline.js](scripts/pipeline.js):
 
-1. **Font Detection**: Convert `font-['FontFamily:Style']` to inline styles with fontWeight
-2. **AST Cleaning**: Remove invalid classes, add `overflow-x-hidden`, fix flex sizing
-3. **SVG Fixes**: Inline composite SVG logos, flatten absolute positioned image wrappers
-4. **Post-Fixes**: Fix multi-stop gradients, radial gradients, shapes, verify blend modes
-5. **CSS Variables**: Convert `var(--figma-var)` to actual values, optimize Tailwind
-6. **Safety Net**: Regex-based catch-all for any remaining CSS vars
-7. **CSS Generation**: Extract fonts (Google Fonts) + CSS custom properties to separate `.css` file
+1. **Parse AST** (Babel parser)
+2. **Sort transforms** by priority (0 → 40)
+3. **Execute each transform** (font detection → ast cleaning → svg fixes → post-fixes → css vars → tailwind optimizer)
+4. **Generate code** (Babel generator)
+5. **Safety net** (regex catch-all for remaining CSS vars)
+6. **CSS generation** (fonts + variables + custom classes)
 
-**Chunking Mode**: For large designs (>25k tokens), the processor automatically detects `chunks/` directory and processes each chunk individually, then assembles them.
+**Chunking Mode**: For large designs (>25k tokens), automatically detects `chunks/` directory and processes each chunk individually, then assembles them.
+
+**Adding a new transformation:**
+1. Create `scripts/transformations/ma-regle.js`:
+```javascript
+import traverse from '@babel/traverse'
+import * as t from '@babel/types'
+
+export const meta = {
+  name: 'ma-regle',
+  priority: 35  // Between css-vars (30) and tailwind (40)
+}
+
+export function execute(ast, context) {
+  let count = 0
+  traverse.default(ast, {
+    JSXElement(path) {
+      // Your transformations here
+      count++
+    }
+  })
+  return { count }
+}
+```
+2. Import in [pipeline.js:16](scripts/pipeline.js#L16): `import * as maRegle from './transformations/ma-regle.js'`
+3. Add to `ALL_TRANSFORMS` array
+
+That's it! No classes, no wrappers, just functions.
 
 ### MCP Integration
 
@@ -160,10 +199,13 @@ Tests are stored in `src/generated/tests/node-{nodeId}/` where:
 
 ### AST Transformations
 
-- **Single-pass traversal**: All transformations run in one AST parse (performance)
-- **Order matters**: Font detection must run BEFORE cleanClasses (which removes font classes)
-- **Shared state**: Clear `customCSSClasses` Map between runs to avoid memory leaks
-- **Safety net**: Regex catch-all runs after AST to catch edge cases
+- **Simple architecture**: 8 files total (transformations/ + pipeline.js + config.js + unified-processor.js)
+- **Single-pass traversal**: All transformations run in one AST parse (performance: ~33ms)
+- **Priority-based execution**: Transforms run in order: 0 (font-detection) → 40 (tailwind-optimizer)
+- **Order matters**: Font detection (priority 0) MUST run BEFORE ast-cleaning (priority 10) which removes font-[...] classes
+- **Shared state**: Context object passed to all transforms, `customCSSClasses` Map cleared between runs
+- **Safety net**: Regex catch-all runs after pipeline to catch edge cases
+- **Each transform**: Simple pattern with `export const meta = { name, priority }` + `export function execute(ast, context)`
 
 ### Chunking Large Designs
 

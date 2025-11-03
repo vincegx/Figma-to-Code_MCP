@@ -70,14 +70,14 @@ cp -r /tmp/figma-assets/* src/generated/tests/node-{nodeId}/ 2>/dev/null || true
 
 **Si get_design_context échoue (>25k tokens) - MODE CHUNKING:**
 
-1. Extraire liste nœuds: `mkdir -p src/generated/tests/node-{nodeId}/chunks && docker exec mcp-figma-v1 node scripts/mcp-direct-save.js extract-nodes src/generated/tests/node-{nodeId}/metadata.xml`
+1. Extraire liste nœuds: `mkdir -p src/generated/tests/node-{nodeId}/chunks && docker exec mcp-figma-v1 node scripts/utils/chunking.js extract-nodes src/generated/tests/node-{nodeId}/metadata.xml`
 
 2. **POUR CHAQUE NŒUD - UN PAR UN - SÉQUENTIEL:**
    - Appel `mcp__figma-desktop__get_design_context` avec nodeId du nœud
    - IMMÉDIATEMENT après, sauvegarder avec Write tool: `src/generated/tests/node-{nodeId}/chunks/NomNoeud.tsx` avec contenu MCP
    - **NE PAS PASSER AU NŒUD SUIVANT AVANT D'AVOIR SAUVEGARDÉ**
 
-3. Quand TOUS les chunks sont sauvegardés: `docker exec mcp-figma-v1 node scripts/mcp-direct-save.js assemble-chunks src/generated/tests/node-{nodeId} Component src/generated/tests/node-{nodeId}/chunks/*.tsx`
+3. Quand TOUS les chunks sont sauvegardés: `docker exec mcp-figma-v1 node scripts/utils/chunking.js assemble-chunks src/generated/tests/node-{nodeId} Component src/generated/tests/node-{nodeId}/chunks/*.tsx`
 
 #### 1.3 Sauvegarder avec Write tool
 
@@ -102,7 +102,7 @@ echo "✅ Phase 1 terminée"
 #### 2.1 Organiser les images (FIRST)
 
 ```bash
-docker exec mcp-figma-v1 node scripts/organize-images.js src/generated/tests/node-{nodeId}
+docker exec mcp-figma-v1 node scripts/post-processing/organize-images.js src/generated/tests/node-{nodeId}
 ```
 
 Crée `img/`, déplace images, renomme avec noms Figma, convertit en imports ES6.
@@ -122,7 +122,7 @@ AST cleaning, gradients, shapes, CSS vars, Tailwind optimization. Génère metad
 #### 2.3 Fixer variables CSS dans les SVG
 
 ```bash
-docker exec mcp-figma-v1 node scripts/fix-svg-vars.js src/generated/tests/node-{nodeId}/img
+docker exec mcp-figma-v1 node scripts/post-processing/fix-svg-vars.js src/generated/tests/node-{nodeId}/img
 ```
 
 #### 2.4 VALIDATION VISUELLE (OBLIGATOIRE)
@@ -137,7 +137,7 @@ Si non lancé, demander à l'utilisateur de lancer `docker-compose up`.
 
 **B. Capturer screenshot web**
 ```bash
-docker exec mcp-figma-v1 node scripts/capture-web-screenshot.js src/generated/tests/node-{nodeId} 5173
+docker exec mcp-figma-v1 node scripts/post-processing/capture-screenshot.js src/generated/tests/node-{nodeId} 5173
 ```
 
 **C. Voir le rendu web**

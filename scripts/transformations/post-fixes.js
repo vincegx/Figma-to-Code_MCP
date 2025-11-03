@@ -9,6 +9,12 @@
  */
 
 import * as t from '@babel/types'
+import traverse from '@babel/traverse'
+
+export const meta = {
+  name: 'post-fixes',
+  priority: 25 // After svg-icon-fixes, before css-vars
+}
 
 /**
  * Fix multi-stop gradient elements
@@ -108,6 +114,37 @@ export function fixShapesContainer(path, attributes, fixes) {
     return true
   }
   return false
+}
+
+/**
+ * Main execution function for post-fixes
+ */
+export function execute(ast, context) {
+  const fixes = {
+    gradientsFixed: 0,
+    shapesFixed: 0,
+    blendModesVerified: 0
+  }
+
+  traverse.default(ast, {
+    JSXElement(path) {
+      const attributes = path.node.openingElement.attributes
+
+      // Fix multi-stop gradients
+      fixMultiStopGradient(path, attributes, fixes)
+
+      // Fix radial gradients
+      fixRadialGradient(path, attributes, fixes)
+
+      // Fix shapes container
+      fixShapesContainer(path, attributes, fixes)
+
+      // Verify blend modes
+      verifyBlendMode(path, attributes, fixes)
+    }
+  })
+
+  return fixes
 }
 
 /**

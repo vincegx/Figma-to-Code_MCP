@@ -9,6 +9,42 @@
  * Extracted from post-processor-fix.js (lines 355-404)
  */
 
+import traverse from '@babel/traverse'
+import * as t from '@babel/types'
+
+export const meta = {
+  name: 'tailwind-optimizer',
+  priority: 40 // Must run LAST (after all other transforms)
+}
+
+/**
+ * Main execution function for Tailwind optimizer
+ */
+export function execute(ast, context) {
+  let classesOptimized = 0
+
+  traverse.default(ast, {
+    JSXElement(path) {
+      const attributes = path.node.openingElement.attributes
+      const classNameAttr = attributes.find(
+        attr => attr.name && attr.name.name === 'className'
+      )
+
+      if (classNameAttr && t.isStringLiteral(classNameAttr.value)) {
+        const original = classNameAttr.value.value
+        const optimized = optimizeTailwindClasses(original)
+
+        if (optimized !== original) {
+          classNameAttr.value = t.stringLiteral(optimized)
+          classesOptimized++
+        }
+      }
+    }
+  })
+
+  return { classesOptimized }
+}
+
 /**
  * Optimize Tailwind classes: arbitrary → standard when possible
  */

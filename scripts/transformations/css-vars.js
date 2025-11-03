@@ -12,6 +12,14 @@
  * - fix-css-vars-simple.js (complete file)
  */
 
+import traverse from '@babel/traverse'
+import * as t from '@babel/types'
+
+export const meta = {
+  name: 'css-vars',
+  priority: 30 // After ast-cleaning and post-fixes
+}
+
 /**
  * Map to collect custom CSS classes that need to be generated
  * Format: { className: { property: 'padding', variable: '--margin-r', fallback: '32px' } }
@@ -128,6 +136,40 @@ export function convertCSSVarsInClass(classString) {
   })
 
   return converted
+}
+
+/**
+ * Main execution function for CSS variables
+ */
+export function execute(ast, context) {
+  let varsConverted = 0
+
+  // Clear the customCSSClasses Map to avoid memory leaks between runs
+  customCSSClasses.clear()
+
+  traverse.default(ast, {
+    JSXElement(path) {
+      const attributes = path.node.openingElement.attributes
+      const classNameAttr = attributes.find(
+        attr => attr.name && attr.name.name === 'className'
+      )
+
+      if (classNameAttr && t.isStringLiteral(classNameAttr.value)) {
+        const original = classNameAttr.value.value
+        const converted = convertCSSVarsInClass(original)
+
+        if (converted !== original) {
+          classNameAttr.value = t.stringLiteral(converted)
+          varsConverted++
+        }
+      }
+    }
+  })
+
+  // Store customCSSClasses in context for CSS generation
+  context.customCSSClasses = customCSSClasses
+
+  return { varsConverted, customClassesGenerated: customCSSClasses.size }
 }
 
 /**

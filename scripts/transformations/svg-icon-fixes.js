@@ -29,8 +29,46 @@
  */
 
 import * as t from '@babel/types'
+import traverse from '@babel/traverse'
 import fs from 'fs'
 import { join as pathJoin } from 'path'
+
+export const meta = {
+  name: 'svg-icon-fixes',
+  priority: 20 // After ast-cleaning, before post-fixes
+}
+
+/**
+ * Main execution function for SVG icon fixes
+ */
+export function execute(ast, context) {
+  const stats = {
+    wrappersFlattened: 0,
+    compositesInlined: 0
+  }
+
+  // Get input directory from context (for resolving SVG paths)
+  const inputDir = context.inputDir || process.cwd()
+
+  // Traverse twice: first flatten wrappers, then inline composites
+  traverse.default(ast, {
+    JSXElement(path) {
+      if (flattenAbsoluteImgWrappers(path)) {
+        stats.wrappersFlattened++
+      }
+    }
+  })
+
+  traverse.default(ast, {
+    JSXElement(path) {
+      if (inlineSVGComposites(path, inputDir)) {
+        stats.compositesInlined++
+      }
+    }
+  })
+
+  return stats
+}
 
 /**
  * Flatten absolute positioned divs without explicit dimensions that contain only an img

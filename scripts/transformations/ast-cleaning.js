@@ -7,6 +7,12 @@
  */
 
 import * as t from '@babel/types'
+import traverse from '@babel/traverse'
+
+export const meta = {
+  name: 'ast-cleaning',
+  priority: 10 // After font-detection, before other transforms
+}
 
 // Track if root container has been processed
 let rootContainerProcessed = false
@@ -191,6 +197,61 @@ export function countNode(path, analysis) {
     return true
   }
   return false
+}
+
+/**
+ * Main execution function for AST cleaning
+ */
+export function execute(ast, context) {
+  let stats = {
+    classesFixed: 0,
+    overflowAdded: false,
+    textSizesConverted: 0,
+    widthsAdded: 0,
+    sectionsDetected: 0,
+    nodesAnalyzed: 0
+  }
+
+  // Reset root container flag
+  resetRootContainer()
+
+  traverse.default(ast, {
+    JSXElement(path) {
+      // Add overflow-x-hidden to root container
+      if (addOverflowXHidden(path)) {
+        stats.overflowAdded = true
+      }
+
+      // Clean invalid classes
+      if (cleanClasses(path)) {
+        stats.classesFixed++
+      }
+
+      // Convert text sizes
+      if (convertTextSizes(path)) {
+        stats.textSizesConverted++
+      }
+
+      // Add width to flex grow items
+      if (addWidthToFlexGrow(path)) {
+        stats.widthsAdded++
+      }
+
+      // Count nodes
+      if (countNode(path, context.analysis || {})) {
+        stats.nodesAnalyzed++
+      }
+    },
+
+    JSXText(path) {
+      // Detect sections
+      if (detectSection(path, context.analysis || {})) {
+        stats.sectionsDetected++
+      }
+    }
+  })
+
+  return stats
 }
 
 /**
