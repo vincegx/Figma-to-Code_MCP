@@ -223,22 +223,38 @@ function TestCard({ test, onSelect }: TestCardProps) {
     window.open(previewUrl, '_blank')
   }
 
+  // Chemin vers la miniature
+  const thumbnailPath = `/src/generated/tests/${test.testId}/web-render.png`
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-300 transition-all p-6 group">
-      {/* Test Icon */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center text-white text-2xl group-hover:scale-110 transition-transform">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-300 transition-all overflow-hidden group">
+      {/* Thumbnail Preview */}
+      <div className="relative w-full h-48 bg-gradient-to-br from-purple-100 to-blue-100 overflow-hidden">
+        <img
+          src={thumbnailPath}
+          alt={test.fileName || 'Preview'}
+          className="w-full h-full object-contain object-center group-hover:scale-105 transition-transform duration-300"
+          onError={(e) => {
+            // Fallback si l'image n'existe pas
+            e.currentTarget.style.display = 'none'
+            e.currentTarget.nextElementSibling?.classList.remove('hidden')
+          }}
+        />
+        <div className="hidden absolute inset-0 flex items-center justify-center text-6xl">
           🎨
         </div>
-        <div className="text-xs text-gray-500">
-          {test.testId?.replace('test-', '')}
+        {/* Badge ID */}
+        <div className="absolute top-2 right-2 px-2 py-1 bg-black/50 backdrop-blur-sm text-white text-xs rounded font-mono">
+          {test.testId?.replace('node-', '')}
         </div>
       </div>
 
-      {/* Test Info */}
-      <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
-        {test.fileName || 'Sans titre'}
-      </h3>
+      {/* Card Content */}
+      <div className="p-6">
+        {/* Test Info */}
+        <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+          {test.fileName || 'Sans titre'}
+        </h3>
 
       <div className="space-y-2 text-sm text-gray-600 mb-4">
         <div className="flex items-center gap-2">
@@ -277,26 +293,27 @@ function TestCard({ test, onSelect }: TestCardProps) {
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
-        <button
-          onClick={onSelect}
-          className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          <span>Détails</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-        <button
-          onClick={handleOpenPreview}
-          className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          <span>Preview</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </button>
+        {/* Action Buttons */}
+        <div className="mt-4 pt-4 border-t border-gray-100 flex gap-2">
+          <button
+            onClick={handleOpenPreview}
+            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <span>Preview</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </button>
+          <button
+            onClick={onSelect}
+            className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            <span>Détails</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   )
