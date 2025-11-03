@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-figma-v1
+
+    # Port mapping (network_mode: host ne fonctionne pas sur macOS)
+    ports:
+      - "5173:5173"
+
+    # Permet d'accéder au serveur MCP Figma sur l'host macOS
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # Volumes pour hot reload et fichiers générés
+    volumes:
+      # Code source (hot reload)
+      - ./src:/app/src
+      - ./scripts:/app/scripts
+      - ./.claude:/app/.claude
+
+      # Fichiers générés (accessibles depuis l'host)
+      - ./src/generated:/app/src/generated
+
+      # Node modules (optimisation performance)
+      - node_modules:/app/node_modules
+
+    # Variables d'environnement
+    environment:
+      - NODE_ENV=development
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+    # Redémarrage automatique
+    restart: unless-stopped
+
+    # Garder le container actif
+    stdin_open: true
+    tty: true
+
+# Volume nommé pour node_modules
+volumes:
+  node_modules:

@@ -12,6 +12,14 @@ Tu vas analyser une URL Figma et générer un test avec une **fidélité visuell
 
 ---
 
+## ⚙️ Vérification Docker
+
+```bash
+docker ps | grep -q mcp-figma-v1 || docker-compose up -d
+```
+
+---
+
 ## 📋 PROCESSUS EN 4 PHASES
 
 ### ┌─────────────────────────────────────────────────────────┐
@@ -56,14 +64,14 @@ Paramètres communs pour tous :
 
 **Si get_design_context échoue (>25k tokens) - MODE CHUNKING:**
 
-1. Extraire liste nœuds: `mkdir -p src/generated/tests/node-{nodeId}/chunks && node scripts/mcp-direct-save.js extract-nodes src/generated/tests/node-{nodeId}/metadata.xml`
+1. Extraire liste nœuds: `mkdir -p src/generated/tests/node-{nodeId}/chunks && docker exec mcp-figma-v1 node scripts/mcp-direct-save.js extract-nodes src/generated/tests/node-{nodeId}/metadata.xml`
 
 2. **POUR CHAQUE NŒUD - UN PAR UN - SÉQUENTIEL:**
    - Appel `mcp__figma-desktop__get_design_context` avec nodeId du nœud
    - IMMÉDIATEMENT après, sauvegarder: `cat > src/generated/tests/node-{nodeId}/chunks/NomNoeud.tsx << 'ENDOFCODE'\n[CODE]\nENDOFCODE`
    - **NE PAS PASSER AU NŒUD SUIVANT AVANT D'AVOIR SAUVEGARDÉ**
 
-3. Quand TOUS les chunks sont sauvegardés: `node scripts/mcp-direct-save.js assemble-chunks src/generated/tests/node-{nodeId} Component src/generated/tests/node-{nodeId}/chunks/*.tsx`
+3. Quand TOUS les chunks sont sauvegardés: `docker exec mcp-figma-v1 node scripts/mcp-direct-save.js assemble-chunks src/generated/tests/node-{nodeId} Component src/generated/tests/node-{nodeId}/chunks/*.tsx`
 
 #### 1.3 Sauvegarder avec Bash heredoc
 
@@ -94,7 +102,7 @@ echo "✅ Phase 1 terminée"
 #### 2.1 Organiser les images (FIRST)
 
 ```bash
-node scripts/organize-images.js src/generated/tests/node-{nodeId}
+docker exec mcp-figma-v1 node scripts/organize-images.js src/generated/tests/node-{nodeId}
 ```
 
 Crée `img/`, déplace images, renomme avec noms Figma, convertit en imports ES6.
@@ -102,7 +110,7 @@ Crée `img/`, déplace images, renomme avec noms Figma, convertit en imports ES6
 #### 2.2 Appliquer le processeur unifié
 
 ```bash
-node scripts/unified-processor.js \
+docker exec mcp-figma-v1 node scripts/unified-processor.js \
   src/generated/tests/node-{nodeId}/Component.tsx \
   src/generated/tests/node-{nodeId}/Component-fixed.tsx \
   src/generated/tests/node-{nodeId}/metadata.xml \
@@ -114,7 +122,7 @@ AST cleaning, gradients, shapes, CSS vars, Tailwind optimization. Génère metad
 #### 2.3 Fixer variables CSS dans les SVG
 
 ```bash
-node scripts/fix-svg-vars.js src/generated/tests/node-{nodeId}/img
+docker exec mcp-figma-v1 node scripts/fix-svg-vars.js src/generated/tests/node-{nodeId}/img
 ```
 
 #### 2.4 VALIDATION VISUELLE (OBLIGATOIRE)
@@ -123,13 +131,13 @@ Cette étape garantit la fidélité 100%. Screenshot Figma (Phase 1) vs rendu we
 
 **A. Vérifier serveur dev**
 ```bash
-lsof -i :5173 || echo "⚠️ Serveur non lancé"
+docker ps | grep mcp-figma-v1 || echo "⚠️ Container Docker non lancé - Lancer: docker-compose up"
 ```
-Si non lancé, demander à l'utilisateur de lancer `npm run dev`.
+Si non lancé, demander à l'utilisateur de lancer `docker-compose up`.
 
 **B. Capturer screenshot web**
 ```bash
-node scripts/capture-web-screenshot.js src/generated/tests/node-{nodeId} 5173
+docker exec mcp-figma-v1 node scripts/capture-web-screenshot.js src/generated/tests/node-{nodeId} 5173
 ```
 
 **C. Voir le rendu web**
