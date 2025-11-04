@@ -19,6 +19,10 @@ interface Metadata {
   timestamp?: string | number  // Peut être une string ISO ou un nombre (secondes Unix)
   figmaUrl?: string
   componentName?: string
+  dimensions?: {
+    width: number
+    height: number
+  }
 }
 
 interface TestDetailProps {
@@ -238,7 +242,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
       {/* Content */}
       <main className={activeTab === 'preview' ? 'w-full py-8' : 'max-w-7xl mx-auto px-6 py-8'}>
         {activeTab === 'preview' && (
-          <PreviewTab testId={testId} componentName={metadata?.componentName} />
+          <PreviewTab testId={testId} componentName={metadata?.componentName} dimensions={metadata?.dimensions} />
         )}
 
         {activeTab === 'code' && (
@@ -263,16 +267,21 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
 interface PreviewTabProps {
   testId: string
   componentName?: string
+  dimensions?: {
+    width: number
+    height: number
+  }
 }
 
-function PreviewTab({ testId, componentName }: PreviewTabProps) {
+function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
   const [Component, setComponent] = useState<ComponentType | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Responsive viewport simulator
-  const [viewportWidth, setViewportWidth] = useState<number>(1200)
-  const [customInput, setCustomInput] = useState<string>('1200')
+  // Responsive viewport simulator - use dimensions if available, otherwise default to 1200
+  const defaultWidth = dimensions?.width || 1200
+  const [viewportWidth, setViewportWidth] = useState<number>(defaultWidth)
+  const [customInput, setCustomInput] = useState<string>(defaultWidth.toString())
   const minWidth = 320
   const maxWidth = 1920
 
@@ -332,6 +341,7 @@ function PreviewTab({ testId, componentName }: PreviewTabProps) {
   }
 
   const presets = [
+    ...(dimensions ? [{ name: 'Native', width: dimensions.width, icon: '🎯' }] : []),
     { name: 'Mobile', width: 375, icon: '📱' },
     { name: 'Tablet', width: 768, icon: '📱' },
     { name: 'Desktop', width: 1200, icon: '💻' },
@@ -400,8 +410,15 @@ function PreviewTab({ testId, componentName }: PreviewTabProps) {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Test Responsive</h3>
-              <div className="text-sm font-mono bg-purple-100 text-purple-800 px-3 py-1.5 rounded">
-                {viewportWidth}px
+              <div className="flex items-center gap-2">
+                {dimensions && viewportWidth === dimensions.width && (
+                  <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
+                    <span>🎯</span> Native
+                  </span>
+                )}
+                <div className="text-sm font-mono bg-purple-100 text-purple-800 px-3 py-1.5 rounded">
+                  {viewportWidth}px
+                </div>
               </div>
             </div>
 
@@ -483,7 +500,17 @@ function PreviewTab({ testId, componentName }: PreviewTabProps) {
           >
             {Component && (
               <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading component...</div>}>
-                <Component />
+                {dimensions ? (
+                  <div style={{
+                    width: `${dimensions.width}px`,
+                    height: `${dimensions.height}px`,
+                    margin: '0 auto'
+                  }}>
+                    <Component />
+                  </div>
+                ) : (
+                  <Component />
+                )}
               </Suspense>
             )}
           </div>
@@ -495,6 +522,9 @@ function PreviewTab({ testId, componentName }: PreviewTabProps) {
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <p className="text-sm font-semibold text-green-900 mb-2">💡 Tips</p>
           <ul className="text-sm text-green-800 space-y-1">
+            {dimensions && (
+              <li>• Le bouton 🎯 Native affiche le composant à sa taille Figma originale ({dimensions.width}×{dimensions.height}px)</li>
+            )}
             <li>• Utilise le slider ou les presets pour tester différentes tailles d'écran</li>
             <li>• Inspecte les éléments avec les DevTools pour voir les classes Tailwind</li>
             <li>• Compare avec le design Figma original</li>

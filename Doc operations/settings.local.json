@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "mcp__figma-dev-mode-mcp-server__get_design_context",
+      "mcp__figma-dev-mode-mcp-server__get_screenshot",
+      "mcp__figma-dev-mode-mcp-server__get_variable_defs",
+      "mcp__figma-dev-mode-mcp-server__get_metadata",
+      "mcp__figma-desktop__get_design_context",
+      "mcp__figma-desktop__get_screenshot",
+      "mcp__figma-desktop__get_variable_defs",
+      "mcp__figma-desktop__get_metadata",
+      "Bash(claude mcp call:*)",
+      "Bash(src/generated/tests/test-1762107506/design_context.json)",
+      "Bash(echo:*)",
+      "Bash(node scripts/capture-web-screenshot.js:*)",
+      "Bash(node scripts/unified-processor.js:*)",
+      "Bash(node scripts/organize-images.js:*)",
+      "Bash(node scripts/fix-svg-vars.js:*)",
+      "Bash(lsof:*)",
+      "Bash(node scripts/mcp-direct-save.js:*)",
+      "Bash(src/generated/tests/node-104-13741/Component.tsx )",
+      "Bash(src/generated/tests/node-104-13741/Component-fixed.tsx )",
+      "Bash(src/generated/tests/node-104-13741/metadata.xml )",
+      "Bash(\"https://www.figma.com/design/S7pdTdfq93HbMiVz8aAnOG/Sans-titre?node-id=104-13741&t=92sHZxk7yfjAJwgb-4\")",
+      "Bash(docker-compose up:*)",
+      "Bash(docker exec:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -44,13 +44,12 @@ export const meta = {
 export function execute(ast, context) {
   const stats = {
     wrappersFlattened: 0,
-    compositesInlined: 0
+    compositesInlined: 0 // Désactivé - maintenant géré par consolidate-svg-groups.js
   }
 
-  // Get input directory from context (for resolving SVG paths)
-  const inputDir = context.inputDir || process.cwd()
-
-  // Traverse twice: first flatten wrappers, then inline composites
+  // Traverse: flatten wrappers only
+  // NOTE: inlineSVGComposites est désactivé car maintenant géré par
+  // scripts/post-processing/consolidate-svg-groups.js qui s'exécute AVANT unified-processor
   traverse.default(ast, {
     JSXElement(path) {
       if (flattenAbsoluteImgWrappers(path)) {
@@ -59,13 +58,15 @@ export function execute(ast, context) {
     }
   })
 
-  traverse.default(ast, {
-    JSXElement(path) {
-      if (inlineSVGComposites(path, inputDir)) {
-        stats.compositesInlined++
-      }
-    }
-  })
+  // inlineSVGComposites: DÉSACTIVÉ
+  // Raison: Géré par consolidate-svg-groups.js en post-processing
+  // traverse.default(ast, {
+  //   JSXElement(path) {
+  //     if (inlineSVGComposites(path, inputDir)) {
+  //       stats.compositesInlined++
+  //     }
+  //   }
+  // })
 
   return stats
 }

@@ -12,6 +12,7 @@ import * as fontDetection from './transformations/font-detection.js'
 import * as autoLayout from './transformations/auto-layout.js'
 import * as astCleaning from './transformations/ast-cleaning.js'
 import * as svgIconFixes from './transformations/svg-icon-fixes.js'
+import * as svgConsolidation from './transformations/svg-consolidation.js'
 import * as postFixes from './transformations/post-fixes.js'
 import * as positionFixes from './transformations/position-fixes.js'
 import * as strokeAlignment from './transformations/stroke-alignment.js'
@@ -24,6 +25,7 @@ const ALL_TRANSFORMS = [
   autoLayout,
   astCleaning,
   svgIconFixes,
+  svgConsolidation,
   postFixes,
   positionFixes,
   strokeAlignment,

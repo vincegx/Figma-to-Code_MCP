@@ -108,9 +108,16 @@ function extractDesignReferences(testDir) {
   try {
     const xmlContent = fs.readFileSync(metadataXmlPath, 'utf8')
 
-    // Extract frame name (first line)
+    // Extract frame name and dimensions (first line)
     const frameMatch = xmlContent.match(/<frame[^>]+name="([^"]+)"/)
     const frameName = frameMatch ? frameMatch[1] : 'Unnamed Frame'
+
+    // Extract dimensions from the root frame
+    const dimensionsMatch = xmlContent.match(/<frame[^>]+width="([^"]+)"[^>]+height="([^"]+)"/)
+    const dimensions = dimensionsMatch ? {
+      width: parseInt(dimensionsMatch[1], 10),
+      height: parseInt(dimensionsMatch[2], 10)
+    } : null
 
     // Extract sections from text nodes with pattern "=== SECTION X: ... ==="
     const sectionRegex = /name="===\s*SECTION\s+\d+:\s*([^=]+)==="\s*/g
@@ -134,7 +141,8 @@ function extractDesignReferences(testDir) {
 
     return {
       name: frameName,
-      sections
+      sections,
+      dimensions
     }
   } catch (error) {
     console.warn(`⚠️  Warning: Could not parse metadata.xml: ${error.message}`)
@@ -200,6 +208,11 @@ function main() {
     visualFidelity: '100%',
     stats: processingStats,
     files: allFiles
+  }
+
+  // Add dimensions if found
+  if (designReferences?.dimensions) {
+    metadata.dimensions = designReferences.dimensions
   }
 
   // Add design references if found
