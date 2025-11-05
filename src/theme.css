@@ -12,6 +12,10 @@
   --color-4: #c5b4c8;
   --color-5: #e3d9f0;
 
+  /* Extra colors - Customizable black & white */
+  --color-black: #000000;
+  --color-white: #ffffff;
+
   /* Semantic Background Colors */
   --bg-primary: var(--color-2);        /* Main background */
   --bg-secondary: var(--color-5);      /* Secondary surfaces */
@@ -85,6 +89,10 @@
   --color-3: #b9b3b2;  /* medium */
   --color-4: #d3cdc6;  /* lighter */
   --color-5: #eee7da;  /* lightest */
+
+  /* Extra colors - Customizable black & white */
+  --color-black: #000000;
+  --color-white: #ffffff;
 
   /* Semantic Background Colors - utiliser les couleurs sombres */
   --bg-primary: var(--color-1);        /* Darkest pour fond principal */

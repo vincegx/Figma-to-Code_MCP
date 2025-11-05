@@ -9,6 +9,7 @@ import { createServer as createViteServer } from 'vite'
 import { createServer as createHttpServer } from 'http'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import fs from 'fs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -269,6 +270,132 @@ app.get('/api/mcp/health', async (req, res) => {
 })
 
 /**
+ * GET /api/usage
+ * Récupère les statistiques d'utilisation de l'API Figma
+ */
+app.get('/api/usage', (req, res) => {
+  try {
+    const usageFilePath = path.join(__dirname, 'data', 'figma-usage.json')
+
+    // Si le fichier n'existe pas, retourner des stats vides
+    if (!fs.existsSync(usageFilePath)) {
+      return res.json({
+        today: {
+          date: new Date().toISOString().split('T')[0],
+          calls: {},
+          totalCalls: 0,
+          analyses: 0,
+          credits: {
+            min: 0,
+            typical: 0,
+            max: 0,
+            dailyLimit: 1200000,
+            percentUsed: 0
+          }
+        },
+        historical: [],
+        status: {
+          emoji: '✅',
+          text: 'SAFE - No usage yet',
+          level: 'safe'
+        }
+      })
+    }
+
+    // Lire le fichier d'usage
+    const usageData = JSON.parse(fs.readFileSync(usageFilePath, 'utf8'))
+    const today = new Date().toISOString().split('T')[0]
+    const todayData = usageData.daily[today] || { calls: {}, totalCalls: 0, analyses: 0 }
+
+    // Calculer les crédits estimés
+    const creditEstimates = {
+      'get_metadata': { min: 50, typical: 50, max: 100 },
+      'get_variable_defs': { min: 50, typical: 50, max: 100 },
+      'get_design_context': { min: 50, typical: 200, max: 5000 },
+      'get_screenshot': { min: 200, typical: 200, max: 500 }
+    }
+
+    let minCredits = 0
+    let typicalCredits = 0
+    let maxCredits = 0
+
+    for (const [tool, count] of Object.entries(todayData.calls)) {
+      const estimates = creditEstimates[tool] || { min: 50, typical: 100, max: 200 }
+      minCredits += count * estimates.min
+      typicalCredits += count * estimates.typical
+      maxCredits += count * estimates.max
+    }
+
+    const percentUsed = (typicalCredits / 1200000) * 100
+
+    // Déterminer le statut
+    let status
+    if (percentUsed < 10) {
+      status = { emoji: '✅', text: 'SAFE - Plenty of quota remaining', level: 'safe' }
+    } else if (percentUsed < 50) {
+      status = { emoji: '🟢', text: 'GOOD - Moderate usage', level: 'good' }
+    } else if (percentUsed < 80) {
+      status = { emoji: '🟡', text: 'WARNING - High usage', level: 'warning' }
+    } else if (percentUsed < 95) {
+      status = { emoji: '🟠', text: 'CRITICAL - Near limit', level: 'critical' }
+    } else {
+      status = { emoji: '🔴', text: 'DANGER - Likely exceeded limit', level: 'danger' }
+    }
+
+    // Historique 7 derniers jours
+    const historical = []
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
+      const dayData = usageData.daily[dateStr]
+
+      if (dayData) {
+        let dayCredits = 0
+        for (const [tool, count] of Object.entries(dayData.calls)) {
+          const estimates = creditEstimates[tool] || { min: 50, typical: 100, max: 200 }
+          dayCredits += count * estimates.typical
+        }
+        historical.push({
+          date: dateStr,
+          totalCalls: dayData.totalCalls,
+          analyses: dayData.analyses,
+          creditsEstimate: dayCredits
+        })
+      } else {
+        historical.push({
+          date: dateStr,
+          totalCalls: 0,
+          analyses: 0,
+          creditsEstimate: 0
+        })
+      }
+    }
+
+    res.json({
+      today: {
+        date: today,
+        calls: todayData.calls,
+        totalCalls: todayData.totalCalls,
+        analyses: todayData.analyses,
+        credits: {
+          min: minCredits,
+          typical: typicalCredits,
+          max: maxCredits,
+          dailyLimit: 1200000,
+          percentUsed
+        }
+      },
+      historical,
+      status
+    })
+  } catch (error) {
+    console.error('Error reading usage data:', error)
+    res.status(500).json({ error: 'Failed to read usage data' })
+  }
+})
+
+/**
  * GET /api/download/:testId
  * Télécharge un test complet en archive ZIP
  */
@@ -355,6 +482,7 @@ async function startServer() {
       console.log(`   POST /api/analyze`)
       console.log(`   GET  /api/analyze/logs/:jobId`)
       console.log(`   GET  /api/analyze/status/:jobId`)
+      console.log(`   GET  /api/usage`)
       console.log(`   GET  /api/mcp/health`)
       console.log(`\n💡 Open http://localhost:${PORT} in your browser`)
     })

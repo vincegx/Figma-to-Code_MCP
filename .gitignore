@@ -8,6 +8,10 @@ src/generated
 tmp/figma-assets/*
 !tmp/figma-assets/.gitkeep
 
+# Usage tracking data (keep directory structure)
+data/*
+!data/.gitkeep
+
 # Claude Code local settings
 .claude/settings.local.json
 .env

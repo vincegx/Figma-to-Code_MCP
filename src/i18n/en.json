@@ -147,5 +147,29 @@
       "banner_title": "Complete technical report",
       "banner_text": "Detailed documentation of all applied transformations: AST processing, Tailwind optimizations, asset management, etc."
     }
+  },
+  "usage": {
+    "title": "API Usage",
+    "analyses_today": "analyses today",
+    "credits": "credits",
+    "status": {
+      "safe": "✓ Safe",
+      "good": "Good",
+      "warning": "⚠ High",
+      "critical": "⚠ Critical",
+      "danger": "✗ Limit"
+    },
+    "tooltip": {
+      "credit_estimates": "Credit Estimates (today)",
+      "min": "Min",
+      "typical": "Typical",
+      "max": "Max",
+      "api_calls": "API Calls Breakdown",
+      "calls": "calls",
+      "no_calls": "No API calls today yet",
+      "last_days": "Last 7 Days",
+      "analyses": "analyses",
+      "disclaimer": "⚠️ Credits are estimated based on API calls. Actual usage may vary depending on design complexity."
+    }
   }
 }

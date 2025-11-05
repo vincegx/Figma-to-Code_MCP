@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { UsageTracker } from './utils/usage-tracker.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -106,6 +107,7 @@ class FigmaCLI {
     );
 
     this.client = null;
+    this.usageTracker = new UsageTracker();
   }
 
   /**
@@ -217,11 +219,37 @@ class FigmaCLI {
         name: toolName,
         arguments: args
       });
+
+      // Track successful call (only if no rate limit error in response)
+      if (this.validateMCPResult(result)) {
+        this.usageTracker.track(toolName);
+      }
+
       return result;
     } catch (error) {
       log.error(`Erreur lors de l'appel ${toolName}: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * Validate MCP result doesn't contain error patterns
+   * @param {Object} result - MCP tool result
+   * @returns {boolean} - True if successful, false if error detected
+   */
+  validateMCPResult(result) {
+    const resultText = JSON.stringify(result);
+    const errorPatterns = [
+      /rate limit exceeded/i,
+      /please try again/i,
+      /^error:/i,
+      /api error/i,
+      /request failed/i,
+      /unauthorized/i,
+      /forbidden/i,
+      /not found/i
+    ];
+    return !errorPatterns.some(pattern => pattern.test(resultText));
   }
 
   /**
@@ -563,6 +591,10 @@ class FigmaCLI {
     try {
       await this.connectMCP();
       await this.phase0_preparation();
+
+      // Track this analysis
+      this.usageTracker.trackAnalysis();
+
       await this.phase1_extraction();
       await this.phase2_postProcessing();
       await this.phase3_captureWebRender();

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import AnalysisForm from './AnalysisForm'
 import LanguageSwitcher from './LanguageSwitcher'
 import ThemeToggle from './ThemeToggle'
+import { UsageBar } from './UsageBar'
 import { useTranslation } from '../i18n/I18nContext'
 
 interface Test {
@@ -209,7 +210,7 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    {t('header.mcp_checking')}
+                    MCP
                   </span>
                 </div>
               ) : mcpConnected ? (
@@ -223,7 +224,7 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: 'var(--status-success-text)' }}></span>
                     <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: 'var(--status-success-text)' }}></span>
                   </span>
-                  {t('header.mcp_connected')}
+                  MCP
                 </div>
               ) : (
                 <div className="px-4 py-2 backdrop-blur-sm text-sm font-medium rounded-xl flex items-center gap-2" style={{
@@ -235,25 +236,15 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                   <span className="relative flex h-2 w-2">
                     <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: 'var(--status-error-text)' }}></span>
                   </span>
-                  {t('header.mcp_disconnected')}
+                  MCP
                 </div>
               )}
+
+              {/* Usage Bar à côté du MCP status */}
+              <UsageBar />
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="px-4 py-2 backdrop-blur-sm text-sm font-medium rounded-xl" style={{
-                backgroundColor: 'var(--bg-overlay-light)',
-                color: 'var(--text-inverse)',
-                borderWidth: '1px',
-                borderColor: 'var(--border-light)'
-              }}>
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  {tests.length} {tests.length > 1 ? t('common.tests_plural') : t('common.tests')}
-                </span>
-              </div>
               <ThemeToggle />
               <LanguageSwitcher />
             </div>
@@ -335,34 +326,49 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
             borderColor: 'var(--border-subtle)',
             boxShadow: 'var(--shadow-sm)'
           }}>
-            {/* Left: View Mode Toggle */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{t('home.view')}</span>
-              <div className="flex rounded-lg p-1" style={{ backgroundColor: 'var(--bg-hover)' }}>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    viewMode === 'grid'
-                      ? 'bg-white text-purple-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
+            {/* Left: View Mode Toggle + Test Count */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{t('home.view')}</span>
+                <div className="flex rounded-lg p-1" style={{ backgroundColor: 'var(--bg-hover)' }}>
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      viewMode === 'grid'
+                        ? 'bg-white text-purple-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      viewMode === 'list'
+                        ? 'bg-white text-purple-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Test Count */}
+              <div className="px-3 py-1.5 rounded-lg text-sm font-medium" style={{
+                backgroundColor: 'var(--bg-hover)',
+                color: 'var(--text-primary)'
+              }}>
+                <span className="flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    viewMode === 'list'
-                      ? 'bg-white text-purple-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
+                  {tests.length} {tests.length > 1 ? t('common.tests_plural') : t('common.tests')}
+                </span>
               </div>
             </div>
 
