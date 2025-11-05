@@ -161,9 +161,14 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+    <div className="rounded-lg p-6 mb-8" style={{
+      backgroundColor: 'var(--bg-card)',
+      boxShadow: 'var(--shadow-sm)',
+      borderWidth: '1px',
+      borderColor: 'var(--border-primary)'
+    }}>
       {/* Header */}
-      <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
         🚀 {t('analysis.title')}
       </h2>
 
@@ -177,20 +182,47 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
               onChange={handleUrlChange}
               placeholder={t('analysis.placeholder')}
               disabled={isAnalyzing}
-              className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors ${
-                urlError
-                  ? 'border-red-300 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-purple-500'
-              }`}
+              className="flex-1 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: isAnalyzing ? 'var(--bg-hover)' : 'var(--bg-card)',
+                borderWidth: '1px',
+                borderColor: urlError ? 'var(--status-error-border)' : 'var(--border-primary)',
+                color: 'var(--text-primary)',
+                outline: 'none'
+              }}
+              onFocus={(e) => {
+                if (!urlError) {
+                  e.currentTarget.style.boxShadow = 'var(--focus-ring)'
+                  e.currentTarget.style.borderColor = 'var(--accent-primary)'
+                }
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.boxShadow = 'none'
+                e.currentTarget.style.borderColor = urlError ? 'var(--status-error-border)' : 'var(--border-primary)'
+              }}
             />
             <button
               type="submit"
               disabled={isAnalyzing || !figmaUrl.trim()}
-              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2 font-medium rounded-lg transition-colors disabled:cursor-not-allowed flex items-center gap-2"
+              style={{
+                background: (isAnalyzing || !figmaUrl.trim()) ? 'var(--bg-hover)' : 'var(--button-primary-bg)',
+                color: (isAnalyzing || !figmaUrl.trim()) ? 'var(--text-muted)' : 'var(--button-primary-text)'
+              }}
+              onMouseEnter={(e) => {
+                if (!isAnalyzing && figmaUrl.trim()) {
+                  e.currentTarget.style.background = 'var(--button-primary-hover)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isAnalyzing && figmaUrl.trim()) {
+                  e.currentTarget.style.background = 'var(--button-primary-bg)'
+                }
+              }}
             >
               {isAnalyzing ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-t-transparent" style={{ borderColor: 'var(--text-muted)' }}></div>
                   {t('analysis.in_progress')}
                 </>
               ) : (
@@ -206,11 +238,15 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
 
           {/* Error Message */}
           {urlError && (
-            <div className="flex items-start gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-start gap-2 px-3 py-2 rounded-lg" style={{
+              backgroundColor: 'var(--status-error-bg)',
+              borderWidth: '1px',
+              borderColor: 'var(--status-error-border)'
+            }}>
+              <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--status-error-text)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className="text-sm text-red-700">{urlError}</p>
+              <p className="text-sm" style={{ color: 'var(--status-error-text)' }}>{urlError}</p>
             </div>
           )}
         </div>
@@ -218,30 +254,41 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
 
       {/* Terminal Logs */}
       {jobId && (
-        <div className="bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
+        <div className="rounded-lg overflow-hidden" style={{
+          backgroundColor: 'var(--bg-overlay-dark)',
+          borderWidth: '1px',
+          borderColor: 'var(--border-primary)'
+        }}>
           {/* Terminal Header */}
-          <div className="bg-gray-800 px-4 py-2 flex items-center justify-between border-b border-gray-700">
+          <div className="px-4 py-2 flex items-center justify-between" style={{
+            backgroundColor: 'var(--bg-overlay-medium)',
+            borderBottom: '1px solid',
+            borderColor: 'var(--border-primary)'
+          }}>
             <div className="flex items-center gap-3">
               <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--status-error-text)' }}></div>
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--status-warning-text)' }}></div>
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--status-success-text)' }}></div>
               </div>
-              <span className="text-sm font-mono text-gray-300">
+              <span className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
                 {isAnalyzing && (
-                  <span className="text-green-400">{t('analysis.status.in_progress')}</span>
+                  <span style={{ color: 'var(--status-success-text)' }}>{t('analysis.status.in_progress')}</span>
                 )}
                 {isComplete && isSuccess && (
-                  <span className="text-green-400">{t('analysis.status.success')}</span>
+                  <span style={{ color: 'var(--status-success-text)' }}>{t('analysis.status.success')}</span>
                 )}
                 {isComplete && !isSuccess && (
-                  <span className="text-red-400">{t('analysis.status.failed')}</span>
+                  <span style={{ color: 'var(--status-error-text)' }}>{t('analysis.status.failed')}</span>
                 )}
               </span>
             </div>
             <button
               onClick={handleReset}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-inverse)'}
+              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
               title={t('common.close')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,7 +298,7 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
           </div>
 
           {/* Logs Display with react-lazylog */}
-          <div className="bg-black">
+          <div style={{ backgroundColor: '#000000' }}>
             <LazyLog
               text={logs}
               height={320}
@@ -273,15 +320,25 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
 
           {/* Footer Actions */}
           {isComplete && (
-            <div className="bg-gray-800 px-4 py-3 border-t border-gray-700 flex items-center justify-between">
-              <span className="text-sm text-gray-400">
+            <div className="px-4 py-3 flex items-center justify-between" style={{
+              backgroundColor: 'var(--bg-overlay-medium)',
+              borderTop: '1px solid',
+              borderColor: 'var(--border-primary)'
+            }}>
+              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 {isSuccess
                   ? t('analysis.footer.success_message')
                   : t('analysis.footer.error_message')}
               </span>
               <button
                 onClick={handleReset}
-                className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded transition-colors"
+                className="px-4 py-1.5 text-sm font-medium rounded transition-colors"
+                style={{
+                  background: 'var(--button-primary-bg)',
+                  color: 'var(--button-primary-text)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--button-primary-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--button-primary-bg)'}
               >
                 {t('analysis.footer.new_export')}
               </button>
@@ -292,8 +349,8 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
 
       {/* Helper Text */}
       {!jobId && (
-        <p className="text-sm text-gray-500 mt-3">
-          {t('analysis.helper')} <code className="bg-gray-100 px-1 rounded">node-id</code>
+        <p className="text-sm mt-3" style={{ color: 'var(--text-secondary)' }}>
+          {t('analysis.helper')} <code className="px-1 rounded" style={{ backgroundColor: 'var(--bg-secondary)' }}>node-id</code>
         </p>
       )}
     </div>
