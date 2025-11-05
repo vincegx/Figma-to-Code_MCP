@@ -246,7 +246,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
         )}
 
         {activeTab === 'code' && (
-          <CodeTab componentCode={componentCode} />
+          <CodeTab componentCode={componentCode} testId={testId} />
         )}
 
         {activeTab === 'report' && (
@@ -537,54 +537,236 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
 }
 
 /**
- * TAB 2: Code - Code source Component-fixed.tsx
+ * TAB 2: Code - Navigation entre tous les fichiers
  */
 interface CodeTabProps {
   componentCode: string
+  testId: string
 }
 
-function CodeTab({ componentCode }: CodeTabProps) {
-  if (!componentCode) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-        <div className="text-6xl mb-4">📝</div>
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          Code non disponible
-        </h3>
-        <p className="text-gray-600">
-          Le fichier Component-fixed.jsx n'a pas pu être chargé
-        </p>
-      </div>
-    )
+interface CodeFile {
+  name: string
+  content: string
+  type: 'tsx' | 'css'
+  icon: string
+}
+
+function CodeTab({ componentCode, testId }: CodeTabProps) {
+  const [files, setFiles] = useState<CodeFile[]>([])
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadAllFiles()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testId])
+
+  const loadAllFiles = async () => {
+    try {
+      const fileList: CodeFile[] = []
+
+      // 1. Component-fixed.tsx
+      fileList.push({
+        name: 'Component-fixed.tsx',
+        content: componentCode,
+        type: 'tsx',
+        icon: '⚛️'
+      })
+
+      // 2. Component-fixed.css
+      try {
+        const cssModule = await import(`../generated/tests/${testId}/Component-fixed.css?raw`)
+        fileList.push({
+          name: 'Component-fixed.css',
+          content: cssModule.default,
+          type: 'css',
+          icon: '🎨'
+        })
+      } catch (e) {
+        console.warn('No CSS file')
+      }
+
+      // 3. Tous les chunks
+      const chunkNames = ['ImageText', 'Header', 'Footer', 'Hero', 'Card', 'Button', 'Navigation', 'Sidebar']
+
+      for (const chunkName of chunkNames) {
+        // TSX chunk
+        try {
+          const tsxModule = await import(`../generated/tests/${testId}/chunks-fixed/${chunkName}.tsx?raw`)
+          fileList.push({
+            name: `chunks/${chunkName}.tsx`,
+            content: tsxModule.default,
+            type: 'tsx',
+            icon: '🧩'
+          })
+        } catch (e) {
+          // Chunk n'existe pas
+        }
+
+        // CSS chunk
+        try {
+          const cssModule = await import(`../generated/tests/${testId}/chunks-fixed/${chunkName}.css?raw`)
+          fileList.push({
+            name: `chunks/${chunkName}.css`,
+            content: cssModule.default,
+            type: 'css',
+            icon: '🎨'
+          })
+        } catch (e) {
+          // CSS n'existe pas
+        }
+      }
+
+      setFiles(fileList)
+      setLoading(false)
+    } catch (err) {
+      console.error('Error loading files:', err)
+      setLoading(false)
+    }
   }
 
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Chargement des fichiers...</div>
+  }
+
+  if (files.length === 0) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Aucun fichier trouvé</div>
+  }
+
+  const selectedFile = files[selectedIndex]
+
+  // Séparer les fichiers principaux des chunks
+  const mainFiles = files.filter(f => !f.name.startsWith('chunks/'))
+  const chunkFiles = files.filter(f => f.name.startsWith('chunks/'))
+
   return (
-    <div className="space-y-4">
-      {/* Info banner */}
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <div className="text-purple-500 text-xl">💻</div>
-          <div className="text-sm text-purple-900">
-            <p className="font-semibold mb-1">Code source généré</p>
-            <p className="text-purple-800">
-              Composant React + Tailwind CSS généré depuis Figma avec post-processing intelligent (gradients, shapes, optimisations).
-            </p>
+    <div>
+      {/* NAVIGATION - Boutons pour chaque fichier */}
+      <div style={{
+        backgroundColor: '#f9fafb',
+        borderRadius: '8px',
+        padding: '16px',
+        marginBottom: '16px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '16px', fontSize: '16px', color: '#111827' }}>
+          📁 Navigation des fichiers ({files.length} fichiers)
+        </div>
+
+        {/* Fichiers principaux */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{
+            fontSize: '12px',
+            fontWeight: '600',
+            color: '#6b7280',
+            textTransform: 'uppercase',
+            marginBottom: '8px',
+            letterSpacing: '0.5px'
+          }}>
+            📦 Composant principal ({mainFiles.length})
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {mainFiles.map((file) => {
+              const actualIndex = files.indexOf(file)
+              return (
+                <button
+                  key={actualIndex}
+                  onClick={() => setSelectedIndex(actualIndex)}
+                  style={{
+                    padding: '8px 16px',
+                    border: selectedIndex === actualIndex ? '2px solid #7c3aed' : '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    backgroundColor: selectedIndex === actualIndex ? '#ede9fe' : 'white',
+                    color: selectedIndex === actualIndex ? '#5b21b6' : '#374151',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: selectedIndex === actualIndex ? '600' : '400',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>{file.icon}</span>
+                  <span>{file.name}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
+
+        {/* Chunks */}
+        {chunkFiles.length > 0 && (
+          <div>
+            <div style={{
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#6b7280',
+              textTransform: 'uppercase',
+              marginBottom: '8px',
+              letterSpacing: '0.5px'
+            }}>
+              🧩 Chunks - Composants découpés ({chunkFiles.length})
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {chunkFiles.map((file) => {
+                const actualIndex = files.indexOf(file)
+                return (
+                  <button
+                    key={actualIndex}
+                    onClick={() => setSelectedIndex(actualIndex)}
+                    style={{
+                      padding: '8px 16px',
+                      border: selectedIndex === actualIndex ? '2px solid #7c3aed' : '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: selectedIndex === actualIndex ? '#ede9fe' : 'white',
+                      color: selectedIndex === actualIndex ? '#5b21b6' : '#374151',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: selectedIndex === actualIndex ? '600' : '400',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>{file.icon}</span>
+                    <span>{file.name.replace('chunks/', '')}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Code viewer */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gray-900 text-gray-100 px-6 py-3 flex items-center justify-between">
-          <h3 className="font-semibold">Component-fixed.tsx</h3>
-          <div className="text-xs text-gray-400">
-            {componentCode.split('\n').length} lignes
+      {/* AFFICHAGE DU CODE */}
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb',
+        overflow: 'hidden'
+      }}>
+        {/* Header */}
+        <div style={{
+          backgroundColor: '#1f2937',
+          color: 'white',
+          padding: '12px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px' }}>{selectedFile.icon}</span>
+            <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{selectedFile.name}</span>
+          </div>
+          <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+            {selectedFile.content.split('\n').length} lignes
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Code */}
+        <div style={{ overflow: 'auto', maxHeight: '70vh' }}>
           <SyntaxHighlighter
-            language="typescript"
+            language={selectedFile.type === 'tsx' ? 'typescript' : 'css'}
             style={vscDarkPlus}
             customStyle={{
               margin: 0,
@@ -594,7 +776,7 @@ function CodeTab({ componentCode }: CodeTabProps) {
             }}
             showLineNumbers
           >
-            {componentCode}
+            {selectedFile.content}
           </SyntaxHighlighter>
         </div>
       </div>

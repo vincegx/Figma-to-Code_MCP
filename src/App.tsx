@@ -52,8 +52,34 @@ function App() {
 // Preview mode component - renders ONLY the generated component
 function PreviewMode({ testId }: { testId: string }) {
   const [Component, setComponent] = useState<React.ComponentType | null>(null)
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null)
 
   useEffect(() => {
+    // Load metadata to get dimensions
+    import(`./generated/tests/${testId}/metadata.xml?raw`)
+      .then((module) => {
+        const xmlContent = module.default
+        const widthMatch = xmlContent.match(/width="(\d+)"/)
+        const heightMatch = xmlContent.match(/height="(\d+)"/)
+
+        if (widthMatch && heightMatch) {
+          setDimensions({
+            width: parseInt(widthMatch[1]),
+            height: parseInt(heightMatch[1])
+          })
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load metadata:', err)
+      })
+
+    // Load CSS
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = `/src/generated/tests/${testId}/Component-fixed.css`
+    link.id = `test-css-${testId}`
+    document.head.appendChild(link)
+
     // Dynamically import the generated component
     import(`./generated/tests/${testId}/Component-fixed.tsx`)
       .then((module) => {
@@ -62,14 +88,25 @@ function PreviewMode({ testId }: { testId: string }) {
       .catch((err) => {
         console.error('Failed to load component:', err)
       })
+
+    return () => {
+      const existingLink = document.getElementById(`test-css-${testId}`)
+      if (existingLink) {
+        document.head.removeChild(existingLink)
+      }
+    }
   }, [testId])
 
-  if (!Component) {
+  if (!Component || !dimensions) {
     return <div>Loading...</div>
   }
 
   return (
-    <div style={{ width: '390px', height: '715px', margin: '0 auto' }}>
+    <div style={{
+      width: `${dimensions.width}px`,
+      height: `${dimensions.height}px`,
+      margin: '0 auto'
+    }}>
       <Component />
     </div>
   )

@@ -307,19 +307,90 @@ ${componentCalls}
 
   console.log(`\n✅ Chunking mode complete - processed ${chunkFiles.length} chunks`)
 
-  // Initialize minimal context for report generation
-  var context = {
+  // ═══════════════════════════════════════════════════════════════
+  // AGGREGATE STATS FROM ALL CHUNKS
+  // ═══════════════════════════════════════════════════════════════
+
+  console.log(`\n📊 Aggregating stats from ${chunkFiles.length} chunks...`)
+
+  const aggregatedStats = {
     analysis: {
       sections: [],
       totalNodes: 0,
       imagesCount: 0
     },
     stats: {},
+    safetyNet: {
+      varsFixed: 0,
+      varsFound: 0
+    },
+    customCSSClassesCount: 0
+  }
+
+  // Read all .stats.json files
+  for (const chunk of chunkFiles) {
+    const statsPath = chunk.outputPath.replace(/\.tsx$/, '.stats.json')
+
+    if (!fs.existsSync(statsPath)) {
+      console.log(`   ⚠️  Stats file not found for ${chunk.normalizedName}`)
+      continue
+    }
+
+    try {
+      const chunkStats = JSON.parse(fs.readFileSync(statsPath, 'utf-8'))
+
+      // Aggregate analysis
+      aggregatedStats.analysis.totalNodes += chunkStats.analysis?.totalNodes || 0
+      aggregatedStats.analysis.imagesCount += chunkStats.analysis?.imagesCount || 0
+      if (chunkStats.analysis?.sections) {
+        aggregatedStats.analysis.sections.push(...chunkStats.analysis.sections)
+      }
+
+      // Aggregate transformation stats
+      for (const [transformName, transformStats] of Object.entries(chunkStats.stats || {})) {
+        if (!aggregatedStats.stats[transformName]) {
+          aggregatedStats.stats[transformName] = {}
+        }
+
+        // Sum up all numeric properties
+        for (const [key, value] of Object.entries(transformStats)) {
+          if (typeof value === 'number') {
+            aggregatedStats.stats[transformName][key] =
+              (aggregatedStats.stats[transformName][key] || 0) + value
+          }
+        }
+      }
+
+      // Aggregate safety net stats
+      aggregatedStats.safetyNet.varsFixed += chunkStats.safetyNet?.varsFixed || 0
+      aggregatedStats.safetyNet.varsFound += chunkStats.safetyNet?.varsFound || 0
+
+      // Aggregate custom CSS classes count
+      aggregatedStats.customCSSClassesCount += chunkStats.customCSSClassesCount || 0
+
+    } catch (error) {
+      console.log(`   ⚠️  Error reading stats from ${chunk.normalizedName}: ${error.message}`)
+    }
+  }
+
+  console.log(`   ✅ Aggregated stats from ${chunkFiles.length} chunks`)
+  console.log(`      - Total nodes: ${aggregatedStats.analysis.totalNodes}`)
+  console.log(`      - Images: ${aggregatedStats.analysis.imagesCount}`)
+  console.log(`      - Sections: ${aggregatedStats.analysis.sections.length}`)
+  console.log(`      - Custom CSS classes: ${aggregatedStats.customCSSClassesCount}`)
+
+  // Use aggregated stats for report generation
+  var context = {
+    analysis: aggregatedStats.analysis,
+    stats: aggregatedStats.stats,
     customCSSClasses: new Map()
   }
 
-  // Initialize safetyNet for report generation
-  var safetyNet = { varsFixed: 0, varsFound: 0, code: '' }
+  var safetyNet = {
+    varsFixed: aggregatedStats.safetyNet.varsFixed,
+    varsFound: aggregatedStats.safetyNet.varsFound,
+    code: ''
+  }
 
   // Don't exit - continue to reports generation
 } else {
@@ -606,6 +677,22 @@ try {
 }
 
 console.log(`\n💾 Output saved: ${outputFile}`)
+
+// Save stats to JSON file (for chunking mode aggregation)
+if (inputFile.includes('/chunks/')) {
+  const statsFilePath = outputFile.replace(/\.tsx$/, '.stats.json')
+  const statsToSave = {
+    analysis: context.analysis,
+    stats: context.stats,
+    safetyNet: {
+      varsFixed: safetyNet.varsFixed,
+      varsFound: safetyNet.varsFound
+    },
+    customCSSClassesCount: context.customCSSClasses ? context.customCSSClasses.size : 0
+  }
+  fs.writeFileSync(statsFilePath, JSON.stringify(statsToSave, null, 2), 'utf-8')
+  console.log(`📊 Saved stats: ${path.basename(statsFilePath)}`)
+}
 } // End of else block (normal mode)
 
 // ═══════════════════════════════════════════════════════════════

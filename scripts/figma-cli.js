@@ -169,6 +169,40 @@ class FigmaCLI {
   }
 
   /**
+   * Parse metadata.xml to extract node dimensions
+   * Returns { width, height } or null if not found
+   */
+  parseNodeDimensions() {
+    const metadataPath = path.join(this.testDir, 'metadata.xml');
+
+    if (!fs.existsSync(metadataPath)) {
+      console.log('   ⚠️  metadata.xml not found, cannot extract dimensions');
+      return null;
+    }
+
+    try {
+      const metadata = fs.readFileSync(metadataPath, 'utf8');
+
+      // Parse root node attributes (first tag)
+      // Example: <frame id="168:14226" name="Home" width="1426" height="734">
+      const match = metadata.match(/width="(\d+(?:\.\d+)?)"\s+height="(\d+(?:\.\d+)?)"/);
+
+      if (match) {
+        return {
+          width: Math.round(parseFloat(match[1])),
+          height: Math.round(parseFloat(match[2]))
+        };
+      }
+
+      console.log('   ⚠️  Could not parse dimensions from metadata.xml');
+      return null;
+    } catch (error) {
+      console.log('   ⚠️  Error parsing metadata.xml:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * PHASE 0: Preparation
    */
   async phase0_preparation() {
@@ -195,24 +229,23 @@ class FigmaCLI {
     console.log('└─────────────────────────────────────────────────────────┘\n');
 
     // 1. Check/create design system rules
-    const rulesPath = path.join(__dirname, '..', this.config.directories.designRules);
+    const rulesPath = path.join(__dirname, '..', this.config.directories.designRules).replace('.json', '.md');
     let designRules = null;
 
     if (fs.existsSync(rulesPath)) {
       console.log('📋 Chargement design system rules (cache)...');
-      designRules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
+      designRules = fs.readFileSync(rulesPath, 'utf8');
     } else {
       console.log('📋 Génération design system rules...');
       try {
         const rulesResult = await this.callMCPTool('create_design_system_rules', {
-          fileId: this.fileId,
           clientLanguages: this.config.commonParams.clientLanguages,
           clientFrameworks: this.config.commonParams.clientFrameworks
         });
 
-        designRules = JSON.parse(rulesResult.content[0].text);
-        fs.writeFileSync(rulesPath, JSON.stringify(designRules, null, 2), 'utf8');
-        console.log('   ✅ Design rules sauvegardées\n');
+        designRules = rulesResult.content[0].text; // C'est du markdown, pas du JSON
+        fs.writeFileSync(rulesPath, designRules, 'utf8');
+        console.log('   ✅ Design rules sauvegardées en markdown\n');
       } catch (error) {
         console.log('   ⚠️  Design rules non générées (continuera sans):\n', error.message);
       }
@@ -226,16 +259,35 @@ class FigmaCLI {
     this.saveFile('metadata.xml', metadataResult.content[0].text);
     console.log('   ✅ metadata.xml sauvegardé\n');
 
-    // 2b. Get parent wrapper (for chunking mode background/padding preservation)
-    console.log('🎨 Récupération wrapper parent...');
-    const parentWrapperResult = await this.callMCPTool('get_design_context', {
-      nodeId: this.nodeId,
-      ...this.config.commonParams,
-      forceCode: true,
-      ...(designRules && { designSystemRules: JSON.stringify(designRules) })
-    });
+    // 2b. Get parent wrapper + screenshot + variables (parallel)
+    console.log('🎨 Récupération wrapper parent + screenshot + variables (parallèle)...');
+    const [parentWrapperResult, screenshotResult, variablesResult] = await Promise.all([
+      this.callMCPTool('get_design_context', {
+        nodeId: this.nodeId,
+        ...this.config.commonParams,
+        forceCode: true
+      }),
+      this.callMCPTool('get_screenshot', { nodeId: this.nodeId }),
+      this.callMCPTool('get_variable_defs', { nodeId: this.nodeId })
+    ]);
+
+    // Save parent wrapper
     this.saveFile('parent-wrapper.tsx', parentWrapperResult.content[0].text);
-    console.log('   ✅ parent-wrapper.tsx sauvegardé\n');
+
+    // Save screenshot (handle base64/binary)
+    const screenshotData = screenshotResult.content[0].data || screenshotResult.content[0].text;
+    if (screenshotData) {
+      const screenshotBuffer = screenshotResult.content[0].data
+        ? Buffer.from(screenshotData, 'base64')
+        : screenshotData;
+      this.saveFile('figma-screenshot.png', screenshotBuffer);
+    } else {
+      console.log('   ⚠️  Screenshot non disponible');
+    }
+
+    // Save variables
+    this.saveFile('variables.json', variablesResult.content[0].text);
+    console.log('   ✅ Parent wrapper + screenshot + variables sauvegardés\n');
 
     // 3. Extract nodes (mode chunk systématique)
     console.log('📦 Extraction des nodes (mode chunk systématique)...');
@@ -269,8 +321,7 @@ class FigmaCLI {
       const codeResult = await this.callMCPTool('get_design_context', {
         nodeId: node.id,
         ...this.config.commonParams,
-        forceCode: true,
-        ...(designRules && { designSystemRules: JSON.stringify(designRules) })
+        forceCode: true
       });
 
       // Validate that the result contains valid code, not an error message
@@ -310,28 +361,7 @@ class FigmaCLI {
     }
     console.log('   ✅ Tous les chunks générés\n');
 
-    // 5. Parallel: get_screenshot + get_variable_defs
-    console.log('🖼️  Récupération screenshot + variables (parallèle)...');
-    const [screenshotResult, variablesResult] = await Promise.all([
-      this.callMCPTool('get_screenshot', { nodeId: this.nodeId }),
-      this.callMCPTool('get_variable_defs', { nodeId: this.nodeId })
-    ]);
-
-    // Screenshot peut être dans .data (base64) ou .text (binary)
-    const screenshotData = screenshotResult.content[0].data || screenshotResult.content[0].text;
-    if (screenshotData) {
-      const screenshotBuffer = screenshotResult.content[0].data
-        ? Buffer.from(screenshotData, 'base64')
-        : screenshotData;
-      this.saveFile('figma-screenshot.png', screenshotBuffer);
-    } else {
-      console.log('   ⚠️  Screenshot non disponible');
-    }
-
-    this.saveFile('variables.json', variablesResult.content[0].text);
-    console.log('   ✅ Variables sauvegardées\n');
-
-    // 6. Wait for images in /tmp/figma-assets
+    // 5. Wait for images in /tmp/figma-assets
     console.log('⏳ Attente des images MCP...');
     await this.waitForImages();
 
@@ -453,10 +483,20 @@ class FigmaCLI {
     console.log('└─────────────────────────────────────────────────────────┘\n');
 
     console.log('📸 Capture web-render.png...');
-    execSync(
-      `node ${path.join(__dirname, 'post-processing/capture-screenshot.js')} ` +
-      `${this.testDir} ${this.config.docker.vitePort}`
-    );
+
+    // Extract dimensions from metadata.xml to match Figma screenshot size
+    const dimensions = this.parseNodeDimensions();
+
+    let command = `node ${path.join(__dirname, 'post-processing/capture-screenshot.js')} ${this.testDir} ${this.config.docker.vitePort}`;
+
+    if (dimensions) {
+      console.log(`   📐 Using Figma node dimensions: ${dimensions.width}x${dimensions.height}`);
+      command += ` ${dimensions.width} ${dimensions.height}`;
+    } else {
+      console.log('   📐 Auto-detecting dimensions from web render');
+    }
+
+    execSync(command);
     console.log('   ✅ web-render.png capturé\n');
   }
 

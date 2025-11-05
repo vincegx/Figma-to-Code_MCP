@@ -53,16 +53,31 @@ npm run preview
 
 ### Analyzing Figma Designs
 
-Use the `/analyze-mcp` slash command:
+**Option 1: Slash Command** (recommended in Claude Code)
 ```bash
 /analyze-mcp https://www.figma.com/design/...?node-id=X-Y
 ```
 
-This triggers the full 4-phase workflow (see .claude/commands/analyze-mcp.md for details).
+**Option 2: Direct CLI**
+```bash
+./cli/figma-analyze "https://www.figma.com/design/...?node-id=X-Y"
+```
+
+**Full Workflow** (see .claude/commands/analyze-mcp.md):
+1. **Phase 1**: MCP extraction (health check → parallel extraction → save files)
+2. **Phase 2**: Post-processing (organize images → unified processor → fix SVG vars)
+3. **Phase 3**: Validation (screenshot capture → visual comparison)
+4. **Phase 4**: Reporting (metadata.json → analysis.md → report.html)
 
 **Performance:** Optimized with Write tool (84% faster than bash heredoc)
 - Simple design: ~10-15s
 - Complex design (chunking): ~25-40s
+
+**Error Handling:**
+- Health check runs before any extraction
+- Chunk validation prevents corrupted files
+- Actionable error messages with recovery steps
+- Early exit on rate limits with user prompt
 
 ## Architecture
 
@@ -85,6 +100,9 @@ src/
 │       ├── Component.tsx         # Original generated component
 │       ├── Component-fixed.tsx   # Post-processed component
 │       ├── Component-fixed.css   # Extracted CSS (fonts, variables)
+│       ├── parent-wrapper.tsx    # Parent wrapper (for chunking: preserves bg, padding, data-*)
+│       ├── chunks/               # Child node chunks (only in chunking mode)
+│       ├── chunks-fixed/         # Processed chunks (only in chunking mode)
 │       ├── img/                  # Images organized by Figma names
 │       ├── variables.json        # Figma variables (colors, spacing, fonts)
 │       ├── metadata.xml          # Design hierarchy
@@ -95,6 +113,7 @@ src/
 │       └── web-render.png        # Screenshot from web render
 
 scripts/
+├── figma-cli.js                   # Core MCP extraction orchestrator (health check, validation, chunking)
 ├── unified-processor.js           # Main entry point (CLI, CSS generation, safety net)
 ├── pipeline.js                    # Simple transform orchestrator (92 lines)
 ├── config.js                      # Transform configuration (enable/disable)
@@ -175,12 +194,24 @@ That's it! No classes, no wrappers, just functions.
 
 ### MCP Integration
 
-Four MCP tools are called **in parallel** during extraction:
+**Core Extraction Flow** (scripts/figma-cli.js):
 
-1. `mcp__figma-desktop__get_design_context` - React code + Tailwind
-2. `mcp__figma-desktop__get_screenshot` - Figma screenshot (PNG)
-3. `mcp__figma-desktop__get_variable_defs` - Design variables (colors, spacing, fonts)
-4. `mcp__figma-desktop__get_metadata` - XML hierarchy structure
+1. **Health Check** (startup):
+   - Test MCP server with minimal call
+   - Detect rate limits, unauthorized errors
+   - Exit early if server unavailable
+
+2. **Parallel Extraction** (4 tools called simultaneously):
+   - `get_design_context` - React code + Tailwind → Component.tsx
+   - `get_screenshot` - Figma screenshot → figma-render.png
+   - `get_variable_defs` - Design variables → variables.json
+   - `get_metadata` - XML hierarchy → metadata.xml
+
+3. **Chunking Mode** (if design too large):
+   - Extract parent node → parent-wrapper.tsx
+   - Extract child nodes sequentially → chunks/*.tsx
+   - Validate each chunk before writing
+   - Assemble chunks with parent wrapper
 
 ### Dashboard Application
 
@@ -243,6 +274,91 @@ When `get_design_context` fails due to size (>25k tokens):
 1. Extract child nodes: `scripts/mcp-direct-save.js extract-nodes metadata.xml`
 2. Process each node **sequentially** (one at a time), save immediately
 3. Assemble chunks: `scripts/mcp-direct-save.js assemble-chunks`
+
+**Chunking Mode Features (v2.1):**
+- **Parent Wrapper Extraction**: `get_design_context` called on parent node to preserve background, padding, and all attributes
+- **CSS Consolidation**: Merges CSS from all chunks, preserving multi-line class definitions
+- **Chunk Validation**: Detects API errors before writing files (rate limits, unauthorized, etc.)
+- **Multi-line Regex**: Uses `[\s\S]+?` to capture multi-line div attributes and CSS classes
+
+### MCP Health Check & Validation
+
+**Health Check** (figma-cli.js:105-134):
+- Runs at startup before any MCP tool calls
+- Tests server with minimal `get_variable_defs` call
+- Detects "rate limit", "unauthorized", "forbidden" errors
+- Exits with helpful message if server is down or rate-limited
+- User prompt: "Open Figma Desktop App"
+
+**Chunk Validation** (figma-cli.js:265-290):
+- Validates each `get_design_context` response before writing to file
+- Error patterns: `/rate limit exceeded/i`, `/unauthorized/i`, `/not found/i`, etc.
+- Verifies response looks like React code (`import`, `export`, `function`)
+- Prevents corrupted chunk files from breaking AST parsing
+- Fails fast with clear error message and recovery instructions
+
+**Why It Matters:**
+- Prevents cascading failures from MCP server errors
+- Saves time by detecting issues early (before post-processing)
+- Provides actionable error messages to the user
+- Ensures all chunk files contain valid React code
+
+### Parent Wrapper Preservation
+
+**Problem**: In chunking mode, parent node's background, padding, and metadata were lost.
+
+**Solution** (figma-cli.js:229-238, unified-processor.js:119-134, chunking.js:97-112):
+1. Call `get_design_context` on parent node → save to `parent-wrapper.tsx`
+2. Extract opening `<div>` tag with regex: `/<div[\s\S]+?>/`
+3. Use extracted wrapper in `Component-fixed.tsx` instead of `<div className="w-full">`
+
+**Result:**
+```tsx
+// Before
+<div className="w-full">
+  <ImageText />
+</div>
+
+// After
+<div className="bg-[#f0d9b5] box-border content-stretch flex flex-col items-start px-0 py-[40px] relative size-full" data-name="Home" data-node-id="168:14226">
+  <ImageText />
+</div>
+```
+
+**Captured Attributes:**
+- `className`: All Tailwind classes (background, padding, layout, sizing)
+- `data-name`: Figma layer name
+- `data-node-id`: Figma node ID
+- Multi-line attributes supported
+
+### CSS Consolidation Strategy
+
+**Single Chunk** (unified-processor.js:169-181):
+- Direct copy of chunk CSS with updated header
+- Preserves all formatting and structure
+- ~76 lines, 29+ custom classes
+
+**Multiple Chunks** (unified-processor.js:183-267):
+- Merge by deduplicating sections:
+  - Font imports (take first)
+  - `:root` variables (merge unique)
+  - Utility classes (`.content-start`, `.content-end`)
+  - Custom classes (`.gap-margin-m`, `.px-display-container`)
+- Multi-line class regex: `/^(\.[a-z0-9_-]+\s*\{[\s\S]*?\})/gm`
+- Preserves CSS property formatting (indent, multi-line)
+
+**Example Multi-line Class:**
+```css
+.px-display-container {
+  padding-left: var(--display-container, 32px);
+  padding-right: var(--display-container, 32px);
+}
+```
+
+**Stats Logged:**
+- CSS variables: 11
+- Custom classes: 29
+- Font families: "Poppins"
 
 ### Docker Networking
 
