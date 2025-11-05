@@ -10,6 +10,71 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ANSI Color codes for better logs
+const colors = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  dim: '\x1b[2m',
+
+  // Colors
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  red: '\x1b[31m',
+  gray: '\x1b[90m',
+
+  // Background
+  bgCyan: '\x1b[46m',
+  bgGreen: '\x1b[42m',
+  bgYellow: '\x1b[43m',
+};
+
+// Logging helpers
+const log = {
+  phase: (title) => {
+    console.log(`\n${colors.bright}${colors.bgCyan}${colors.reset}`);
+    console.log(`${colors.bright}${colors.cyan}┌${'─'.repeat(60)}┐${colors.reset}`);
+    console.log(`${colors.bright}${colors.cyan}│  ${title.padEnd(58)}│${colors.reset}`);
+    console.log(`${colors.bright}${colors.cyan}└${'─'.repeat(60)}┘${colors.reset}\n`);
+  },
+
+  task: (emoji, text) => {
+    console.log(`${colors.bright}${emoji}  ${colors.blue}${text}${colors.reset}`);
+  },
+
+  success: (text) => {
+    console.log(`   ${colors.green}✓${colors.reset} ${colors.dim}${text}${colors.reset}`);
+  },
+
+  warning: (text) => {
+    console.log(`   ${colors.yellow}⚠${colors.reset} ${colors.dim}${text}${colors.reset}`);
+  },
+
+  info: (text) => {
+    console.log(`   ${colors.cyan}ℹ${colors.reset} ${colors.dim}${text}${colors.reset}`);
+  },
+
+  progress: (current, total, item) => {
+    const percent = Math.round((current / total) * 100);
+    const bar = '█'.repeat(Math.floor(percent / 5)) + '░'.repeat(20 - Math.floor(percent / 5));
+    console.log(`   ${colors.cyan}[${current}/${total}]${colors.reset} ${colors.gray}${bar}${colors.reset} ${colors.dim}${item}${colors.reset}`);
+  },
+
+  error: (text) => {
+    console.log(`\n${colors.red}✗ ${text}${colors.reset}`);
+  },
+
+  header: (text) => {
+    console.log(`\n${colors.bright}${colors.magenta}🚀 ${text}${colors.reset}\n`);
+  },
+
+  divider: () => {
+    console.log(`${colors.gray}${'─'.repeat(60)}${colors.reset}`);
+  }
+};
+
 class FigmaCLI {
   constructor(url) {
     // Load config
@@ -21,7 +86,6 @@ class FigmaCLI {
     if (process.env.PROJECT_ROOT) {
       const hostPath = path.join(process.env.PROJECT_ROOT, 'tmp/figma-assets');
       this.config.commonParams.dirForAssetWrites = hostPath;
-      console.log(`📂 Assets will be written to: ${hostPath} (on host)\n`);
     }
 
     // Parse Figma URL
@@ -68,8 +132,8 @@ class FigmaCLI {
 
       return { fileId, nodeId, nodeIdHyphen };
     } catch (error) {
-      console.error('❌ Error parsing Figma URL:', error.message);
-      console.error('   Expected format: https://www.figma.com/design/FILE_ID?node-id=X-Y');
+      log.error(`Error parsing Figma URL: ${error.message}`);
+      console.log(`   ${colors.dim}Expected format: https://www.figma.com/design/FILE_ID?node-id=X-Y${colors.reset}`);
       process.exit(1);
     }
   }
@@ -78,7 +142,7 @@ class FigmaCLI {
    * Connect to MCP server via StreamableHTTP
    */
   async connectMCP() {
-    console.log('🔌 Connexion au MCP server...');
+    log.task('🔌', 'Connexion au MCP server');
 
     try {
       const transport = new StreamableHTTPClientTransport(
@@ -99,11 +163,11 @@ class FigmaCLI {
 
       // List available tools (concise)
       const toolsResult = await this.client.listTools();
-      console.log('   ✅ Connecté au MCP server');
-      console.log(`   📋 ${toolsResult.tools.length} tools: ${toolsResult.tools.map(t => t.name).join(', ')}`);
+      log.success('Connecté au MCP server');
+      log.info(`${toolsResult.tools.length} tools disponibles`);
 
       // Health check: verify the server can respond to a simple call
-      console.log('   🏥 Test de santé du serveur...');
+      log.task('🏥', 'Test de santé du serveur');
       try {
         // Try a simple call to verify the server is working
         const healthCheck = await this.client.callTool({
@@ -120,25 +184,25 @@ class FigmaCLI {
           throw new Error('Server responded with error: ' + responseText.substring(0, 200));
         }
 
-        console.log('   ✅ Serveur MCP opérationnel\n');
+        log.success('Serveur MCP opérationnel\n');
       } catch (healthError) {
-        console.error('\n❌ Le serveur MCP ne répond pas correctement');
-        console.error('   Erreur:', healthError.message.substring(0, 200));
-        console.error('\n📋 Actions requises:');
-        console.error('   1. Ouvrez Figma Desktop App');
-        console.error('   2. Assurez-vous d\'être connecté à votre compte Figma');
-        console.error('   3. Vérifiez que le MCP server tourne sur', this.config.mcpServer.url);
-        console.error('   4. Si "rate limit", attendez quelques minutes avant de réessayer');
-        console.error('\n💡 Tip: Le serveur MCP nécessite Figma Desktop ouvert et connecté\n');
+        log.error('Le serveur MCP ne répond pas correctement');
+        console.log(`   ${colors.dim}Erreur: ${healthError.message.substring(0, 200)}${colors.reset}`);
+        console.log(`\n${colors.yellow}📋 Actions requises:${colors.reset}`);
+        console.log(`   ${colors.dim}1. Ouvrez Figma Desktop App${colors.reset}`);
+        console.log(`   ${colors.dim}2. Assurez-vous d'être connecté à votre compte Figma${colors.reset}`);
+        console.log(`   ${colors.dim}3. Vérifiez que le MCP server tourne sur${colors.reset} ${colors.cyan}${this.config.mcpServer.url}${colors.reset}`);
+        console.log(`   ${colors.dim}4. Si "rate limit", attendez quelques minutes avant de réessayer${colors.reset}`);
+        console.log(`\n${colors.cyan}💡 Tip:${colors.reset} ${colors.dim}Le serveur MCP nécessite Figma Desktop ouvert et connecté${colors.reset}\n`);
         process.exit(1);
       }
     } catch (error) {
-      console.error('\n❌ Erreur connexion MCP:', error.message);
-      console.error('\n📋 Actions requises:');
-      console.error('   1. Ouvrez Figma Desktop App');
-      console.error('   2. Vérifiez que le MCP server tourne sur', this.config.mcpServer.url);
-      console.error('   3. Depuis Docker: utilisez host.docker.internal au lieu de localhost');
-      console.error('\n💡 Tip: Le serveur MCP nécessite Figma Desktop ouvert\n');
+      log.error(`Erreur connexion MCP: ${error.message}`);
+      console.log(`\n${colors.yellow}📋 Actions requises:${colors.reset}`);
+      console.log(`   ${colors.dim}1. Ouvrez Figma Desktop App${colors.reset}`);
+      console.log(`   ${colors.dim}2. Vérifiez que le MCP server tourne sur${colors.reset} ${colors.cyan}${this.config.mcpServer.url}${colors.reset}`);
+      console.log(`   ${colors.dim}3. Depuis Docker: utilisez host.docker.internal au lieu de localhost${colors.reset}`);
+      console.log(`\n${colors.cyan}💡 Tip:${colors.reset} ${colors.dim}Le serveur MCP nécessite Figma Desktop ouvert${colors.reset}\n`);
       process.exit(1);
     }
   }
@@ -154,7 +218,7 @@ class FigmaCLI {
       });
       return result;
     } catch (error) {
-      console.error(`❌ Erreur lors de l'appel ${toolName}:`, error.message);
+      log.error(`Erreur lors de l'appel ${toolName}: ${error.message}`);
       throw error;
     }
   }
@@ -176,7 +240,7 @@ class FigmaCLI {
     const metadataPath = path.join(this.testDir, 'metadata.xml');
 
     if (!fs.existsSync(metadataPath)) {
-      console.log('   ⚠️  metadata.xml not found, cannot extract dimensions');
+      log.warning('metadata.xml not found, cannot extract dimensions');
       return null;
     }
 
@@ -194,10 +258,10 @@ class FigmaCLI {
         };
       }
 
-      console.log('   ⚠️  Could not parse dimensions from metadata.xml');
+      log.warning('Could not parse dimensions from metadata.xml');
       return null;
     } catch (error) {
-      console.log('   ⚠️  Error parsing metadata.xml:', error.message);
+      log.warning(`Error parsing metadata.xml: ${error.message}`);
       return null;
     }
   }
@@ -206,61 +270,35 @@ class FigmaCLI {
    * PHASE 0: Preparation
    */
   async phase0_preparation() {
-    console.log('┌─────────────────────────────────────────────────────────┐');
-    console.log('│  PHASE 0: PRÉPARATION                                   │');
-    console.log('└─────────────────────────────────────────────────────────┘\n');
+    log.phase('PHASE 0: PRÉPARATION');
 
     // Create test directory
-    console.log(`📁 Création dossier test: node-${this.nodeIdHyphen}-${this.timestamp}`);
+    log.task('📁', `Création dossier test: node-${this.nodeIdHyphen}-${this.timestamp}`);
     fs.mkdirSync(this.testDir, { recursive: true });
+    log.success('Dossier créé');
 
     // Clean /tmp/figma-assets (empty content, don't remove dir as it's a volume mount)
-    console.log('🧹 Nettoyage /tmp/figma-assets...');
+    log.task('🧹', 'Nettoyage /tmp/figma-assets');
     execSync('rm -rf /tmp/figma-assets/* 2>/dev/null || true');
-    console.log('   ✅ /tmp/figma-assets nettoyé\n');
+    log.success('/tmp/figma-assets nettoyé\n');
   }
 
   /**
    * PHASE 1: MCP Extraction (chunk mode systématique)
    */
   async phase1_extraction() {
-    console.log('┌─────────────────────────────────────────────────────────┐');
-    console.log('│  PHASE 1: EXTRACTION MCP (mode chunk systématique)     │');
-    console.log('└─────────────────────────────────────────────────────────┘\n');
+    log.phase('PHASE 1: EXTRACTION MCP (mode chunk systématique)');
 
-    // 1. Check/create design system rules
-    const rulesPath = path.join(__dirname, '..', this.config.directories.designRules).replace('.json', '.md');
-    let designRules = null;
-
-    if (fs.existsSync(rulesPath)) {
-      console.log('📋 Chargement design system rules (cache)...');
-      designRules = fs.readFileSync(rulesPath, 'utf8');
-    } else {
-      console.log('📋 Génération design system rules...');
-      try {
-        const rulesResult = await this.callMCPTool('create_design_system_rules', {
-          clientLanguages: this.config.commonParams.clientLanguages,
-          clientFrameworks: this.config.commonParams.clientFrameworks
-        });
-
-        designRules = rulesResult.content[0].text; // C'est du markdown, pas du JSON
-        fs.writeFileSync(rulesPath, designRules, 'utf8');
-        console.log('   ✅ Design rules sauvegardées en markdown\n');
-      } catch (error) {
-        console.log('   ⚠️  Design rules non générées (continuera sans):\n', error.message);
-      }
-    }
-
-    // 2. Get metadata
-    console.log('📄 Récupération metadata...');
+    // 1. Get metadata
+    log.task('📄', 'Récupération metadata');
     const metadataResult = await this.callMCPTool('get_metadata', {
       nodeId: this.nodeId
     });
     this.saveFile('metadata.xml', metadataResult.content[0].text);
-    console.log('   ✅ metadata.xml sauvegardé\n');
+    log.success('metadata.xml sauvegardé\n');
 
-    // 2b. Get parent wrapper + screenshot + variables (parallel)
-    console.log('🎨 Récupération wrapper parent + screenshot + variables (parallèle)...');
+    // 2. Get parent wrapper + screenshot + variables (parallel)
+    log.task('🎨', 'Récupération wrapper parent + screenshot + variables (parallèle)');
     const [parentWrapperResult, screenshotResult, variablesResult] = await Promise.all([
       this.callMCPTool('get_design_context', {
         nodeId: this.nodeId,
@@ -282,15 +320,15 @@ class FigmaCLI {
         : screenshotData;
       this.saveFile('figma-screenshot.png', screenshotBuffer);
     } else {
-      console.log('   ⚠️  Screenshot non disponible');
+      log.warning('Screenshot non disponible');
     }
 
     // Save variables
     this.saveFile('variables.json', variablesResult.content[0].text);
-    console.log('   ✅ Parent wrapper + screenshot + variables sauvegardés\n');
+    log.success('Parent wrapper + screenshot + variables sauvegardés\n');
 
     // 3. Extract nodes (mode chunk systématique)
-    console.log('📦 Extraction des nodes (mode chunk systématique)...');
+    log.task('📦', 'Extraction des nodes (mode chunk systématique)');
     const chunksDir = path.join(this.testDir, 'chunks');
     fs.mkdirSync(chunksDir, { recursive: true });
 
@@ -306,17 +344,17 @@ class FigmaCLI {
 
     // Si aucun enfant, traiter le node racine lui-même
     if (nodes.length === 0) {
-      console.log('   ℹ️  Aucun enfant détecté, traitement du node racine');
+      log.info('Aucun enfant détecté, traitement du node racine');
       nodes = [{ id: this.nodeId, name: 'Component' }];
     }
 
-    console.log(`   📦 ${nodes.length} node(s) à traiter\n`);
+    log.info(`${nodes.length} node(s) à traiter\n`);
 
     // 4. For each node: get_design_context (séquentiel)
-    console.log('⏳ Génération des chunks (séquentiel)...');
+    log.task('⏳', 'Génération des chunks (séquentiel)');
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
-      console.log(`   [${i + 1}/${nodes.length}] Processing chunk: ${node.name} (${node.id})`);
+      log.progress(i + 1, nodes.length, `${node.name} (${node.id})`);
 
       const codeResult = await this.callMCPTool('get_design_context', {
         nodeId: node.id,
@@ -341,13 +379,13 @@ class FigmaCLI {
       const looksLikeReactCode = resultText.includes('import') || resultText.includes('export') || resultText.includes('function') || resultText.includes('const');
 
       if (containsError || (!looksLikeReactCode && resultText.length < 500)) {
-        console.error(`\n❌ Le serveur MCP a retourné une erreur au lieu du code:`);
-        console.error(`   Chunk: ${node.name}`);
-        console.error(`   Réponse: ${resultText.substring(0, 200)}`);
-        console.error('\n📋 Actions requises:');
-        console.error('   1. Attendez quelques minutes (rate limit Figma API)');
-        console.error('   2. Vérifiez votre connexion Figma Desktop');
-        console.error('   3. Réessayez la commande\n');
+        log.error('Le serveur MCP a retourné une erreur au lieu du code');
+        console.log(`   ${colors.dim}Chunk: ${node.name}${colors.reset}`);
+        console.log(`   ${colors.dim}Réponse: ${resultText.substring(0, 200)}${colors.reset}`);
+        console.log(`\n${colors.yellow}📋 Actions requises:${colors.reset}`);
+        console.log(`   ${colors.dim}1. Attendez quelques minutes (rate limit Figma API)${colors.reset}`);
+        console.log(`   ${colors.dim}2. Vérifiez votre connexion Figma Desktop${colors.reset}`);
+        console.log(`   ${colors.dim}3. Réessayez la commande${colors.reset}\n`);
         throw new Error(`MCP server returned error instead of code: ${resultText.substring(0, 100)}`);
       }
 
@@ -359,14 +397,14 @@ class FigmaCLI {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
-    console.log('   ✅ Tous les chunks générés\n');
+    log.success('Tous les chunks générés\n');
 
     // 5. Wait for images in /tmp/figma-assets
-    console.log('⏳ Attente des images MCP...');
+    log.task('⏳', 'Attente des images MCP');
     await this.waitForImages();
 
-    // 7. Assemble chunks
-    console.log('🔗 Assemblage des chunks...');
+    // 6. Assemble chunks
+    log.task('🔗', 'Assemblage des chunks');
     // Find all .tsx files in chunks/ directory (avoids issues with spaces in filenames)
     const allChunkFiles = fs.readdirSync(chunksDir)
       .filter(f => f.endsWith('.tsx'))
@@ -378,7 +416,7 @@ class FigmaCLI {
       `node ${path.join(__dirname, 'utils/chunking.js')} assemble-chunks ` +
       `${this.testDir} Component ${allChunkFiles}`
     );
-    console.log('   ✅ Component.tsx assemblé\n');
+    log.success('Component.tsx assemblé\n');
   }
 
   /**
@@ -388,7 +426,7 @@ class FigmaCLI {
     // Count expected images from Component.tsx
     const componentPath = path.join(this.testDir, 'chunks');
     if (!fs.existsSync(componentPath)) {
-      console.log('   ⚠️  Aucun chunk trouvé, skip attente images');
+      log.warning('Aucun chunk trouvé, skip attente images');
       return;
     }
 
@@ -404,11 +442,11 @@ class FigmaCLI {
     }
 
     if (expectedCount === 0) {
-      console.log('   ℹ️  Aucune image attendue');
+      log.info('Aucune image attendue');
       return;
     }
 
-    console.log(`   ⏳ Attente de ${expectedCount} image(s)...`);
+    log.info(`Attente de ${expectedCount} image(s)...`);
 
     // Wait max 30s
     for (let i = 1; i <= 30; i++) {
@@ -417,7 +455,7 @@ class FigmaCLI {
         : [];
 
       if (tmpFiles.length >= expectedCount) {
-        console.log(`   ✅ ${tmpFiles.length} image(s) détectée(s) après ${i}s`);
+        log.success(`${tmpFiles.length} image(s) détectée(s) après ${i}s`);
 
         // Copy to test directory
         execSync(`cp -r /tmp/figma-assets/* ${this.testDir}/ 2>/dev/null || true`);
@@ -425,7 +463,7 @@ class FigmaCLI {
       }
 
       if (i === 30) {
-        console.log(`   ⚠️  Timeout: seulement ${tmpFiles.length}/${expectedCount} images après 30s`);
+        log.warning(`Timeout: seulement ${tmpFiles.length}/${expectedCount} images après 30s`);
         execSync(`cp -r /tmp/figma-assets/* ${this.testDir}/ 2>/dev/null || true`);
       }
 
@@ -437,25 +475,23 @@ class FigmaCLI {
    * PHASE 2: Post-processing
    */
   async phase2_postProcessing() {
-    console.log('┌─────────────────────────────────────────────────────────┐');
-    console.log('│  PHASE 2: POST-PROCESSING                               │');
-    console.log('└─────────────────────────────────────────────────────────┘\n');
+    log.phase('PHASE 2: POST-PROCESSING');
 
     // 1. Organize images
-    console.log('🖼️  Organisation des images...');
+    log.task('🖼️', 'Organisation des images');
     const imageCount = fs.existsSync(this.testDir)
       ? fs.readdirSync(this.testDir).filter(f => /\.(png|svg|jpg|jpeg|gif|webp)$/i.test(f)).length
       : 0;
 
     if (imageCount > 0) {
       execSync(`node ${path.join(__dirname, 'post-processing/organize-images.js')} ${this.testDir}`);
-      console.log(`   ✅ ${imageCount} image(s) organisée(s)\n`);
+      log.success(`${imageCount} image(s) organisée(s)\n`);
     } else {
-      console.log('   ⚠️  Aucune image trouvée, skip organisation\n');
+      log.warning('Aucune image trouvée, skip organisation\n');
     }
 
     // 2. Unified processor (AST + reports)
-    console.log('🔧 Transformations AST + génération rapports...');
+    log.task('🔧', 'Transformations AST + génération rapports');
     execSync(
       `node ${path.join(__dirname, 'unified-processor.js')} ` +
       `${path.join(this.testDir, 'Component.tsx')} ` +
@@ -463,14 +499,14 @@ class FigmaCLI {
       `${path.join(this.testDir, 'metadata.xml')} ` +
       `"${this.figmaUrl}"`
     );
-    console.log('   ✅ Component-fixed.tsx + rapports générés\n');
+    log.success('Component-fixed.tsx + rapports générés\n');
 
     // 3. Fix SVG vars
     const imgDir = path.join(this.testDir, 'img');
     if (fs.existsSync(imgDir)) {
-      console.log('🎨 Correction variables CSS dans SVG...');
+      log.task('🎨', 'Correction variables CSS dans SVG');
       execSync(`node ${path.join(__dirname, 'post-processing/fix-svg-vars.js')} ${imgDir}`);
-      console.log('   ✅ Variables SVG corrigées\n');
+      log.success('Variables SVG corrigées\n');
     }
   }
 
@@ -478,11 +514,9 @@ class FigmaCLI {
    * PHASE 3: Capture web render
    */
   async phase3_captureWebRender() {
-    console.log('┌─────────────────────────────────────────────────────────┐');
-    console.log('│  PHASE 3: CAPTURE WEB RENDER                            │');
-    console.log('└─────────────────────────────────────────────────────────┘\n');
+    log.phase('PHASE 3: CAPTURE WEB RENDER');
 
-    console.log('📸 Capture web-render.png...');
+    log.task('📸', 'Capture web-render.png');
 
     // Extract dimensions from metadata.xml to match Figma screenshot size
     const dimensions = this.parseNodeDimensions();
@@ -490,14 +524,14 @@ class FigmaCLI {
     let command = `node ${path.join(__dirname, 'post-processing/capture-screenshot.js')} ${this.testDir} ${this.config.docker.vitePort}`;
 
     if (dimensions) {
-      console.log(`   📐 Using Figma node dimensions: ${dimensions.width}x${dimensions.height}`);
+      log.info(`Using Figma node dimensions: ${dimensions.width}x${dimensions.height}`);
       command += ` ${dimensions.width} ${dimensions.height}`;
     } else {
-      console.log('   📐 Auto-detecting dimensions from web render');
+      log.info('Auto-detecting dimensions from web render');
     }
 
     execSync(command);
-    console.log('   ✅ web-render.png capturé\n');
+    log.success('web-render.png capturé\n');
   }
 
   /**
@@ -506,10 +540,12 @@ class FigmaCLI {
   async run() {
     const startTime = Date.now();
 
-    console.log('\n🚀 FIGMA-ANALYZE - Mode chunk systématique\n');
-    console.log(`URL: ${this.figmaUrl}`);
-    console.log(`Node: ${this.nodeId}`);
-    console.log(`Test: node-${this.nodeIdHyphen}-${this.timestamp}\n`);
+    log.header('FIGMA-ANALYZE - Mode chunk systématique');
+    log.divider();
+    console.log(`${colors.dim}URL:${colors.reset}  ${this.figmaUrl}`);
+    console.log(`${colors.dim}Node:${colors.reset} ${this.nodeId}`);
+    console.log(`${colors.dim}Test:${colors.reset} node-${this.nodeIdHyphen}-${this.timestamp}`);
+    log.divider();
 
     try {
       await this.connectMCP();
@@ -520,19 +556,20 @@ class FigmaCLI {
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
-      console.log('┌─────────────────────────────────────────────────────────┐');
-      console.log('│  ✅ TEST GÉNÉRÉ AVEC SUCCÈS                             │');
-      console.log('└─────────────────────────────────────────────────────────┘\n');
+      console.log(`\n${colors.bright}${colors.bgGreen} ${colors.reset}`);
+      console.log(`${colors.bright}${colors.green}┌${'─'.repeat(60)}┐${colors.reset}`);
+      console.log(`${colors.bright}${colors.green}│  ✅ TEST GÉNÉRÉ AVEC SUCCÈS${' '.repeat(30)}│${colors.reset}`);
+      console.log(`${colors.bright}${colors.green}└${'─'.repeat(60)}┘${colors.reset}\n`);
 
-      console.log(`📁 Test directory: ${this.testDir}`);
-      console.log(`⏱️  Durée: ${duration}s`);
-      console.log(`📊 Dashboard: http://localhost:${this.config.docker.vitePort}`);
-      console.log(`\nPour validation Claude (optionnel):`);
-      console.log(`  ./cli/figma-validate node-${this.nodeIdHyphen}-${this.timestamp}\n`);
+      console.log(`${colors.cyan}📁${colors.reset} ${colors.dim}Test directory:${colors.reset} ${this.testDir}`);
+      console.log(`${colors.cyan}⏱️${colors.reset}  ${colors.dim}Durée:${colors.reset} ${colors.bright}${duration}s${colors.reset}`);
+      console.log(`${colors.cyan}📊${colors.reset} ${colors.dim}Dashboard:${colors.reset} ${colors.blue}http://localhost:${this.config.docker.vitePort}${colors.reset}`);
+      console.log(`\n${colors.dim}Pour validation Claude (optionnel):${colors.reset}`);
+      console.log(`  ${colors.gray}./cli/figma-validate node-${this.nodeIdHyphen}-${this.timestamp}${colors.reset}\n`);
 
     } catch (error) {
-      console.error('\n❌ ERREUR lors de la génération:', error.message);
-      console.error(error.stack);
+      log.error(`ERREUR lors de la génération: ${error.message}`);
+      console.log(`${colors.dim}${error.stack}${colors.reset}`);
       process.exit(1);
     } finally {
       if (this.client) {
@@ -545,8 +582,8 @@ class FigmaCLI {
 // CLI entry point
 const url = process.argv[2];
 if (!url) {
-  console.error('Usage: node figma-cli.js <figma-url>');
-  console.error('Example: node figma-cli.js "https://www.figma.com/design/abc?node-id=9-2654"');
+  log.error('Usage: node figma-cli.js <figma-url>');
+  console.log(`${colors.dim}Example: node figma-cli.js "https://www.figma.com/design/abc?node-id=9-2654"${colors.reset}`);
   process.exit(1);
 }
 
