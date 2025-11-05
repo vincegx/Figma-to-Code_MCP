@@ -40,7 +40,7 @@
     },
     "no_tests": {
       "title": "No tests yet",
-      "message": "Launch your first analysis with the /analyze-mcp slash command"
+      "message": "Start your first export using the form above."
     },
     "pagination": {
       "showing": "Showing",
@@ -60,7 +60,7 @@
     }
   },
   "analysis": {
-    "title": "New Figma Export",
+    "title": "Figma Export ",
     "placeholder": "https://www.figma.com/design/...?node-id=X-Y",
     "launch": "Launch export",
     "in_progress": "In progress...",
@@ -118,7 +118,7 @@
       "loading_component": "Loading component...",
       "error_title": "Error loading component",
       "error_text": "The component may be missing or invalid",
-      "tips_title": "💡 Tips",
+      "tips_title": "Tips",
       "tips": [
         "The 🎯 Native button displays the component at its original Figma size ({{width}}×{{height}}px)",
         "Use the slider or presets to test different screen sizes",

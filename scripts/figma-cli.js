@@ -615,6 +615,18 @@ class FigmaCLI {
     } catch (error) {
       log.error(`ERREUR lors de la génération: ${error.message}`);
       console.log(`${colors.dim}${error.stack}${colors.reset}`);
+
+      // Cleanup: remove incomplete test directory to avoid pollution
+      if (fs.existsSync(this.testDir)) {
+        log.task('🧹', 'Nettoyage du dossier de test incomplet');
+        try {
+          fs.rmSync(this.testDir, { recursive: true, force: true });
+          log.success(`Dossier supprimé: ${path.basename(this.testDir)}`);
+        } catch (cleanupError) {
+          log.warning(`Impossible de supprimer le dossier: ${cleanupError.message}`);
+        }
+      }
+
       process.exit(1);
     } finally {
       if (this.client) {

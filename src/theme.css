@@ -6,14 +6,14 @@
 
 :root {
   /* Light Theme (Default) - Palette correcte */
-  --color-1: #949096;
-  --color-2: #ebe6d7;
-  --color-3: #dfd2d3;
-  --color-4: #c5b4c8;
-  --color-5: #e3d9f0;
+  --color-1: #5f7470;
+  --color-2: #889696;
+  --color-3: #b8bdb5;
+  --color-4: #d2d4c8;
+  --color-5: #e0e2db;
 
   /* Extra colors - Customizable black & white */
-  --color-black: #000000;
+  --color-black: #494949;
   --color-white: #ffffff;
 
   /* Semantic Background Colors */
@@ -26,10 +26,10 @@
   --bg-overlay-dark: rgba(0, 0, 0, 0.2);
 
   /* Semantic Text Colors */
-  --text-primary: #1f2937;             /* Main text */
-  --text-secondary: #6b7280;           /* Secondary text */
-  --text-muted: var(--color-1);        /* Muted/disabled text */
-  --text-inverse: #ffffff;             /* Text on dark backgrounds */
+  --text-primary: var(--color-black);             /* Main text */
+  --text-secondary: color-mix(in srgb, var(--color-black) 60%, transparent);          /* Secondary text */
+  --text-muted: color-mix(in srgb, var(--color-2) 60%, transparent);       /* Muted/disabled text */
+  --text-inverse: var(--color-white);  
 
   /* Semantic Border Colors */
   --border-primary: var(--color-4);
@@ -60,8 +60,8 @@
   --status-info-border: #93c5fd;
 
   /* Interactive Elements */
-  --button-primary-bg: linear-gradient(to right, var(--color-4), var(--color-5));
-  --button-primary-hover: linear-gradient(to right, var(--color-3), var(--color-4));
+  --button-primary-bg: var(--color-4);
+  --button-primary-hover:var(--color-3);
   --button-primary-text: var(--text-inverse);
 
   --button-secondary-bg: var(--bg-card);
@@ -75,7 +75,7 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 
   /* Focus Ring */
-  --focus-ring: 0 0 0 3px var(--color-5);
+  --focus-ring: 0 0 0 1px var(--color-5);
 }
 
 /* ============================================
@@ -91,23 +91,22 @@
   --color-5: #eee7da;  /* lightest */
 
   /* Extra colors - Customizable black & white */
-  --color-black: #000000;
+  --color-black: #494949;
   --color-white: #ffffff;
 
   /* Semantic Background Colors - utiliser les couleurs sombres */
   --bg-primary: var(--color-1);        /* Darkest pour fond principal */
   --bg-secondary: var(--color-2);      /* Darker pour surfaces secondaires */
-  --bg-card: var(--color-2);           /* Darker pour cartes */
-  --bg-hover: var(--color-3);          /* Medium pour hover */
+  --bg-card: #ffffff;           /* Medium pour hover */
   --bg-overlay-light: rgba(135, 129, 139, 0.1);   /* color-1 avec alpha */
   --bg-overlay-medium: rgba(135, 129, 139, 0.3);  /* color-1 avec alpha */
   --bg-overlay-dark: rgba(135, 129, 139, 0.6);    /* color-1 avec alpha */
 
   /* Semantic Text Colors - utiliser les couleurs claires pour contraste */
-  --text-primary: var(--color-5);      /* Lightest pour texte principal */
-  --text-secondary: var(--color-4);    /* Lighter pour texte secondaire */
-  --text-muted: var(--color-3);        /* Medium pour texte discret */
-  --text-inverse: var(--color-1);      /* Darkest pour texte sur fond clair */
+  --text-primary: var(--color-black);             /* Main text */
+  --text-secondary: color-mix(in srgb, var(--color-black) 60%, transparent);          /* Secondary text */
+  --text-muted: color-mix(in srgb, var(--color-3) 60%, transparent);    /* Muted/disabled text */
+  --text-inverse: var(--color-white);             /* Text on dark backgrounds */
 
   /* Semantic Border Colors */
   --border-primary: var(--color-3);    /* Medium */
@@ -121,9 +120,9 @@
   --accent-hover: var(--color-3);      /* Medium */
 
   /* Status Colors (adjusted for dark) */
-  --status-success-bg: rgba(34, 197, 94, 0.15);
-  --status-success-text: #86efac;
-  --status-success-border: rgba(134, 239, 172, 0.3);
+  --status-success-bg: #dcfce7;
+  --status-success-text: #166534;
+  --status-success-border: #86efac;
 
   --status-error-bg: rgba(239, 68, 68, 0.15);
   --status-error-text: #fca5a5;
@@ -133,13 +132,13 @@
   --status-warning-text: #fcd34d;
   --status-warning-border: rgba(252, 211, 77, 0.3);
 
-  --status-info-bg: rgba(59, 130, 246, 0.15);
-  --status-info-text: #93c5fd;
-  --status-info-border: rgba(147, 197, 253, 0.3);
+  --status-info-bg: #dbeafe;
+  --status-info-text: #1e40af;
+  --status-info-border: #93c5fd;
 
   /* Interactive Elements */
-  --button-primary-bg: linear-gradient(to right, var(--color-4), var(--color-5));
-  --button-primary-hover: linear-gradient(to right, var(--color-3), var(--color-4));
+  --button-primary-bg: var(--color-4);
+  --button-primary-hover:var(--color-3);
   --button-primary-text: var(--color-1);  /* Dark text sur bouton clair */
 
   --button-secondary-bg: var(--bg-card);
@@ -148,12 +147,96 @@
   --button-secondary-border: var(--border-primary);
 
   /* Shadows (enhanced for dark) */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 
   /* Focus Ring */
-  --focus-ring: 0 0 0 3px var(--color-3);
+  --focus-ring: 0 0 0 1px var(--color-3);
+}
+
+/* ============================================
+   TEST LIST ITEM STYLES
+   ============================================ */
+
+.test-list-item {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+.test-list-item:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-primary);
+}
+
+.test-list-thumbnail {
+  background: linear-gradient(to bottom right, var(--accent-secondary), var(--bg-secondary));
+}
+
+.test-list-badge {
+  background-color: var(--bg-overlay-dark);
+  color: var(--text-inverse);
+}
+
+.test-list-title {
+  color: var(--text-primary);
+}
+
+.test-list-date {
+  color: var(--text-secondary);
+}
+
+.test-list-id {
+  color: var(--text-muted);
+}
+
+.test-stat-nodes {
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.test-stat-sections {
+  background-color: var(--accent-secondary);
+  color: var(--accent-primary);
+}
+
+.test-stat-images {
+  background-color: var(--status-info-bg);
+  color: var(--status-info-text);
+}
+
+.test-stat-fixes {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+
+.test-action-btn {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.test-action-btn:hover {
+  background-color: var(--accent-secondary);
+  color: var(--accent-primary);
+}
+
+.test-delete-btn:hover:not(:disabled) {
+  background-color: var(--status-error-text);
+}
+
+.test-delete-btn:hover:not(:disabled) svg {
+  color: var(--text-inverse);
+}
+
+.test-primary-btn {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.test-primary-btn:hover {
+  background: var(--button-primary-hover);
 }
 
 /* ============================================

@@ -252,10 +252,10 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 style={{
                   background: 'var(--status-info-bg)',
                   color: 'var(--status-info-text)',
-                  boxShadow: 'var(--shadow-md)'
+                  boxShadow: 'var(--shadow-sm)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-lg)'}
-                onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+                onMouseEnter={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+                onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-sm)'}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -270,10 +270,10 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 style={{
                   background: 'var(--status-success-bg)',
                   color: 'var(--status-success-text)',
-                  boxShadow: 'var(--shadow-md)'
+                  boxShadow: 'var(--shadow-sm)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-lg)'}
-                onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+                onMouseEnter={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+                onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-sm)'}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -286,17 +286,17 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 rel="noopener noreferrer"
                 className="px-4 py-2.5 text-sm font-medium rounded-xl transition-all flex items-center gap-2"
                 style={{
-                  background: 'var(--button-primary-bg)',
+                  background: 'var(--color-4)',
                   color: 'var(--button-primary-text)',
-                  boxShadow: 'var(--shadow-md)'
+                  boxShadow: 'var(--shadow-sm)'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'var(--button-primary-hover)'
-                  e.currentTarget.style.boxShadow = 'var(--shadow-lg)'
+                  e.currentTarget.style.boxShadow = 'var(--shadow-md)'
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'var(--button-primary-bg)'
-                  e.currentTarget.style.boxShadow = 'var(--shadow-md)'
+                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
                 }}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -309,58 +309,54 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
 
           {/* Stats bar */}
           {metadata?.stats && (
-            <div className="flex items-center gap-3 mt-4 pt-4" style={{
+            <div className="flex items-center gap-2 mt-4 pt-4" style={{
               borderTop: '1px solid',
               borderColor: 'var(--border-light)'
             }}>
               {metadata.stats.totalNodes !== undefined && (
-                <div className="flex items-center gap-2 px-3 py-2 backdrop-blur-sm rounded-lg" style={{
-                  backgroundColor: 'var(--bg-card)',
+                <div className="flex items-center gap-1.5 px-2.5 py-1 backdrop-blur-sm rounded-md" style={{
+                  backgroundColor: 'var(--bg-hover)',
                   borderWidth: '1px',
-                  borderColor: 'var(--border-subtle)',
-                  boxShadow: 'var(--shadow-sm)'
+                  borderColor: 'var(--border-subtle)'
                 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>📦</span>
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{metadata.stats.totalNodes}</span>
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t('common.nodes')}</span>
+                  <span className="text-xs">📦</span>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{metadata.stats.totalNodes}</span>
+                  <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{t('common.nodes')}</span>
                 </div>
               )}
               {metadata.stats.sectionsDetected !== undefined && metadata.stats.sectionsDetected > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 backdrop-blur-sm rounded-lg" style={{
-                  backgroundColor: 'var(--bg-card)',
+                <div className="flex items-center gap-1.5 px-2.5 py-1 backdrop-blur-sm rounded-md" style={{
+                  backgroundColor: 'var(--accent-secondary)',
                   borderWidth: '1px',
-                  borderColor: 'var(--border-subtle)',
-                  boxShadow: 'var(--shadow-sm)'
+                  borderColor: 'var(--border-subtle)'
                 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>📑</span>
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{metadata.stats.sectionsDetected}</span>
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t('common.sections')}</span>
+                  <span className="text-xs">📑</span>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{metadata.stats.sectionsDetected}</span>
+                  <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{t('common.sections')}</span>
                 </div>
               )}
               {metadata.stats.imagesOrganized !== undefined && metadata.stats.imagesOrganized > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 backdrop-blur-sm rounded-lg" style={{
-                  backgroundColor: 'var(--bg-card)',
+                <div className="flex items-center gap-1.5 px-2.5 py-1 backdrop-blur-sm rounded-md" style={{
+                  backgroundColor: 'var(--status-info-bg)',
                   borderWidth: '1px',
-                  borderColor: 'var(--border-subtle)',
-                  boxShadow: 'var(--shadow-sm)'
+                  borderColor: 'var(--status-info-border)'
                 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>🖼️</span>
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{metadata.stats.imagesOrganized}</span>
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t('common.images')}</span>
+                  <span className="text-xs">🖼️</span>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--status-info-text)' }}>{metadata.stats.imagesOrganized}</span>
+                  <span className="text-[10px]" style={{ color: 'var(--status-info-text)' }}>{t('common.images')}</span>
                 </div>
               )}
               {(metadata.stats.totalFixes !== undefined || metadata.stats.classesOptimized !== undefined) && (
-                <div className="flex items-center gap-2 px-3 py-2 backdrop-blur-sm rounded-lg" style={{
-                  backgroundColor: 'var(--bg-card)',
+                <div className="flex items-center gap-1.5 px-2.5 py-1 backdrop-blur-sm rounded-md" style={{
+                  backgroundColor: 'var(--status-warning-bg)',
                   borderWidth: '1px',
-                  borderColor: 'var(--border-subtle)',
-                  boxShadow: 'var(--shadow-sm)'
+                  borderColor: 'var(--status-warning-border)'
                 }}>
-                  <span style={{ color: 'var(--text-muted)' }}>⚡</span>
-                  <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  <span className="text-xs">⚡</span>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--status-warning-text)' }}>
                     {metadata.stats.totalFixes || metadata.stats.classesOptimized || 0}
                   </span>
-                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t('common.fixes')}</span>
+                  <span className="text-[10px]" style={{ color: 'var(--status-warning-text)' }}>{t('common.fixes')}</span>
                 </div>
               )}
             </div>
@@ -476,10 +472,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
               <div className="relative group">
                 <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200" style={{
                   color: 'var(--text-secondary)',
-                  backgroundColor: 'var(--bg-secondary)',
-                  borderWidth: '1px',
-                  borderColor: 'var(--border-primary)',
-                  boxShadow: 'var(--shadow-sm)'
+                  backgroundColor: 'var(--status-info-bg)'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = 'var(--status-info-text)'
@@ -489,7 +482,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = 'var(--text-secondary)'
-                  e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'
+                  e.currentTarget.style.backgroundColor = 'var(--status-info-bg)'
                   e.currentTarget.style.borderColor = 'var(--border-primary)'
                   e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
                 }}>
@@ -508,13 +501,12 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 }}>
                   {/* Info section */}
                   <div className="p-4" style={{
-                    background: 'linear-gradient(to bottom right, var(--status-info-bg), var(--bg-secondary))',
+                    background: 'var(--status-info-bg)',
                     borderBottom: '1px solid',
                     borderColor: 'var(--status-info-border)'
                   }}>
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{
-                        backgroundColor: 'var(--status-info-text)',
                         color: 'var(--bg-card)',
                         boxShadow: 'var(--shadow-sm)'
                       }}>
@@ -529,11 +521,11 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
 
                   {/* Tips section */}
                   <div className="p-4" style={{
-                    background: 'linear-gradient(to bottom right, var(--status-success-bg), var(--bg-secondary))'
+                    background: 'var(--color-white)'
                   }}>
                     <div className="flex items-center gap-2 mb-3">
                       <div className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-sm" style={{
-                        backgroundColor: 'var(--status-success-text)',
+                        backgroundColor: 'var(--status-info-bg)',
                         color: 'var(--bg-card)',
                         boxShadow: 'var(--shadow-sm)'
                       }}>
@@ -544,24 +536,24 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                     <ul className="text-sm space-y-2 ml-8" style={{ color: 'var(--text-secondary)' }}>
                       {metadata?.dimensions && (
                         <li className="flex items-start gap-2">
-                          <span className="mt-0.5" style={{ color: 'var(--status-success-text)' }}>→</span>
+                          <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
                           <span>{t('detail.preview.tips.0', { width: metadata.dimensions.width.toString(), height: metadata.dimensions.height.toString() })}</span>
                         </li>
                       )}
                       <li className="flex items-start gap-2">
-                        <span className="mt-0.5" style={{ color: 'var(--status-success-text)' }}>→</span>
+                        <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
                         <span>{t('detail.preview.tips.1')}</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="mt-0.5" style={{ color: 'var(--status-success-text)' }}>→</span>
+                        <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
                         <span>{t('detail.preview.tips.2')}</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="mt-0.5" style={{ color: 'var(--status-success-text)' }}>→</span>
+                        <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
                         <span>{t('detail.preview.tips.3')}</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="mt-0.5" style={{ color: 'var(--status-success-text)' }}>→</span>
+                        <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
                         <span>{t('detail.preview.tips.4')}</span>
                       </li>
                     </ul>
@@ -574,7 +566,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
       </nav>
 
       {/* Content */}
-      <main className={activeTab === 'preview' ? 'w-full py-8' : 'max-w-7xl mx-auto px-6 py-8'}>
+      <main className={activeTab === 'preview' ? 'w-full py-1' : 'max-w-7xl mx-auto px-6 py-8'}>
         {activeTab === 'preview' && (
           <PreviewTab testId={testId} componentName={metadata?.componentName} dimensions={metadata?.dimensions} />
         )}
@@ -732,14 +724,13 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-1">
       {/* Responsive Controls - Sticky */}
       <div className="sticky top-0 z-10 py-4" style={{
-        backgroundColor: 'var(--bg-primary)',
-        boxShadow: 'var(--shadow-sm)'
+        backgroundColor: 'var(--bg-primary)'
       }}>
         <div className="max-w-7xl mx-auto px-6">
-          <div className="rounded-lg p-6" style={{
+          <div className="rounded-lg p-4" style={{
             backgroundColor: 'var(--bg-card)',
             boxShadow: 'var(--shadow-sm)',
             borderWidth: '1px',
@@ -758,7 +749,7 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
                 )}
                 <div className="text-sm font-mono px-3 py-1.5 rounded" style={{
                   backgroundColor: 'var(--accent-secondary)',
-                  color: 'var(--accent-primary)'
+                  color: 'var(--text-secondary)'
                 }}>
                   {viewportWidth}px
                 </div>
@@ -849,7 +840,7 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
         borderColor: 'var(--border-primary)'
       }}>
         <div className="px-6 py-3 flex items-center justify-between" style={{
-          backgroundColor: 'var(--bg-secondary)',
+          backgroundColor: 'var(--color-white)',
           borderBottom: '1px solid',
           borderColor: 'var(--border-primary)'
         }}>
@@ -863,7 +854,7 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
 
         {/* Full width viewport simulator */}
         <div className="min-h-[600px] flex justify-center items-start py-8" style={{
-          background: 'linear-gradient(to bottom right, var(--bg-primary), var(--bg-secondary))'
+          background: 'var(--color-white)'
         }}>
           <div
             className="shadow-xl transition-all duration-300 ease-in-out overflow-auto"

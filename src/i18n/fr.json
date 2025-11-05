@@ -40,7 +40,7 @@
     },
     "no_tests": {
       "title": "Aucun test pour le moment",
-      "message": "Lance ta première analyse avec le slash command /analyze-mcp"
+      "message": "Lance ta première exportation avec le Formulaire ci-dessus"
     },
     "pagination": {
       "showing": "Affichage de",
@@ -118,7 +118,7 @@
       "loading_component": "Chargement du composant...",
       "error_title": "Erreur de chargement du composant",
       "error_text": "Le composant est peut-être manquant ou invalide",
-      "tips_title": "💡 Tips",
+      "tips_title": "Tips",
       "tips": [
         "Le bouton 🎯 Native affiche le composant à sa taille Figma originale ({{width}}×{{height}}px)",
         "Utilise le slider ou les presets pour tester différentes tailles d'écran",

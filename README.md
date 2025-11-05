@@ -144,11 +144,34 @@ The MCP Figma Desktop server must be running on port 3845:
 git clone https://github.com/vincegx/Figma-to-Code---MCP-tools.git
 cd Figma-to-Code---MCP-tools
 
-# 2. Start the application
+# 2. Install dependencies (creates node_modules folder)
+npm install
+
+# 3. Build and start Docker containers
 docker-compose up --build
 
-# 3. Open your browser
+# 4. Open your browser
 # http://localhost:5173
+```
+
+**What happens during installation:**
+- ✅ Installs ~619 npm packages (202MB)
+- ✅ Builds Docker image with Chromium for screenshots
+- ✅ Creates Docker volumes for hot reload and generated files
+- ✅ Starts container with MCP connectivity to host (port 3845)
+- ✅ Dashboard accessible at http://localhost:5173
+- ✅ Backend API running at http://localhost:5173/api
+
+**Verify installation:**
+```bash
+# Check container is running
+docker ps | grep mcp-figma
+
+# Check logs
+docker logs mcp-figma-v1
+
+# Test CLI tool
+docker exec mcp-figma-v1 /app/cli/figma-analyze
 ```
 
 That's it! 🎉 The dashboard is now running.
@@ -169,6 +192,60 @@ npm run dev
 # 4. Open your browser
 # http://localhost:5173
 ```
+
+**Note:** Local development requires:
+- Node.js 20+
+- Chromium/Chrome installed for screenshot capture
+- MCP Figma Desktop server running on port 3845
+
+### 🔍 Verify MCP Connection
+
+After installation, verify the MCP server connection:
+
+```bash
+# From host (macOS)
+curl http://localhost:3845/mcp
+
+# From Docker container
+docker exec mcp-figma-v1 wget -O- http://host.docker.internal:3845/mcp
+```
+
+You should see a response (even if it's a 400 error - that means the server is responding).
+
+### 📁 Important Directories
+
+After installation, these directories are created:
+
+```
+.
+├── src/generated/          # Generated test outputs (git-ignored)
+│   └── tests/
+│       └── node-{id}/     # Each test has its own folder
+├── tmp/                    # Temporary assets from MCP
+│   └── figma-assets/      # Images downloaded by MCP Desktop
+├── data/                   # Usage tracking data
+└── node_modules/          # Dependencies (202MB)
+```
+
+### ⚠️ Troubleshooting Installation
+
+**Port 5173 already in use:**
+```bash
+# Change port in docker-compose.yml
+ports:
+  - "5174:5173"  # Use 5174 instead
+```
+
+**Container name conflict:**
+```bash
+# Change container name in docker-compose.yml
+container_name: mcp-figma-custom-name
+```
+
+**MCP connection failed:**
+- Ensure Figma Desktop app is running
+- Verify MCP server is on port 3845: `curl http://localhost:3845/mcp`
+- Check firewall settings allow Docker to access host
 
 ---
 

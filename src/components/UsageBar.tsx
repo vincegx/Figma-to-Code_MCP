@@ -106,13 +106,13 @@ export function UsageBar() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      {/* Layout horizontal compact */}
-      <div className="flex items-center gap-4">
-        {/* Emoji + Titre */}
-        <div className="flex items-center gap-2">
-          <span className="text-base">{status.emoji}</span>
+      {/* Layout horizontal compact - Responsive */}
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Emoji + Titre (titre masqué sur mobile) */}
+        <div className="flex items-center gap-1 md:gap-2">
+          <span className="text-sm md:text-base">{status.emoji}</span>
           <h3
-            className="text-xs font-medium whitespace-nowrap"
+            className="hidden md:block text-xs font-medium whitespace-nowrap"
             style={{ color: 'var(--color-black)' }}
           >
             {t('usage.title')}
@@ -120,8 +120,8 @@ export function UsageBar() {
         </div>
 
         {/* Barre de progression + pourcentage */}
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <div className="flex-1">
+        <div className="flex items-center gap-1 md:gap-2 flex-1 min-w-0">
+          <div className="flex-1 min-w-[80px] md:min-w-[120px]">
             <div
               className="h-1.5 rounded-full overflow-hidden"
               style={{ backgroundColor: 'var(--color-2)' }}
@@ -135,17 +135,19 @@ export function UsageBar() {
               ></div>
             </div>
           </div>
-          <div className="text-xs font-semibold" style={{ color: 'var(--color-black)' }}>
+          <div className="text-[10px] md:text-xs font-semibold whitespace-nowrap" style={{ color: 'var(--color-black)' }}>
             {percentUsed.toFixed(1)}%
           </div>
         </div>
 
-        {/* Stats à droite */}
-        <div className="flex items-center gap-3 whitespace-nowrap">
-          <div className="text-[10px]" style={{ color: 'var(--color-black)' }}>
-            ~{formatNumber(today.credits.typical)} / {formatLimit(today.credits.dailyLimit)} {t('usage.credits')} (Pro)
+        {/* Stats à droite (masqué sur très petits écrans, simplifié sur mobile) */}
+        <div className="hidden sm:flex items-center gap-2 md:gap-3 whitespace-nowrap">
+          <div className="text-[9px] md:text-[10px]" style={{ color: 'var(--color-black)' }}>
+            <span className="hidden md:inline">~{formatNumber(today.credits.typical)} / </span>
+            {formatLimit(today.credits.dailyLimit)}
+            <span className="hidden md:inline"> {t('usage.credits')} (Pro)</span>
           </div>
-          <div className="text-[10px]" style={{ color: 'var(--color-black)' }}>
+          <div className="hidden md:block text-[10px]" style={{ color: 'var(--color-black)' }}>
             {today.analyses} {t('usage.analyses_today')}
           </div>
         </div>

@@ -2,7 +2,7 @@
  * HomePage - Liste de tous les tests MCP analysés
  */
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import AnalysisForm from './AnalysisForm'
 import LanguageSwitcher from './LanguageSwitcher'
 import ThemeToggle from './ThemeToggle'
@@ -185,7 +185,7 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-white)' }}>
       {/* Header */}
       <header className="relative overflow-hidden" style={{
         background: 'linear-gradient(to bottom right, var(--accent-primary), var(--accent-secondary))'
@@ -194,7 +194,7 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
         <div className="absolute inset-0 bg-grid-white/10 bg-[size:20px_20px]"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
 
-        <div className="relative max-w-7xl mx-auto px-6 py-12">
+        <div className="relative max-w-7xl mx-auto px-6 py-8">
           {/* Status Bar */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -252,24 +252,24 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
 
           {/* Main Title */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 mb-4">
+            <div className="inline-flex items-center gap-3 mb-3">
               <div className="w-16 h-16 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl" style={{
                 backgroundColor: 'var(--bg-overlay-light)',
                 borderWidth: '1px',
                 borderColor: 'var(--border-light)'
               }}>
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--text-inverse)' }}>
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--color-black)' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                 </svg>
               </div>
             </div>
 
-            <h1 className="text-5xl font-bold mb-3 tracking-tight" style={{ color: 'var(--text-inverse)' }}>
+            <h1 className="text-5xl font-bold mb-3 tracking-tight" style={{ color: 'var(--color-black)' }}>
               {t('header.title')}
             </h1>
-            <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--text-inverse)', opacity: 0.9 }}>
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--color-black)' }}>
               {t('header.subtitle')}
-              <span className="block text-base mt-2" style={{ opacity: 0.8 }}>
+              <span className="block text-base mt-2" style={{ color: 'var(--color-black)' }}>
                 {t('header.subtitle_detail')}
               </span>
             </p>
@@ -278,35 +278,62 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
           {/* Stats Cards */}
           {tests.length > 0 && (
             <div className="grid grid-cols-3 gap-4 max-w-3xl mx-auto">
-              <div className="backdrop-blur-sm rounded-xl p-4" style={{
+              <div className="backdrop-blur-sm rounded-xl p-3" style={{
                 backgroundColor: 'var(--bg-overlay-light)',
                 borderWidth: '1px',
                 borderColor: 'var(--border-light)'
               }}>
-                <div className="text-3xl font-bold mb-1" style={{ color: 'var(--text-inverse)' }}>
-                  {tests.reduce((acc, test) => acc + (test.stats?.totalNodes || 0), 0)}
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-1)' }}>
+                      <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-2xl font-bold" style={{ color: 'var(--color-black)' }}>
+                      {tests.reduce((acc, test) => acc + (test.stats?.totalNodes || 0), 0)}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--color-black)' }}>{t('header.stats.total_nodes')}</div>
+                  </div>
                 </div>
-                <div className="text-sm" style={{ color: 'var(--text-inverse)', opacity: 0.9 }}>{t('header.stats.total_nodes')}</div>
               </div>
-              <div className="backdrop-blur-sm rounded-xl p-4" style={{
+              <div className="backdrop-blur-sm rounded-xl p-3" style={{
                 backgroundColor: 'var(--bg-overlay-light)',
                 borderWidth: '1px',
                 borderColor: 'var(--border-light)'
               }}>
-                <div className="text-3xl font-bold mb-1" style={{ color: 'var(--text-inverse)' }}>
-                  {tests.reduce((acc, test) => acc + (test.stats?.imagesOrganized || 0), 0)}
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-1)' }}>
+                      <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-2xl font-bold" style={{ color: 'var(--color-black)' }}>
+                      {tests.reduce((acc, test) => acc + (test.stats?.imagesOrganized || 0), 0)}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--color-black)' }}>{t('header.stats.images')}</div>
+                  </div>
                 </div>
-                <div className="text-sm" style={{ color: 'var(--text-inverse)', opacity: 0.9 }}>{t('header.stats.images')}</div>
               </div>
-              <div className="backdrop-blur-sm rounded-xl p-4" style={{
+              <div className="backdrop-blur-sm rounded-xl p-3" style={{
                 backgroundColor: 'var(--bg-overlay-light)',
                 borderWidth: '1px',
                 borderColor: 'var(--border-light)'
               }}>
-                <div className="text-3xl font-bold mb-1" style={{ color: 'var(--text-inverse)' }}>
-                  {tests.reduce((acc, test) => acc + (test.stats?.totalFixes || test.stats?.classesOptimized || 0), 0)}
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-1)' }}>
+                      <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-2xl font-bold" style={{ color: 'var(--color-black)' }}>
+                      {tests.reduce((acc, test) => acc + (test.stats?.totalFixes || test.stats?.classesOptimized || 0), 0)}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--color-black)' }}>{t('header.stats.total_fixes')}</div>
+                  </div>
                 </div>
-                <div className="text-sm" style={{ color: 'var(--text-inverse)', opacity: 0.9 }}>{t('header.stats.total_fixes')}</div>
               </div>
             </div>
           )}
@@ -333,11 +360,22 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                 <div className="flex rounded-lg p-1" style={{ backgroundColor: 'var(--bg-hover)' }}>
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      viewMode === 'grid'
-                        ? 'bg-white text-purple-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
+                    className="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+                    style={{
+                      backgroundColor: viewMode === 'grid' ? 'var(--button-primary-bg)' : 'transparent',
+                      color: viewMode === 'grid' ? 'var(--button-primary-text)' : 'var(--text-secondary)',
+                      boxShadow: viewMode === 'grid' ? 'var(--shadow-sm)' : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (viewMode !== 'grid') {
+                        e.currentTarget.style.color = 'var(--text-primary)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (viewMode !== 'grid') {
+                        e.currentTarget.style.color = 'var(--text-secondary)'
+                      }
+                    }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -345,11 +383,22 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      viewMode === 'list'
-                        ? 'bg-white text-purple-600 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
+                    className="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
+                    style={{
+                      backgroundColor: viewMode === 'list' ? 'var(--button-primary-bg)' : 'transparent',
+                      color: viewMode === 'list' ? 'var(--button-primary-text)' : 'var(--text-secondary)',
+                      boxShadow: viewMode === 'list' ? 'var(--shadow-sm)' : 'none'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (viewMode !== 'list') {
+                        e.currentTarget.style.color = 'var(--text-primary)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (viewMode !== 'list') {
+                        e.currentTarget.style.color = 'var(--text-secondary)'
+                      }
+                    }}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -360,8 +409,8 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
 
               {/* Test Count */}
               <div className="px-3 py-1.5 rounded-lg text-sm font-medium" style={{
-                backgroundColor: 'var(--bg-hover)',
-                color: 'var(--text-primary)'
+                backgroundColor: 'var(--color-5)',
+                color: 'var(--text-secondary)'
               }}>
                 <span className="flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -379,7 +428,16 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                 <select
                   value={sortOption}
                   onChange={(e) => setSortOption(e.target.value as SortOption)}
-                  className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                  className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none transition-all"
+                  style={{ outline: 'none' }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = 'var(--focus-ring)'
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)'
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.borderColor = ''
+                  }}
                 >
                   <option value="date-desc">{t('home.sort_options.date_desc')}</option>
                   <option value="date-asc">{t('home.sort_options.date_asc')}</option>
@@ -396,7 +454,16 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                     setItemsPerPage(Number(e.target.value))
                     setCurrentPage(1)
                   }}
-                  className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                  className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none transition-all"
+                  style={{ outline: 'none' }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.boxShadow = 'var(--focus-ring)'
+                    e.currentTarget.style.borderColor = 'var(--accent-primary)'
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.borderColor = ''
+                  }}
                 >
                   <option value="6">6</option>
                   <option value="9">9</option>
@@ -412,18 +479,17 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
         {/* Tests List */}
         {sortedTests.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-            <div className="text-6xl mb-4">📭</div>
+            <div className="flex justify-center mb-4">
+              <svg className="w-20 h-20" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--text-muted)' }}>
+                <path d="M19.5 21a3 3 0 003-3v-4.5a3 3 0 00-3-3h-15a3 3 0 00-3 3V18a3 3 0 003 3h15zM1.5 10.146V6a3 3 0 013-3h5.379a2.25 2.25 0 011.59.659l2.122 2.121c.14.141.331.22.53.22H19.5a3 3 0 013 3v1.146A4.483 4.483 0 0019.5 9h-15a4.483 4.483 0 00-3 1.146z" />
+              </svg>
+            </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               {t('home.no_tests.title')}
             </h3>
             <p className="text-gray-600 mb-6">
               {t('home.no_tests.message')}
             </p>
-            <div className="inline-block bg-gray-100 px-4 py-2 rounded-lg">
-              <code className="text-sm text-gray-800">
-                /analyze-mcp https://www.figma.com/design/...
-              </code>
-            </div>
           </div>
         ) : (
           <>
@@ -579,7 +645,7 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                     }}
                     className="w-16 px-3 py-2 rounded-lg text-sm font-medium text-center transition-all"
                     style={{
-                      backgroundColor: 'var(--bg-secondary)',
+                      backgroundColor: 'var(--button-primary-bg)',
                       borderWidth: '1px',
                       borderColor: 'var(--border-primary)',
                       color: 'var(--text-primary)'
@@ -819,7 +885,7 @@ function TestCard({ test, onSelect }: TestCardProps) {
           className="w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2"
           style={{
             background: 'var(--button-primary-bg)',
-            color: 'var(--button-primary-text)',
+            color: 'var(--text-secondary)',
             boxShadow: 'var(--shadow-sm)'
           }}
           onMouseEnter={(e) => e.currentTarget.style.background = 'var(--button-primary-hover)'}
@@ -890,107 +956,105 @@ function TestCardList({ test, onSelect }: TestCardListProps) {
   return (
     <div
       onClick={() => onSelect()}
-      className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-300 transition-all overflow-hidden group cursor-pointer flex items-center p-4 gap-4"
+      className="test-list-item rounded-lg overflow-hidden group cursor-pointer transition-all"
     >
-      {/* Thumbnail */}
-      <div className="relative w-32 h-24 flex-shrink-0 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg overflow-hidden">
-        <img
-          src={thumbnailPath}
-          alt={test.layerName || test.fileName || 'Preview'}
-          className="w-full h-full object-contain object-center group-hover:scale-105 transition-transform duration-300"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-            e.currentTarget.nextElementSibling?.classList.remove('hidden')
-          }}
-        />
-        <div className="hidden absolute inset-0 flex items-center justify-center text-4xl">
-          🎨
-        </div>
+      <div className="flex items-center p-3 gap-3">
+        {/* Thumbnail - compact */}
+        <div className="test-list-thumbnail relative w-20 h-16 flex-shrink-0 rounded overflow-hidden">
+          <img
+            src={thumbnailPath}
+            alt={test.layerName || test.fileName || 'Preview'}
+            className="w-full h-full object-contain object-center group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+              e.currentTarget.nextElementSibling?.classList.remove('hidden')
+            }}
+          />
+          <div className="hidden absolute inset-0 flex items-center justify-center text-2xl">🎨</div>
 
-        {/* Node ID Badge */}
-        <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 backdrop-blur-sm text-white text-[10px] rounded font-mono whitespace-nowrap">
-          #{nodeIdDisplay}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <h3 className="text-base font-semibold text-gray-900 group-hover:text-purple-600 transition-colors truncate mb-1">
-          {test.layerName || test.fileName || t('home.card.no_title')}
-        </h3>
-        <div className="flex items-center gap-4 text-xs text-gray-500">
-          <div className="flex flex-col">
-            <span>{formatDate(test.timestamp)}</span>
-            <span className="text-[9px] text-gray-400 font-mono">{test.testId}</span>
+          {/* Node ID Badge */}
+          <div className="test-list-badge absolute bottom-1 right-1 px-1.5 py-0.5 backdrop-blur-sm text-[9px] rounded font-mono">
+            #{nodeIdDisplay}
           </div>
+        </div>
+
+        {/* Content - compact */}
+        <div className="flex-1 min-w-0 flex items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <h3 className="test-list-title text-sm font-semibold truncate mb-0.5">
+              {test.layerName || test.fileName || t('home.card.no_title')}
+            </h3>
+            <div className="flex items-center gap-3 text-[10px]">
+              <span className="test-list-date">{formatDate(test.timestamp)}</span>
+              <span className="test-list-id font-mono hidden md:inline">{test.testId}</span>
+            </div>
+          </div>
+
+          {/* Stats - inline compact */}
           {test.stats && (
-            <>
+            <div className="hidden sm:flex items-center gap-1.5 text-[10px]">
               {test.stats.totalNodes !== undefined && (
-                <span className="flex items-center gap-1">
-                  <span className="text-gray-400">📦</span>
-                  {test.stats.totalNodes} nodes
+                <span className="test-stat-nodes px-1.5 py-0.5 rounded font-medium">
+                  📦 {test.stats.totalNodes}
                 </span>
               )}
               {test.stats.sectionsDetected !== undefined && test.stats.sectionsDetected > 0 && (
-                <span className="flex items-center gap-1">
-                  <span className="text-gray-400">📑</span>
-                  {test.stats.sectionsDetected} sections
+                <span className="test-stat-sections px-1.5 py-0.5 rounded font-medium">
+                  📑 {test.stats.sectionsDetected}
                 </span>
               )}
               {test.stats.imagesOrganized !== undefined && test.stats.imagesOrganized > 0 && (
-                <span className="flex items-center gap-1">
-                  <span className="text-gray-400">🖼️</span>
-                  {test.stats.imagesOrganized} images
+                <span className="test-stat-images px-1.5 py-0.5 rounded font-medium">
+                  🖼️ {test.stats.imagesOrganized}
                 </span>
               )}
               {(test.stats.totalFixes !== undefined || test.stats.classesOptimized !== undefined) && (
-                <span className="flex items-center gap-1">
-                  <span className="text-gray-400">⚡</span>
-                  {test.stats.totalFixes || test.stats.classesOptimized || 0} fixes
+                <span className="test-stat-fixes px-1.5 py-0.5 rounded font-medium">
+                  ⚡ {test.stats.totalFixes || test.stats.classesOptimized || 0}
                 </span>
               )}
-            </>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <button
-          onClick={handleOpenPreview}
-          className="p-2 bg-gray-50 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-all"
-          title={t('home.card.open_preview')}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </button>
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="p-2 bg-gray-50 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all disabled:opacity-50"
-          title={t('home.card.delete')}
-        >
-          {isDeleting ? (
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        {/* Actions - compact horizontal */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            onClick={handleOpenPreview}
+            className="test-action-btn p-1.5 rounded transition-all"
+            title={t('home.card.open_preview')}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="test-action-btn test-delete-btn p-1.5 rounded transition-all disabled:opacity-50"
+            title={t('home.card.delete')}
+          >
+            {isDeleting ? (
+              <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            )}
+          </button>
+          <button
+            onClick={() => onSelect()}
+            className="test-primary-btn px-3 py-1.5 text-xs font-medium rounded transition-all flex items-center gap-1.5"
+          >
+            <span className="hidden lg:inline">{t('common.details')}</span>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          )}
-        </button>
-        <button
-          onClick={() => onSelect()}
-          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-sm font-medium rounded-lg transition-all flex items-center gap-2"
-        >
-          <span>{t('common.details')}</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+          </button>
+        </div>
       </div>
     </div>
   )
