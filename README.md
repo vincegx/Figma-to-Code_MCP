@@ -11,8 +11,7 @@
 ║     │  FIGMA  │  ──── MCP Protocol ───────────>  │  REACT  │      ║
 ║     │ DESIGN  │                                  │   CODE  │      ║
 ║     └─────────┘                                  └─────────┘      ║
-║          │                                            │           ║
-║          │  1. Extract via MCP (Chunk Mode)          │           ║
+║          │  1. Extract via MCP (Chunk Mode)           │           ║
 ║          │  2. AST Processing Pipeline                │           ║
 ║          │  3. Visual Validation                      │           ║
 ║          └────────── 100% Fidelity ─────────────────> ┘           ║
@@ -92,6 +91,7 @@ This project is **open-source** and I'd love your help to make it better! Whethe
 - **Pagination & Sorting** - Grid/List view with sorting by date or name
 - **4-Tab Detail View** - Preview, Code (with chunks), Report, Technical Analysis
 - **Real-Time MCP Status** - Visual indicator for MCP server connection
+- **API Usage Monitoring** - Real-time tracking of Figma API credit estimates (Professional plan)
 - **Test Management** - Delete tests, open previews, view in Figma
 
 ### 🔧 Developer Experience
@@ -231,6 +231,7 @@ After installation, these directories are created:
 ├── tmp/                    # Temporary assets from MCP
 │   └── figma-assets/      # Images downloaded by MCP Desktop
 ├── data/                   # Usage tracking data
+│   └── figma-usage.json   # API call counts & credit estimates (30-day retention)
 └── node_modules/          # Dependencies (202MB)
 ```
 
@@ -421,6 +422,41 @@ Click on any test card to see:
 - **Sorting** - Sort by date or name (ascending/descending)
 - **View Mode** - Switch between Grid and List view
 
+#### 6. Monitor API Usage 📊
+
+The dashboard includes a real-time **Usage Bar** that tracks your Figma API consumption:
+
+**Visual Indicator with Progress Bar:**
+- 🟢 **SAFE** (<10%) - Plenty of quota remaining
+- 🟢 **GOOD** (10-50%) - Moderate usage
+- 🟡 **WARNING** (50-80%) - High usage
+- 🟠 **CRITICAL** (80-95%) - Near limit
+- 🔴 **DANGER** (>95%) - Likely exceeded limit
+
+**Hover for Detailed Tooltip:**
+- **Credit Estimates** - Min, Typical, Max ranges
+- **API Call Breakdown** - Calls per MCP tool (get_design_context, get_screenshot, etc.)
+- **7-Day History** - Visual chart of daily usage
+- **Today's Stats** - Total calls and analyses count
+
+**Important Notes:**
+- ⚠️ **Estimates Only** - Credit consumption is calculated based on conservative estimates from Figma documentation
+- 📊 **Professional Plan** - Configured for Figma Professional plan (1,200,000 credits/day)
+- 🔢 **Actual vs Estimate** - Real credit usage may vary; these are approximations to help you monitor activity
+- 📁 **Data Storage** - Usage tracked in `data/figma-usage.json` (30-day retention, auto-cleanup)
+- 🔄 **Auto-Refresh** - Updates every 30 seconds
+
+**Credit Estimates per Tool:**
+```javascript
+get_metadata:        50-100 credits
+get_variable_defs:   50-100 credits
+get_design_context:  50-5,000 credits (varies by complexity)
+get_screenshot:      200-500 credits
+```
+
+**Why Estimates?**
+Figma doesn't provide real-time credit consumption via API. Our system tracks exact call counts and applies conservative estimates based on documented ranges. Large designs with `get_design_context` can vary significantly (50 to 5,000 credits per call).
+
 ### Method 2: CLI (Direct Container) 🔧
 
 Execute analysis directly in the Docker container:
@@ -497,7 +533,8 @@ mcp-figma-to-code/
 │   ├── 📁 components/          # Dashboard UI components
 │   │   ├── HomePage.tsx        # Test list with pagination & sorting
 │   │   ├── TestDetail.tsx      # 4-tab detail view (Preview, Code, Report, Technical)
-│   │   └── AnalysisForm.tsx    # Form to trigger analysis via API
+│   │   ├── AnalysisForm.tsx    # Form to trigger analysis via API
+│   │   └── UsageBar.tsx        # Real-time API usage monitoring widget
 │   ├── 📁 generated/tests/     # Generated outputs (git-ignored)
 │   │   └── node-{nodeId}-{ts}/ # One folder per analysis
 │   │       ├── Component.tsx            # Original assembled
@@ -540,15 +577,17 @@ mcp-figma-to-code/
 │   │   ├── generate-metadata.js
 │   │   ├── generate-analysis.js
 │   │   └── generate-report.js
-│   └── 📁 utils/               # Chunking utilities
-│       └── chunking.js
+│   └── 📁 utils/               # Utilities
+│       ├── chunking.js         # Chunk extraction & assembly
+│       └── usage-tracker.js    # API usage monitoring (30-day history)
 ├── 📁 cli/                     # Bash wrappers
 │   ├── figma-analyze           # Main wrapper
 │   ├── figma-validate          # Validation script
 │   └── 📁 config/
 │       └── figma-params.json   # MCP tool parameters
-├── 📁 server/                  # Express API server
-│   └── index.js                # API endpoints for dashboard
+├── 📁 data/                    # Usage tracking data (git-ignored)
+│   └── figma-usage.json        # API call counts & credit estimates (30-day retention)
+├── server.js                   # Express API server with SSE support
 ├── docker-compose.yml
 ├── Dockerfile
 ├── package.json
@@ -655,6 +694,12 @@ GET /api/analyze/:jobId
 GET /api/mcp/health
 - Checks MCP server connection
 - Returns: 200 (connected) or 503 (disconnected)
+
+GET /api/usage
+- Retrieves Figma API usage statistics
+- Returns: { today: {...}, historical: [...], status: {...} }
+- Includes: exact call counts, credit estimates, 7-day history
+- Auto-refreshes every 30 seconds in dashboard
 
 DELETE /api/tests/:testId
 - Deletes test directory
