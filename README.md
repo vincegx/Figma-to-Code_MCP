@@ -32,6 +32,13 @@
 
 ---
 
+## 📸 Interface Preview
+
+![Dashboard Interface](docs/images/image01.png)
+*Interactive dashboard with test management, pagination, and real-time MCP status monitoring*
+
+---
+
 ## ⚠️ Project Status - MVP
 
 > **This is a Minimum Viable Product (MVP)** in active development. I will continuously improve the codebase.
@@ -387,10 +394,23 @@ Use the analysis form at the top of the homepage:
 #### 4. View Results
 
 Click on any test card to see:
-- **🎨 Preview Tab** - Live component with responsive testing (320px → 1920px)
-- **💻 Code Tab** - Navigate between all files (Component, CSS, chunks)
-- **📊 Report Tab** - Visual fidelity report with Figma vs Web comparison
-- **🔧 Technical Tab** - Detailed analysis of all transformations
+
+**🎨 Preview Tab** - Live component with responsive testing (320px → 1920px)
+
+![Preview Tab](docs/images/image02.png)
+*Interactive preview with responsive testing sliders and presets*
+
+**💻 Code Tab** - Navigate between all files (Component, CSS, chunks)
+
+![Code Tab](docs/images/image04.png)
+*Syntax-highlighted code view with file navigation between components and chunks*
+
+**📊 Report Tab** - Visual fidelity report with Figma vs Web comparison
+
+![Report Tab](docs/images/image03.png)
+*Visual comparison between Figma design and generated web component*
+
+**🔧 Technical Tab** - Detailed analysis of all transformations
 
 #### 5. Manage Tests
 
