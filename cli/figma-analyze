@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# figma-analyze - Génère un test complet depuis une URL Figma (0 tokens)
+# Usage: ./figma-analyze "https://www.figma.com/design/abc?node-id=9-2654"
+
+set -e
+
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Check arguments
+if [ -z "$1" ]; then
+  echo -e "${RED}❌ URL Figma manquante${NC}"
+  echo ""
+  echo "Usage: ./figma-analyze \"https://www.figma.com/design/FILE_ID?node-id=X-Y\""
+  echo ""
+  echo "Exemple:"
+  echo "  ./figma-analyze \"https://www.figma.com/design/abc123?node-id=9-2654\""
+  exit 1
+fi
+
+FIGMA_URL="$1"
+
+# Check Docker container is running
+if ! docker ps | grep -q mcp-figma-v1; then
+  echo -e "${YELLOW}⚠️  Container Docker non lancé${NC}"
+  echo ""
+  echo "Lancement du container..."
+  docker-compose up -d
+
+  # Wait for container to be ready
+  echo "Attente du démarrage (10s)..."
+  sleep 10
+fi
+
+# Check .env file exists
+if [ ! -f .env ]; then
+  echo -e "${RED}❌ Fichier .env manquant${NC}"
+  echo ""
+  echo "Créez un fichier .env avec:"
+  echo "  FIGMA_API_KEY=your_figma_api_key"
+  echo ""
+  echo "Obtenez votre clé API sur: https://www.figma.com/developers/api#access-tokens"
+  exit 1
+fi
+
+# Get absolute project path for MCP (runs on host, not in Docker)
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Run figma-cli.js in Docker
+echo -e "${GREEN}🚀 Lancement de figma-analyze dans Docker...${NC}"
+echo ""
+
+docker exec -e "PROJECT_ROOT=$PROJECT_ROOT" mcp-figma-v1 node scripts/figma-cli.js "$FIGMA_URL"
+
+exit_code=$?
+
+if [ $exit_code -eq 0 ]; then
+  echo -e "${GREEN}✅ Analyse terminée avec succès${NC}"
+else
+  echo -e "${RED}❌ Erreur lors de l'analyse (code: $exit_code)${NC}"
+  exit $exit_code
+fi

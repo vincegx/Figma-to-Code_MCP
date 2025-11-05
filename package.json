@@ -11,6 +11,7 @@
     "analyze": "node scripts/analyze-figma.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.21.0",
     "cheerio": "^1.1.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

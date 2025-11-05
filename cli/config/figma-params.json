@@ -1,0 +1,24 @@
+{
+  "mcpServer": {
+    "url": "http://host.docker.internal:3845/mcp",
+    "transport": "sse"
+  },
+  "commonParams": {
+    "clientLanguages": "javascript,typescript",
+    "clientFrameworks": "react",
+    "dirForAssetWrites": "/tmp/figma-assets"
+  },
+  "docker": {
+    "containerName": "mcp-figma-v1",
+    "vitePort": 5173
+  },
+  "directories": {
+    "tmpAssets": "/tmp/figma-assets",
+    "testsOutput": "src/generated/tests",
+    "designRules": "cli/config/design-rules.json"
+  },
+  "chunking": {
+    "enabled": true,
+    "mode": "always"
+  }
+}

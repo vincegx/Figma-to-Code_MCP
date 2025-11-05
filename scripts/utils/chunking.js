@@ -59,10 +59,24 @@ function extractChildNodes(xmlPath) {
  * Assemble multiple chunk components into one parent component
  * Generates Component.tsx with imports to chunks (not inline fusion)
  */
-function assembleChunks(parentName, chunkFiles) {
-  // Helper: Convert filename to PascalCase component name (banner1 → Banner1)
+function assembleChunks(parentName, chunkFiles, testDir) {
+  // Helper: Convert filename to valid PascalCase component name
+  // Examples:
+  //   "Frame 1618872337" → "Frame1618872337"
+  //   "Group 1321314779" → "Group1321314779"
+  //   "Appbar" → "Appbar"
+  //   "123test" → "Chunk123test"
   const toPascalCase = (name) => {
-    return name.charAt(0).toUpperCase() + name.slice(1)
+    // Remove spaces and special chars, keep alphanumeric
+    let cleaned = name.replace(/[^a-zA-Z0-9]/g, '');
+
+    // If starts with number, prefix with "Chunk"
+    if (/^\d/.test(cleaned)) {
+      cleaned = 'Chunk' + cleaned;
+    }
+
+    // Ensure first letter is uppercase
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   }
 
   const chunks = chunkFiles.map(file => ({
@@ -80,12 +94,29 @@ function assembleChunks(parentName, chunkFiles) {
     `      <${toPascalCase(chunk.fileName)} />`
   ).join('\n');
 
+  // Extract parent wrapper from parent-wrapper.tsx to preserve background/padding
+  let wrapperDiv = '<div className="w-full">'; // fallback
+  try {
+    const parentWrapperPath = path.join(testDir, 'parent-wrapper.tsx');
+    if (fs.existsSync(parentWrapperPath)) {
+      const parentWrapper = fs.readFileSync(parentWrapperPath, 'utf-8');
+      // Extract the opening div tag with all its classes and attributes (including multi-line)
+      const divMatch = parentWrapper.match(/<div[\s\S]+?>/);
+      if (divMatch) {
+        wrapperDiv = divMatch[0];
+        console.log(`   ✅ Using parent wrapper with all attributes (${wrapperDiv.length} chars)`);
+      }
+    }
+  } catch (error) {
+    console.log(`   ⚠️  Could not read parent wrapper, using default: ${error.message}`);
+  }
+
   // Build final component with imports
   const finalCode = `${imports}
 
 export default function ${parentName}() {
   return (
-    <div className="w-full">
+    ${wrapperDiv}
 ${componentCalls}
     </div>
   );
@@ -124,7 +155,7 @@ if (mode === 'assemble-chunks') {
     process.exit(1);
   }
 
-  const assembled = assembleChunks(parentName, chunkFiles);
+  const assembled = assembleChunks(parentName, chunkFiles, assembleTestDir);
   const outputPath = path.join(assembleTestDir, 'Component.tsx');
   fs.writeFileSync(outputPath, assembled, 'utf8');
 
