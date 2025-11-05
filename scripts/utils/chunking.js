@@ -16,6 +16,7 @@ import path from 'path';
 /**
  * Extract child node IDs from metadata XML
  * Returns array of {id, name} objects for first-level children
+ * Handles duplicate names by adding a numeric suffix
  */
 function extractChildNodes(xmlPath) {
   const xml = fs.readFileSync(xmlPath, 'utf8');
@@ -30,6 +31,7 @@ function extractChildNodes(xmlPath) {
   const rootIndent = rootLine.match(/^\s*/)[0].length;
 
   const childNodes = [];
+  const nameCount = new Map(); // Track name occurrences
 
   // Find all direct children (indent = rootIndent + 2)
   const childIndent = rootIndent + 2;
@@ -44,9 +46,20 @@ function extractChildNodes(xmlPath) {
       const nameMatch = line.match(/name="([^"]+)"/);
 
       if (idMatch && nameMatch) {
+        let nodeName = nameMatch[1];
+
+        // Handle duplicate names
+        if (nameCount.has(nodeName)) {
+          const count = nameCount.get(nodeName) + 1;
+          nameCount.set(nodeName, count);
+          nodeName = `${nodeName}_${count}`;
+        } else {
+          nameCount.set(nodeName, 1);
+        }
+
         childNodes.push({
           id: idMatch[1],
-          name: nameMatch[1]
+          name: nodeName
         });
       }
     }

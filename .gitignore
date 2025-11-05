@@ -4,6 +4,10 @@ dist
 src/generated
 *.log
 
+# Temporary MCP assets (keep directory structure)
+tmp/figma-assets/*
+!tmp/figma-assets/.gitkeep
+
 # Claude Code local settings
 .claude/settings.local.json
 .env

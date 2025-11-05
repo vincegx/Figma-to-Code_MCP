@@ -142,7 +142,7 @@ ${sections.map((section, i) => `**SECTION ${i + 1}:** ${section}`).join('  \n')}
 ├─────────────────────────────────────────────────────────────┤
 │  ├─ mcp__figma-desktop__get_design_context                 │
 │  │   → React + Tailwind TSX code                           │
-│  │   → Assets written to /tmp/figma-assets/                │
+│  │   → Assets written to tmp/figma-assets/                 │
 │  │                                                           │
 │  ├─ mcp__figma-desktop__get_screenshot                     │
 │  │   → PNG screenshot for validation                       │

@@ -82,11 +82,12 @@ class FigmaCLI {
       fs.readFileSync(path.join(__dirname, '../cli/config/figma-params.json'), 'utf8')
     );
 
-    // Fix dirForAssetWrites: MCP runs on host, so use host absolute path
-    if (process.env.PROJECT_ROOT) {
-      const hostPath = path.join(process.env.PROJECT_ROOT, 'tmp/figma-assets');
-      this.config.commonParams.dirForAssetWrites = hostPath;
-    }
+    // Determine project root (works from both Docker and host)
+    const projectRoot = process.env.PROJECT_ROOT || path.join(__dirname, '..');
+
+    // Always use project tmp directory (not system /tmp)
+    this.assetsDir = path.join(projectRoot, 'tmp', 'figma-assets');
+    this.config.commonParams.dirForAssetWrites = this.assetsDir;
 
     // Parse Figma URL
     const parsed = this.parseUrl(url);
@@ -277,10 +278,13 @@ class FigmaCLI {
     fs.mkdirSync(this.testDir, { recursive: true });
     log.success('Dossier créé');
 
-    // Clean /tmp/figma-assets (empty content, don't remove dir as it's a volume mount)
-    log.task('🧹', 'Nettoyage /tmp/figma-assets');
-    execSync('rm -rf /tmp/figma-assets/* 2>/dev/null || true');
-    log.success('/tmp/figma-assets nettoyé\n');
+    // Ensure assets directory exists with proper permissions
+    log.task('🧹', `Nettoyage ${this.assetsDir}`);
+    if (!fs.existsSync(this.assetsDir)) {
+      fs.mkdirSync(this.assetsDir, { recursive: true, mode: 0o755 });
+    }
+    execSync(`rm -rf ${this.assetsDir}/* 2>/dev/null || true`);
+    log.success('Assets directory nettoyé\n');
   }
 
   /**
@@ -399,7 +403,7 @@ class FigmaCLI {
     }
     log.success('Tous les chunks générés\n');
 
-    // 5. Wait for images in /tmp/figma-assets
+    // 5. Wait for images in assets directory
     log.task('⏳', 'Attente des images MCP');
     await this.waitForImages();
 
@@ -431,40 +435,49 @@ class FigmaCLI {
     }
 
     const chunks = fs.readdirSync(componentPath).filter(f => f.endsWith('.tsx'));
-    let expectedCount = 0;
+    const allImagePaths = new Set();
 
     for (const chunk of chunks) {
       const content = fs.readFileSync(path.join(componentPath, chunk), 'utf8');
-      const matches = content.match(/\/tmp\/figma-assets\/[^"']+\.(png|svg|jpg|jpeg|gif|webp)/g);
+      // Match both absolute paths and hash filenames
+      const matches = content.match(/[^"']*[/\\][a-f0-9]{40}\.(png|svg|jpg|jpeg|gif|webp)|[^"']+\.(png|svg|jpg|jpeg|gif|webp)/gi);
       if (matches) {
-        expectedCount += new Set(matches).size;
+        matches.forEach(match => allImagePaths.add(match));
       }
     }
+
+    const expectedCount = allImagePaths.size;
 
     if (expectedCount === 0) {
       log.info('Aucune image attendue');
       return;
     }
 
-    log.info(`Attente de ${expectedCount} image(s)...`);
+    log.info(`Attente de ${expectedCount} image(s) unique(s)...`);
 
     // Wait max 30s
     for (let i = 1; i <= 30; i++) {
-      const tmpFiles = fs.existsSync('/tmp/figma-assets')
-        ? fs.readdirSync('/tmp/figma-assets').filter(f => /\.(png|svg|jpg|jpeg|gif|webp)$/i.test(f))
-        : [];
+      let tmpFiles = [];
+      try {
+        if (fs.existsSync(this.assetsDir)) {
+          tmpFiles = fs.readdirSync(this.assetsDir).filter(f => /\.(png|svg|jpg|jpeg|gif|webp)$/i.test(f));
+        }
+      } catch (error) {
+        log.warning(`Cannot read ${this.assetsDir}: ${error.message}`);
+        tmpFiles = [];
+      }
 
       if (tmpFiles.length >= expectedCount) {
         log.success(`${tmpFiles.length} image(s) détectée(s) après ${i}s`);
 
         // Copy to test directory
-        execSync(`cp -r /tmp/figma-assets/* ${this.testDir}/ 2>/dev/null || true`);
+        execSync(`cp -r "${this.assetsDir}"/* "${this.testDir}"/ 2>/dev/null || true`);
         return;
       }
 
       if (i === 30) {
         log.warning(`Timeout: seulement ${tmpFiles.length}/${expectedCount} images après 30s`);
-        execSync(`cp -r /tmp/figma-assets/* ${this.testDir}/ 2>/dev/null || true`);
+        execSync(`cp -r "${this.assetsDir}"/* "${this.testDir}"/ 2>/dev/null || true`);
       }
 
       await new Promise(resolve => setTimeout(resolve, 1000));

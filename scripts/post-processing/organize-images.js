@@ -244,12 +244,23 @@ for (const file of filesToProcess) {
 
 console.log(`   Found ${allImageDeclarations.length} image declarations (const + ES6 imports) across all files`)
 
+// Deduplicate by hash filename (multiple chunks can use same images)
+const uniqueDeclarations = new Map()
+for (const decl of allImageDeclarations) {
+  const oldFilename = path.basename(decl.imagePath)
+  if (!uniqueDeclarations.has(oldFilename)) {
+    uniqueDeclarations.set(oldFilename, decl)
+  }
+}
+
+console.log(`   Unique images: ${uniqueDeclarations.size} (${allImageDeclarations.length - uniqueDeclarations.size} shared across chunks)`)
+
 // Map to track renames: { oldFilename: newFilename }
 const renameMap = new Map()
 let renamedCount = 0
 
-if (allImageDeclarations.length > 0) {
-  for (const decl of allImageDeclarations) {
+if (uniqueDeclarations.size > 0) {
+  for (const decl of uniqueDeclarations.values()) {
     // Extract old filename from path (handle both relative and absolute paths)
     const oldFilename = path.basename(decl.imagePath)
     const ext = path.extname(oldFilename)
@@ -281,13 +292,7 @@ if (allImageDeclarations.length > 0) {
     const newFilename = newBasename + ext
     const oldPath = path.join(imgDir, oldFilename)
 
-    // Check if old file exists
-    if (!fs.existsSync(oldPath)) {
-      console.warn(`   ⚠️  File not found: ${oldFilename}`)
-      continue
-    }
-
-    // Handle naming conflicts
+    // Handle naming conflicts (check before verifying oldPath existence)
     let finalNewFilename = newFilename
     let finalNewPath = path.join(imgDir, finalNewFilename)
     let counter = 2
@@ -297,6 +302,12 @@ if (allImageDeclarations.length > 0) {
       finalNewFilename = nameWithoutExt + ext
       finalNewPath = path.join(imgDir, finalNewFilename)
       counter++
+    }
+
+    // Check if old file exists
+    if (!fs.existsSync(oldPath)) {
+      console.warn(`   ⚠️  Image not downloaded by MCP: ${oldFilename}`)
+      continue
     }
 
     // Rename the file
@@ -311,7 +322,7 @@ if (allImageDeclarations.length > 0) {
   }
 }
 
-console.log(`   Renamed ${renamedCount} / ${allImageDeclarations.length} images`)
+console.log(`   Renamed ${renamedCount} / ${uniqueDeclarations.size} unique images`)
 
 // ═══════════════════════════════════════════════════════════════
 // STEP 5: Convert const declarations to ES6 imports
@@ -391,9 +402,10 @@ console.log('\n📊 Summary:')
 console.log(`   Mode: ${isChunkingMode ? 'CHUNKING' : 'NORMAL'}`)
 console.log(`   Files processed: ${filesToProcess.length}`)
 console.log(`   Images moved: ${movedFiles.length}`)
+console.log(`   Unique images: ${uniqueDeclarations.size}${allImageDeclarations.length > uniqueDeclarations.size ? ` (${allImageDeclarations.length - uniqueDeclarations.size} shared)` : ''}`)
 console.log(`   Images renamed: ${renamedCount}`)
 console.log(`   Paths updated: ${totalPathsUpdated}`)
-console.log(`   ES6 imports: ${allImageDeclarations.length}`)
+console.log(`   Total imports: ${allImageDeclarations.length}`)
 console.log(`   Location: ${imgDir}`)
 console.log('\n✅ Image organization complete!')
 console.log('💡 Images now use descriptive names from Figma and ES6 imports!')

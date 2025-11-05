@@ -227,12 +227,12 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
             </div>
 
             <h1 className="text-5xl font-bold text-white mb-3 tracking-tight">
-              MCP Figma Analyzer
+              Figma Code Exporter
             </h1>
             <p className="text-xl text-purple-100 max-w-2xl mx-auto">
-              Transformez vos designs Figma en composants React + Tailwind
+              Transform your Figma designs into React + Tailwind componants
               <span className="block text-base mt-2 text-purple-200">
-                avec validation visuelle 100% et rapports détaillés
+                MCP code exporter without dependencies
               </span>
             </p>
           </div>
