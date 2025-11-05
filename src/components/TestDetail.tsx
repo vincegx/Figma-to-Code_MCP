@@ -11,6 +11,7 @@
 import React, { useState, useEffect, Suspense, ComponentType } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { useTranslation } from '../i18n/I18nContext'
 
 type Tab = 'preview' | 'code' | 'report' | 'technical'
 
@@ -27,6 +28,7 @@ interface Metadata {
   }
   stats?: {
     totalNodes?: number
+    sectionsDetected?: number
     imagesOrganized?: number
     totalFixes?: number
     classesOptimized?: number
@@ -56,6 +58,7 @@ function formatDate(timestamp: string | number) {
 }
 
 export default function TestDetail({ testId, onBack }: TestDetailProps) {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('preview')
   const [metadata, setMetadata] = useState<Metadata | null>(null)
   const [analysis, setAnalysis] = useState<string>('')
@@ -132,7 +135,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement du test...</p>
+          <p className="text-gray-600">{t('detail.loading')}</p>
         </div>
       </div>
     )
@@ -144,14 +147,14 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
         <div className="text-center max-w-md">
           <div className="text-6xl mb-4">❌</div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Erreur de chargement
+            {t('detail.error.title')}
           </h3>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={onBack}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
           >
-            ← Retour à la liste
+            {t('detail.error.back')}
           </button>
         </div>
       </div>
@@ -246,21 +249,21 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 <div className="flex items-center gap-2 px-3 py-2 bg-white/80 backdrop-blur-sm rounded-lg border border-slate-200 shadow-sm">
                   <span className="text-gray-400">📦</span>
                   <span className="text-sm font-medium text-gray-700">{metadata.stats.totalNodes}</span>
-                  <span className="text-xs text-gray-500">nodes</span>
+                  <span className="text-xs text-gray-500">{t('common.nodes')}</span>
+                </div>
+              )}
+              {metadata.stats.sectionsDetected !== undefined && metadata.stats.sectionsDetected > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-white/80 backdrop-blur-sm rounded-lg border border-slate-200 shadow-sm">
+                  <span className="text-gray-400">📑</span>
+                  <span className="text-sm font-medium text-gray-700">{metadata.stats.sectionsDetected}</span>
+                  <span className="text-xs text-gray-500">{t('common.sections')}</span>
                 </div>
               )}
               {metadata.stats.imagesOrganized !== undefined && metadata.stats.imagesOrganized > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-white/80 backdrop-blur-sm rounded-lg border border-slate-200 shadow-sm">
                   <span className="text-gray-400">🖼️</span>
                   <span className="text-sm font-medium text-gray-700">{metadata.stats.imagesOrganized}</span>
-                  <span className="text-xs text-gray-500">images</span>
-                </div>
-              )}
-              {metadata.stats.fontsConverted !== undefined && metadata.stats.fontsConverted > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-white/80 backdrop-blur-sm rounded-lg border border-slate-200 shadow-sm">
-                  <span className="text-gray-400">🔤</span>
-                  <span className="text-sm font-medium text-gray-700">{metadata.stats.fontsConverted}</span>
-                  <span className="text-xs text-gray-500">fonts</span>
+                  <span className="text-xs text-gray-500">{t('common.images')}</span>
                 </div>
               )}
               {(metadata.stats.totalFixes !== undefined || metadata.stats.classesOptimized !== undefined) && (
@@ -269,7 +272,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                   <span className="text-sm font-medium text-gray-700">
                     {metadata.stats.totalFixes || metadata.stats.classesOptimized || 0}
                   </span>
-                  <span className="text-xs text-gray-500">fixes</span>
+                  <span className="text-xs text-gray-500">{t('common.fixes')}</span>
                 </div>
               )}
             </div>
@@ -289,7 +292,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              🎨 Preview
+              {t('detail.tabs.preview')}
             </button>
             <button
               onClick={() => setActiveTab('code')}
@@ -299,7 +302,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              💻 Code
+              {t('detail.tabs.code')}
             </button>
             <button
               onClick={() => setActiveTab('report')}
@@ -309,7 +312,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              📊 Rapport
+              {t('detail.tabs.report')}
             </button>
             <button
               onClick={() => setActiveTab('technical')}
@@ -319,7 +322,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              🔧 Technical Analysis
+              {t('detail.tabs.technical')}
             </button>
           </div>
         </div>
@@ -360,6 +363,7 @@ interface PreviewTabProps {
 }
 
 function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
+  const { t } = useTranslation()
   const [Component, setComponent] = useState<ComponentType | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -452,7 +456,7 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Chargement du composant...</p>
+        <p className="text-gray-600">{t('detail.preview.loading_component')}</p>
       </div>
     )
   }
@@ -462,11 +466,11 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
         <div className="text-6xl mb-4">⚠️</div>
         <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          Erreur de chargement du composant
+          {t('detail.preview.error_title')}
         </h3>
         <p className="text-gray-600 mb-4">{error}</p>
         <p className="text-sm text-gray-500">
-          Le composant est peut-être manquant ou invalide
+          {t('detail.preview.error_text')}
         </p>
       </div>
     )
@@ -480,10 +484,9 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
           <div className="flex items-start gap-3">
             <div className="text-blue-500 text-xl">ℹ️</div>
             <div className="text-sm text-blue-900">
-              <p className="font-semibold mb-1">Rendu du composant Figma</p>
+              <p className="font-semibold mb-1">{t('detail.preview.banner_title')}</p>
               <p className="text-blue-800">
-                Ce composant a été généré automatiquement depuis Figma via MCP.
-                Utilise les DevTools (F12) pour inspecter les classes Tailwind.
+                {t('detail.preview.banner_text')}
               </p>
             </div>
           </div>
@@ -495,11 +498,11 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
         <div className="max-w-7xl mx-auto px-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Test Responsive</h3>
+              <h3 className="font-semibold text-gray-900">{t('detail.preview.responsive_test')}</h3>
               <div className="flex items-center gap-2">
                 {dimensions && viewportWidth === dimensions.width && (
                   <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded flex items-center gap-1">
-                    <span>🎯</span> Native
+                    <span>🎯</span> {t('detail.preview.native')}
                   </span>
                 )}
                 <div className="text-sm font-mono bg-purple-100 text-purple-800 px-3 py-1.5 rounded">
@@ -567,10 +570,10 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
       <div className="bg-white border-t border-b border-gray-200 overflow-hidden">
         <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">
-            Composant : {componentName}
+            {t('detail.preview.component_label')} {componentName}
           </h3>
           <div className="text-xs text-gray-500">
-            React + Tailwind CSS
+            {t('detail.preview.react_tailwind')}
           </div>
         </div>
 
@@ -606,15 +609,15 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
       {/* Tips */}
       <div className="max-w-7xl mx-auto px-6">
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-green-900 mb-2">💡 Tips</p>
+          <p className="text-sm font-semibold text-green-900 mb-2">{t('detail.preview.tips_title')}</p>
           <ul className="text-sm text-green-800 space-y-1">
             {dimensions && (
-              <li>• Le bouton 🎯 Native affiche le composant à sa taille Figma originale ({dimensions.width}×{dimensions.height}px)</li>
+              <li>• {t('detail.preview.tips.0', { width: dimensions.width.toString(), height: dimensions.height.toString() })}</li>
             )}
-            <li>• Utilise le slider ou les presets pour tester différentes tailles d'écran</li>
-            <li>• Inspecte les éléments avec les DevTools pour voir les classes Tailwind</li>
-            <li>• Compare avec le design Figma original</li>
-            <li>• Vérifie les couleurs, espacements, et typographie</li>
+            <li>• {t('detail.preview.tips.1')}</li>
+            <li>• {t('detail.preview.tips.2')}</li>
+            <li>• {t('detail.preview.tips.3')}</li>
+            <li>• {t('detail.preview.tips.4')}</li>
           </ul>
         </div>
       </div>
@@ -638,6 +641,7 @@ interface CodeFile {
 }
 
 function CodeTab({ componentCode, testId }: CodeTabProps) {
+  const { t } = useTranslation()
   const [files, setFiles] = useState<CodeFile[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -712,11 +716,11 @@ function CodeTab({ componentCode, testId }: CodeTabProps) {
   }
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Chargement des fichiers...</div>
+    return <div style={{ padding: '40px', textAlign: 'center' }}>{t('detail.code.loading')}</div>
   }
 
   if (files.length === 0) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Aucun fichier trouvé</div>
+    return <div style={{ padding: '40px', textAlign: 'center' }}>{t('detail.code.no_files')}</div>
   }
 
   const selectedFile = files[selectedIndex]
@@ -899,15 +903,17 @@ interface TechnicalAnalysisTabProps {
 }
 
 function TechnicalAnalysisTab({ analysis }: TechnicalAnalysisTabProps) {
+  const { t } = useTranslation()
+
   if (!analysis) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
         <div className="text-6xl mb-4">📄</div>
         <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          Analyse technique non disponible
+          {t('detail.technical.no_analysis_title')}
         </h3>
         <p className="text-gray-600">
-          Le fichier analysis.md n'a pas pu être chargé
+          {t('detail.technical.no_analysis_text')}
         </p>
       </div>
     )
@@ -920,9 +926,9 @@ function TechnicalAnalysisTab({ analysis }: TechnicalAnalysisTabProps) {
         <div className="flex items-start gap-3">
           <div className="text-blue-500 text-xl">🔧</div>
           <div className="text-sm text-blue-900">
-            <p className="font-semibold mb-1">Rapport technique complet</p>
+            <p className="font-semibold mb-1">{t('detail.technical.banner_title')}</p>
             <p className="text-blue-800">
-              Documentation détaillée de toutes les transformations appliquées : AST processing, optimisations Tailwind, gestion des assets, etc.
+              {t('detail.technical.banner_text')}
             </p>
           </div>
         </div>

@@ -1,0 +1,151 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "back": "Back",
+    "delete": "Delete",
+    "details": "Details",
+    "close": "Close",
+    "tests": "test",
+    "tests_plural": "tests",
+    "nodes": "nodes",
+    "sections": "sections",
+    "images": "images",
+    "fonts": "fonts",
+    "fixes": "fixes"
+  },
+  "header": {
+    "title": "Figma Code Exporter",
+    "subtitle": "Transform your Figma designs into React + Tailwind components",
+    "subtitle_detail": "MCP code exporter without dependencies",
+    "mcp_checking": "Checking MCP...",
+    "mcp_connected": "MCP Connected",
+    "mcp_disconnected": "MCP Disconnected",
+    "stats": {
+      "total_nodes": "Total Nodes",
+      "images": "Images",
+      "total_fixes": "Total Fixes"
+    }
+  },
+  "home": {
+    "loading_tests": "Loading tests...",
+    "view": "View:",
+    "sort_by": "Sort by:",
+    "per_page": "Per page:",
+    "sort_options": {
+      "date_desc": "Date (newest)",
+      "date_asc": "Date (oldest)",
+      "name_asc": "Name (A → Z)",
+      "name_desc": "Name (Z → A)"
+    },
+    "no_tests": {
+      "title": "No tests yet",
+      "message": "Launch your first analysis with the /analyze-mcp slash command"
+    },
+    "pagination": {
+      "showing": "Showing",
+      "to": "to",
+      "of": "of",
+      "go_to": "Go to:",
+      "previous": "Previous page",
+      "next": "Next page"
+    },
+    "card": {
+      "view_details": "View details",
+      "open_preview": "Open preview",
+      "delete_confirm": "Are you sure you want to delete this test?",
+      "delete_error": "Error deleting test",
+      "no_title": "Untitled",
+      "delete": "Delete"
+    }
+  },
+  "analysis": {
+    "title": "New Figma Export",
+    "placeholder": "https://www.figma.com/design/...?node-id=X-Y",
+    "launch": "Launch export",
+    "in_progress": "In progress...",
+    "helper": "💡 Paste the full URL of your Figma design with the",
+    "status": {
+      "launching": "🚀 Launching analysis...",
+      "in_progress": "● In progress...",
+      "success": "✓ Completed successfully",
+      "failed": "✗ Failed",
+      "error_connection": "✗ Server connection error"
+    },
+    "footer": {
+      "success_message": "The new test will appear in the list",
+      "error_message": "Check the logs above for more details",
+      "new_export": "New export"
+    },
+    "validation": {
+      "empty": "Please enter a Figma URL",
+      "not_figma": "URL must contain \"figma.com\"",
+      "not_design": "URL must be in format: https://www.figma.com/design/...",
+      "missing_node_id": "URL must contain the \"node-id=\" parameter (e.g., ?node-id=168-14226)",
+      "invalid_node_id": "The node-id parameter must be in format \"123-456\" or \"123:456\""
+    }
+  },
+  "detail": {
+    "loading": "Loading test...",
+    "error": {
+      "title": "Loading error",
+      "back": "← Back to list"
+    },
+    "tabs": {
+      "preview": "🎨 Preview",
+      "code": "💻 Code",
+      "report": "📊 Report",
+      "technical": "🔧 Technical Analysis"
+    },
+    "actions": {
+      "preview": "Preview",
+      "figma": "Figma"
+    },
+    "preview": {
+      "banner_title": "Figma component render",
+      "banner_text": "This component was automatically generated from Figma via MCP. Use DevTools (F12) to inspect Tailwind classes.",
+      "responsive_test": "Responsive Test",
+      "native": "Native",
+      "presets": {
+        "native": "🎯 Native",
+        "mobile": "📱 Mobile",
+        "tablet": "📱 Tablet",
+        "desktop": "💻 Desktop",
+        "large": "🖥️ Large"
+      },
+      "custom": "✏️",
+      "component": "Component:",
+      "loading_component": "Loading component...",
+      "error_title": "Error loading component",
+      "error_text": "The component may be missing or invalid",
+      "tips_title": "💡 Tips",
+      "tips": [
+        "The 🎯 Native button displays the component at its original Figma size ({{width}}×{{height}}px)",
+        "Use the slider or presets to test different screen sizes",
+        "Inspect elements with DevTools to see Tailwind classes",
+        "Compare with the original Figma design",
+        "Check colors, spacing, and typography"
+      ],
+      "component_label": "Component:",
+      "react_tailwind": "React + Tailwind CSS"
+    },
+    "code": {
+      "title": "📁 File navigation",
+      "files_count": "files",
+      "main_component": "📦 Main component",
+      "chunks": "🧩 Chunks - Split components",
+      "lines": "lines",
+      "loading": "Loading files...",
+      "no_files": "No files found"
+    },
+    "report": {
+      "title": "Test Analysis Report"
+    },
+    "technical": {
+      "no_analysis_title": "Technical analysis not available",
+      "no_analysis_text": "The analysis.md file could not be loaded",
+      "banner_title": "Complete technical report",
+      "banner_text": "Detailed documentation of all applied transformations: AST processing, Tailwind optimizations, asset management, etc."
+    }
+  }
+}

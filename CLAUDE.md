@@ -4,392 +4,290 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**MCP Figma to Code V1** - A dashboard application that analyzes Figma designs via Model Context Protocol (MCP) and generates React + Tailwind components with 100% visual fidelity.
+MCP Figma to Code is a Figma-to-React conversion tool that transforms Figma designs into pixel-perfect React + Tailwind CSS components with 100% visual fidelity. It uses the Model Context Protocol (MCP) to connect with Figma Desktop and applies advanced AST transformations to generate production-ready code.
 
-The system extracts design data from Figma, processes it through an AST-based transformation pipeline, and generates production-ready React components with comprehensive validation reports.
+## Key Technologies
 
-## Prerequisites
+- **Frontend**: React 19, TypeScript, Tailwind CSS, Vite
+- **Processing**: Babel (AST transformations), Puppeteer (visual validation)
+- **Integration**: MCP Protocol (Figma Desktop server on port 3845)
+- **Infrastructure**: Docker, Node.js 20
 
-- **MCP Figma Desktop** server running on port 3845 (on host machine)
-- **Docker** and **Docker Compose** installed
-- Node.js environment for local development (optional)
+## Development Commands
 
-## Common Commands
-
-### Docker Workflow (Recommended)
+### Starting the Application
 
 ```bash
-# Start the application
+# Start with Docker (recommended)
 docker-compose up --build
 
-# Access the dashboard
-# http://localhost:5173
-
-# Stop the container
-docker-compose down
-
-# Execute commands inside container
-docker exec mcp-figma-v1 <command>
-```
-
-### Local Development (Alternative)
-
-```bash
-# Install dependencies
+# Start locally
 npm install
-
-# Start development server
 npm run dev
 
-# Build for production
-npm build
+# Dashboard accessible at http://localhost:5173
+```
 
-# Lint code
+### Running Analysis
+
+The primary workflow is through the MCP CLI:
+
+```bash
+# From Docker container
+docker exec mcp-figma-v1 node scripts/figma-cli.js "https://www.figma.com/design/FILE_ID?node-id=X-Y"
+
+# Using the bash wrapper (checks Docker status)
+./cli/figma-analyze "https://www.figma.com/design/FILE_ID?node-id=X-Y"
+```
+
+### Processing Pipeline Commands
+
+```bash
+# Run unified processor (AST transformations)
+node scripts/unified-processor.js <input.tsx> <output.tsx> [metadata.xml] [figmaUrl]
+
+# Organize images from tmp/figma-assets to test folder
+node scripts/post-processing/organize-images.js <testDir> <assetsDir>
+
+# Fix SVG CSS variables
+node scripts/post-processing/fix-svg-vars.js <testDir>
+
+# Capture web screenshot for validation
+node scripts/post-processing/capture-screenshot.js <testDir> <port>
+
+# Generate reports
+node scripts/reporting/generate-metadata.js <testDir> <figmaUrl> <nodeIdHyphen>
+node scripts/reporting/generate-analysis.js <testDir>
+node scripts/reporting/generate-report.js <testDir>
+```
+
+### Linting and Building
+
+```bash
 npm run lint
-
-# Preview production build
+npm run build
 npm run preview
 ```
 
-### Analyzing Figma Designs
-
-**Option 1: Slash Command** (recommended in Claude Code)
-```bash
-/analyze-mcp https://www.figma.com/design/...?node-id=X-Y
-```
-
-**Option 2: Direct CLI**
-```bash
-./cli/figma-analyze "https://www.figma.com/design/...?node-id=X-Y"
-```
-
-**Full Workflow** (see .claude/commands/analyze-mcp.md):
-1. **Phase 1**: MCP extraction (health check → parallel extraction → save files)
-2. **Phase 2**: Post-processing (organize images → unified processor → fix SVG vars)
-3. **Phase 3**: Validation (screenshot capture → visual comparison)
-4. **Phase 4**: Reporting (metadata.json → analysis.md → report.html)
-
-**Performance:** Optimized with Write tool (84% faster than bash heredoc)
-- Simple design: ~10-15s
-- Complex design (chunking): ~25-40s
-
-**Error Handling:**
-- Health check runs before any extraction
-- Chunk validation prevents corrupted files
-- Actionable error messages with recovery steps
-- Early exit on rate limits with user prompt
-
 ## Architecture
 
-### High-Level Flow
+### Pipeline Flow
 
-1. **Extraction** (Phase 1): MCP tools retrieve design data from Figma (design context, screenshots, variables, metadata)
-2. **Processing** (Phase 2): AST-based transformations fix and optimize the generated code
-3. **Validation** (Phase 3): Visual comparison between Figma screenshot and web render
-4. **Output**: React component + CSS + metadata + analysis reports
+The conversion follows a 4-phase pipeline:
 
-### Key Directories
+1. **PHASE 1: EXTRACTION** - Via MCP tools:
+   - `get_design_context` → React + Tailwind code
+   - `get_screenshot` → Figma PNG for validation
+   - `get_variable_defs` → Design tokens (colors, fonts)
+   - `get_metadata` → XML hierarchy
+
+2. **PHASE 2: PROCESSING** - AST transformations:
+   - `organize-images.js` → Organize assets to `img/` with Figma names
+   - `unified-processor.js` → Apply 10 transforms in priority order
+   - `fix-svg-vars.js` → Convert CSS variables in SVG paths
+
+3. **PHASE 3: VALIDATION**:
+   - `capture-screenshot.js` → Web render via Puppeteer
+   - Visual comparison (Figma vs Web)
+
+4. **PHASE 4: OUTPUT** - Generate files:
+   - `Component-fixed.tsx` → Production component
+   - `Component-fixed.css` → Extracted styles + fonts
+   - `metadata.json` → Dashboard metadata
+   - `analysis.md` → Technical report
+   - `report.html` → Visual fidelity report
+
+### AST Transform Pipeline
+
+Transforms run in a single pass through `scripts/pipeline.js` in priority order:
+
+1. **font-detection** (Priority 10) - Detect fonts, convert to inline styles
+2. **auto-layout** (Priority 20) - Fix Figma auto-layout classes
+3. **ast-cleaning** (Priority 30) - Remove invalid Tailwind classes
+4. **svg-icon-fixes** (Priority 40) - Fix SVG structure
+5. **svg-consolidation** (Priority 45) - Consolidate SVG elements
+6. **post-fixes** (Priority 50) - Gradient & shape fixes
+7. **position-fixes** (Priority 60) - Fix positioning issues
+8. **stroke-alignment** (Priority 70) - Fix stroke alignment
+9. **css-vars** (Priority 80) - Convert CSS variables to values
+10. **tailwind-optimizer** (Priority 90) - Optimize Tailwind classes
+
+Each transform exports:
+- `meta` - Name and priority
+- `execute(ast, context)` - Transform function returning stats
+
+### Directory Structure
 
 ```
 src/
-├── components/           # React UI components for the dashboard
-│   ├── HomePage.tsx     # Test list view
-│   └── TestDetail.tsx   # Test detail with 4 tabs (Preview, Code, Report, Technical)
-├── generated/tests/     # Generated test outputs (one folder per analysis)
-│   └── node-{nodeId}-{timestamp}/   # Each test contains (e.g., node-104-13741-1735689600):
-│       ├── Component.tsx         # Original generated component
-│       ├── Component-fixed.tsx   # Post-processed component
-│       ├── Component-fixed.css   # Extracted CSS (fonts, variables)
-│       ├── parent-wrapper.tsx    # Parent wrapper (for chunking: preserves bg, padding, data-*)
-│       ├── chunks/               # Child node chunks (only in chunking mode)
-│       ├── chunks-fixed/         # Processed chunks (only in chunking mode)
-│       ├── img/                  # Images organized by Figma names
-│       ├── variables.json        # Figma variables (colors, spacing, fonts)
-│       ├── metadata.xml          # Design hierarchy
-│       ├── metadata.json         # Test metadata for dashboard
-│       ├── analysis.md           # Technical analysis report
-│       ├── report.html           # Visual fidelity report
-│       ├── figma-render.png      # Screenshot from Figma
-│       └── web-render.png        # Screenshot from web render
-
+├── components/           # Dashboard UI
+│   ├── HomePage.tsx      # Test list with analysis form
+│   ├── TestDetail.tsx    # 4-tab detail view (Preview, Code, Report, Technical)
+│   └── AnalysisForm.tsx  # Form to trigger analysis via API
+├── generated/tests/      # Generated test outputs (git-ignored)
+│   └── node-{nodeId}/
+│       ├── Component.tsx          # Original MCP output
+│       ├── Component-fixed.tsx    # Post-processed
+│       ├── Component-fixed.css    # Extracted styles
+│       ├── img/                   # Organized images
+│       ├── chunks/                # For large designs
+│       ├── chunks-fixed/          # Processed chunks
+│       ├── variables.json         # Design tokens
+│       ├── metadata.xml           # Figma hierarchy
+│       ├── metadata.json          # Dashboard metadata
+│       ├── analysis.md            # Technical report
+│       ├── report.html            # Visual report
+│       ├── figma-render.png       # Figma screenshot
+│       └── web-render.png         # Web screenshot
 scripts/
-├── figma-cli.js                   # Core MCP extraction orchestrator (health check, validation, chunking)
-├── unified-processor.js           # Main entry point (CLI, CSS generation, safety net)
-├── pipeline.js                    # Simple transform orchestrator (92 lines)
-├── config.js                      # Transform configuration (enable/disable)
-│
-├── transformations/               # AST transformations (1 file = 1 transform)
-│   ├── font-detection.js          # Priority 0: Convert font-[...] to inline styles + fontPostScriptName
-│   ├── auto-layout.js             # Priority 5: Fix missing gap, alignments, sizing (NEW)
-│   ├── ast-cleaning.js            # Priority 10: Clean invalid classes, add utilities
-│   ├── svg-icon-fixes.js          # Priority 20: Flatten and inline SVG composites
-│   ├── post-fixes.js              # Priority 25: Fix gradients, blend modes, shadows, text-transform
-│   ├── position-fixes.js          # Priority 28: Convert absolute to relative (NEW)
-│   ├── stroke-alignment.js        # Priority 29: Handle INSIDE/OUTSIDE strokes (NEW)
-│   ├── css-vars.js                # Priority 30: Convert CSS variables to values
-│   └── tailwind-optimizer.js      # Priority 40: Optimize Tailwind (runs last)
-│
-├── post-processing/               # Pre/post-processing scripts
-│   ├── organize-images.js         # Organize images (pre-unified-processor)
-│   ├── fix-svg-vars.js            # Fix CSS vars in SVG (post-unified-processor)
-│   └── capture-screenshot.js      # Screenshot validation
-│
-├── reporting/                     # Report generation
-│   ├── generate-metadata.js       # Generate metadata.json
-│   ├── generate-analysis.js       # Generate analysis.md
-│   └── generate-report.js         # Generate report.html
-│
-└── utils/                         # Utilities
-    └── chunking.js                # Chunking for large designs (extract/assemble)
+├── figma-cli.js          # Main orchestrator (uses MCP SDK)
+├── pipeline.js           # Transform pipeline executor
+├── config.js             # Default configuration
+├── unified-processor.js  # CLI entry for processing
+├── transformations/      # Modular AST transforms
+├── post-processing/      # Image organization, screenshots
+├── reporting/            # Report generators
+└── utils/                # Chunking utilities
+cli/
+├── figma-analyze         # Bash wrapper for Docker
+├── figma-validate        # Validation script
+└── config/
+    └── figma-params.json # MCP tool parameters
 ```
-
-### Processing Pipeline (Simple Architecture)
-
-**Single-pass AST traversal** orchestrated by [pipeline.js](scripts/pipeline.js):
-
-1. **Parse AST** (Babel parser)
-2. **Sort transforms** by priority (0 → 40)
-3. **Execute each transform**:
-   - Priority 0: `font-detection` (enhanced with fontPostScriptName)
-   - Priority 5: `auto-layout` (fix missing gap, alignments - NEW, disabled by default)
-   - Priority 10: `ast-cleaning` (clean invalid classes)
-   - Priority 20: `svg-icon-fixes` (flatten and inline SVG)
-   - Priority 25: `post-fixes` (gradients, shadows, text-transform)
-   - Priority 28: `position-fixes` (absolute → relative - NEW, disabled by default)
-   - Priority 29: `stroke-alignment` (INSIDE/OUTSIDE - NEW, disabled by default)
-   - Priority 30: `css-vars` (convert variables)
-   - Priority 40: `tailwind-optimizer` (optimize classes)
-4. **Generate code** (Babel generator)
-5. **Safety net** (regex catch-all for remaining CSS vars)
-6. **CSS generation** (fonts + variables + custom classes)
-
-**Chunking Mode**: For large designs (>25k tokens), automatically detects `chunks/` directory and processes each chunk individually, then assembles them.
-
-**Adding a new transformation:**
-1. Create `scripts/transformations/ma-regle.js`:
-```javascript
-import traverse from '@babel/traverse'
-import * as t from '@babel/types'
-
-export const meta = {
-  name: 'ma-regle',
-  priority: 35  // Between css-vars (30) and tailwind (40)
-}
-
-export function execute(ast, context) {
-  let count = 0
-  traverse.default(ast, {
-    JSXElement(path) {
-      // Your transformations here
-      count++
-    }
-  })
-  return { count }
-}
-```
-2. Import in [pipeline.js:16](scripts/pipeline.js#L16): `import * as maRegle from './transformations/ma-regle.js'`
-3. Add to `ALL_TRANSFORMS` array
-
-That's it! No classes, no wrappers, just functions.
 
 ### MCP Integration
 
-**Core Extraction Flow** (scripts/figma-cli.js):
+The `figma-cli.js` script connects to the Figma Desktop MCP server:
 
-1. **Health Check** (startup):
-   - Test MCP server with minimal call
-   - Detect rate limits, unauthorized errors
-   - Exit early if server unavailable
-
-2. **Parallel Extraction** (4 tools called simultaneously):
-   - `get_design_context` - React code + Tailwind → Component.tsx
-   - `get_screenshot` - Figma screenshot → figma-render.png
-   - `get_variable_defs` - Design variables → variables.json
-   - `get_metadata` - XML hierarchy → metadata.xml
-
-3. **Chunking Mode** (if design too large):
-   - Extract parent node → parent-wrapper.tsx
-   - Extract child nodes sequentially → chunks/*.tsx
-   - Validate each chunk before writing
-   - Assemble chunks with parent wrapper
-
-### Dashboard Application
-
-React SPA with three main views:
-- **HomePage**: Lists all analyzed tests with metadata cards
-- **TestDetail**: Four tabs for each test:
-  - Preview: Live React component with responsive testing
-  - Code: Syntax-highlighted source code
-  - Report: Embedded HTML fidelity report
-  - Technical Analysis: Markdown technical documentation
-
-### Visual Validation
-
-The validation step ensures 100% fidelity:
-1. Capture Figma screenshot (from MCP)
-2. Capture web render screenshot (Puppeteer)
-3. Compare visually (colors, spacing, fonts, gradients, shadows, etc.)
-4. Apply fixes if needed
-
-## Test Naming Convention
-
-Tests are stored in `src/generated/tests/node-{nodeId}-{timestamp}/` where:
-- `nodeId` is from the Figma URL (e.g., `104-13741` from `node-id=104-13741`)
-- `timestamp` is a Unix timestamp (e.g., `1735689600`) to ensure uniqueness
-- Example: `node-104-13741-1735689600`
-- **Do NOT convert** the hyphen to colon in folder names for nodeId
-- Conversion to colon format (`104:13741`) only happens when calling MCP tools
-- Each test has a unique folder, even when analyzing the same Figma node multiple times
-
-## Important Implementation Details
-
-### AST Transformations
-
-- **Simple architecture**: 11 files total (9 transformations + pipeline.js + config.js + unified-processor.js)
-- **Single-pass traversal**: All transformations run in one AST parse (performance: ~33-40ms)
-- **Priority-based execution**: Transforms run in order: 0 (font-detection) → 40 (tailwind-optimizer)
-- **Order matters**: Font detection (priority 0) MUST run BEFORE ast-cleaning (priority 10) which removes font-[...] classes
-- **Shared state**: Context object passed to all transforms, `customCSSClasses` Map cleared between runs
-- **Safety net**: Regex catch-all runs after pipeline to catch edge cases
-- **Each transform**: Simple pattern with `export const meta = { name, priority }` + `export function execute(ast, context)`
-
-**New Transformations (v2.0):**
-- **auto-layout.js**: Fixes missing Figma Auto Layout properties (gap, alignments, sizing)
-- **position-fixes.js**: Converts absolute positioning to relative/flex for responsive layouts
-- **stroke-alignment.js**: Handles INSIDE/OUTSIDE stroke alignment (CSS workarounds)
-- **Enhanced font-detection**: Now parses fontPostScriptName and textStyleId for accurate weights
-- **Enhanced post-fixes**: Added shadow fixes (order, spread, visibility) and text-transform
-
-**Enable/Disable Transformations:**
-Edit `scripts/config.js` to control which transformations run:
 ```javascript
-'auto-layout': { enabled: true },      // Enable to fix Auto Layout issues
-'position-fixes': { enabled: true },   // Enable to fix absolute positioning
-'stroke-alignment': { enabled: true }  // Enable to fix stroke alignment
+// Connection to MCP server on host
+const client = new Client({
+  name: 'figma-to-code-cli',
+  version: '1.0.0'
+}, {
+  capabilities: {}
+});
+
+const transport = new StreamableHTTPClientTransport({
+  url: 'http://host.docker.internal:3845/mcp'
+});
 ```
 
-### Chunking Large Designs
+**Important**: The MCP Figma Desktop server must be running on port 3845 on the host machine. Docker container accesses it via `host.docker.internal`.
 
-When `get_design_context` fails due to size (>25k tokens):
-1. Extract child nodes: `scripts/mcp-direct-save.js extract-nodes metadata.xml`
-2. Process each node **sequentially** (one at a time), save immediately
-3. Assemble chunks: `scripts/mcp-direct-save.js assemble-chunks`
+### Chunking System
 
-**Chunking Mode Features (v2.1):**
-- **Parent Wrapper Extraction**: `get_design_context` called on parent node to preserve background, padding, and all attributes
-- **CSS Consolidation**: Merges CSS from all chunks, preserving multi-line class definitions
-- **Chunk Validation**: Detects API errors before writing files (rate limits, unauthorized, etc.)
-- **Multi-line Regex**: Uses `[\s\S]+?` to capture multi-line div attributes and CSS classes
+For large designs (>25k tokens), the system automatically chunks:
 
-### MCP Health Check & Validation
+1. Detects size from metadata XML
+2. Extracts child nodes if needed
+3. Processes each chunk with `unified-processor.js`
+4. Consolidates chunks into parent component
+5. Merges CSS from all chunks
 
-**Health Check** (figma-cli.js:105-134):
-- Runs at startup before any MCP tool calls
-- Tests server with minimal `get_variable_defs` call
-- Detects "rate limit", "unauthorized", "forbidden" errors
-- Exits with helpful message if server is down or rate-limited
-- User prompt: "Open Figma Desktop App"
+Files are organized as:
+- `chunks/` - Original chunk TSX files
+- `chunks-fixed/` - Processed chunks
+- Parent component imports and renders chunks
 
-**Chunk Validation** (figma-cli.js:265-290):
-- Validates each `get_design_context` response before writing to file
-- Error patterns: `/rate limit exceeded/i`, `/unauthorized/i`, `/not found/i`, etc.
-- Verifies response looks like React code (`import`, `export`, `function`)
-- Prevents corrupted chunk files from breaking AST parsing
-- Fails fast with clear error message and recovery instructions
+### Web Screenshot Capture
 
-**Why It Matters:**
-- Prevents cascading failures from MCP server errors
-- Saves time by detecting issues early (before post-processing)
-- Provides actionable error messages to the user
-- Ensures all chunk files contain valid React code
+`capture-screenshot.js` uses Puppeteer to:
+1. Launch Chromium with specific viewport dimensions
+2. Navigate to preview URL with `?preview=true&test={testId}`
+3. Load component-specific CSS
+4. Wait for fonts and images
+5. Capture PNG with matching dimensions
 
-### Parent Wrapper Preservation
+### Assets Management
 
-**Problem**: In chunking mode, parent node's background, padding, and metadata were lost.
+- **MCP writes to**: `tmp/figma-assets/` (shared between host and Docker)
+- **Images organized to**: `src/generated/tests/node-{id}/img/`
+- **Naming**: Files renamed using Figma layer names from metadata XML
 
-**Solution** (figma-cli.js:229-238, unified-processor.js:119-134, chunking.js:97-112):
-1. Call `get_design_context` on parent node → save to `parent-wrapper.tsx`
-2. Extract opening `<div>` tag with regex: `/<div[\s\S]+?>/`
-3. Use extracted wrapper in `Component-fixed.tsx` instead of `<div className="w-full">`
+## Important Patterns
 
-**Result:**
-```tsx
-// Before
-<div className="w-full">
-  <ImageText />
-</div>
+### When Processing Components
 
-// After
-<div className="bg-[#f0d9b5] box-border content-stretch flex flex-col items-start px-0 py-[40px] relative size-full" data-name="Home" data-node-id="168:14226">
-  <ImageText />
-</div>
+1. Always check if chunking mode is active (presence of `chunks/` directory)
+2. Use metadata XML for layer names when organizing images
+3. Extract CSS to separate file with Google Fonts imports
+4. Preserve design tokens as CSS variables in `:root`
+5. Fix CSS variables in SVG paths (they don't work in `d` attribute)
+
+### When Adding Transforms
+
+1. Create new transform in `scripts/transformations/`
+2. Export `meta` (name, priority) and `execute` function
+3. Import and add to `ALL_TRANSFORMS` in `pipeline.js`
+4. Lower priority number = runs earlier
+5. Return stats object with counters
+
+### When Working with Generated Components
+
+- Import component: `./generated/tests/{testId}/Component-fixed.tsx`
+- Import CSS: `./generated/tests/{testId}/Component-fixed.css`
+- Images referenced as: `./img/{figma-layer-name}.png`
+- Dashboard loads components dynamically with Vite's dynamic imports
+
+### Docker Considerations
+
+- Docker container name: `mcp-figma-v1`
+- Volumes mounted for hot reload: `src/`, `scripts/`, `cli/`
+- Shared volumes: `src/generated/`, `tmp/`
+- Chromium path: `/usr/bin/chromium`
+- Node modules in named volume for performance
+
+## Testing Strategy
+
+Test files are managed in the dashboard at `http://localhost:5173`:
+
+1. **Preview Tab** - Live component with responsive testing
+2. **Code Tab** - Syntax-highlighted source code
+3. **Report Tab** - HTML visual fidelity report
+4. **Technical Tab** - Markdown analysis of transformations
+
+To run a new test:
+```bash
+./cli/figma-analyze "https://www.figma.com/design/FILE?node-id=X-Y"
 ```
 
-**Captured Attributes:**
-- `className`: All Tailwind classes (background, padding, layout, sizing)
-- `data-name`: Figma layer name
-- `data-node-id`: Figma node ID
-- Multi-line attributes supported
+The dashboard automatically detects new test folders in `src/generated/tests/`.
 
-### CSS Consolidation Strategy
+## Common Issues
 
-**Single Chunk** (unified-processor.js:169-181):
-- Direct copy of chunk CSS with updated header
-- Preserves all formatting and structure
-- ~76 lines, 29+ custom classes
+### MCP Connection Failures
+- Ensure Figma Desktop app is running
+- Verify MCP server on port 3845: `curl http://localhost:3845/health`
+- Check Docker can reach host: `docker exec mcp-figma-v1 curl http://host.docker.internal:3845/health`
 
-**Multiple Chunks** (unified-processor.js:183-267):
-- Merge by deduplicating sections:
-  - Font imports (take first)
-  - `:root` variables (merge unique)
-  - Utility classes (`.content-start`, `.content-end`)
-  - Custom classes (`.gap-margin-m`, `.px-display-container`)
-- Multi-line class regex: `/^(\.[a-z0-9_-]+\s*\{[\s\S]*?\})/gm`
-- Preserves CSS property formatting (indent, multi-line)
+### Component Won't Render
+- Check for syntax errors: `npm run lint`
+- Verify CSS file exists: `ls src/generated/tests/node-{id}/Component-fixed.css`
+- Check browser console for import errors
+- Ensure images are in `img/` folder with correct names
 
-**Example Multi-line Class:**
-```css
-.px-display-container {
-  padding-left: var(--display-container, 32px);
-  padding-right: var(--display-container, 32px);
-}
-```
+### Fonts Not Loading
+- Check `variables.json` has font definitions
+- Verify Google Fonts import in CSS file
+- Test font URL: `https://fonts.googleapis.com/css2?family={FontName}:wght@{weights}&display=swap`
 
-**Stats Logged:**
-- CSS variables: 11
-- Custom classes: 29
-- Font families: "Poppins"
+### Large Files Timeout
+- Chunking should be automatic
+- Check metadata XML exists
+- Verify child nodes detected in logs
+- Manually check: `node scripts/utils/chunking.js <metadata.xml>`
 
-### Docker Networking
+## API Endpoints
 
-- Container uses `extra_hosts` to access MCP server on host via `host.docker.internal`
-- Volumes mounted for hot reload (`src/`, `scripts/`) and generated files (`src/generated/`)
-- Puppeteer configured with Chromium in Alpine Linux
+The Express server (`server.js`) provides:
 
-### Slash Command
+- `POST /api/analyze` - Start Figma analysis job
+  - Body: `{ "figmaUrl": "https://..." }`
+  - Returns: `{ "jobId": "job-..." }`
 
-The `/analyze-mcp` command (in `.claude/commands/analyze-mcp.md`) orchestrates the full workflow:
-- Phase 1: MCP extraction + save files
-- Phase 2: Post-processing (organize images, unified processor, fix SVG vars, validation)
-- Checklist ensures all steps completed
+- `GET /api/analyze/:jobId` - Get job status and logs (SSE)
+  - Streams real-time logs from figma-cli.js
+  - Events: `{ type: 'log', message: '...' }`, `{ type: 'complete', result: {...} }`
 
-## Development Workflow
-
-When modifying the codebase:
-
-1. **Dashboard changes** (src/components/): Hot reload works automatically in Docker
-2. **Script changes** (scripts/): Restart container or re-run command
-3. **Transformations** (scripts/transformations/): Modify and test with unified-processor.js
-4. **New tests**: Use `/analyze-mcp` command with Figma URL
-
-## Generated Files Structure
-
-Each test generates a complete package:
-- Component code (original + fixed)
-- Styling (CSS file with fonts + variables)
-- Assets (organized images)
-- Metadata (JSON, XML)
-- Reports (Markdown technical analysis + HTML visual report)
-- Validation (Figma screenshot + web screenshot)
-
-All generated files in `src/generated/tests/` are Git-ignored and accessible from both Docker and host.
+Dashboard uses these endpoints in `AnalysisForm.tsx` for real-time feedback.

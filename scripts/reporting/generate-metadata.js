@@ -150,6 +150,34 @@ function extractDesignReferences(testDir) {
   }
 }
 
+/**
+ * Count sections from metadata.xml
+ * Sections are defined as direct children of the root frame
+ */
+function countSectionsFromXML(testDir) {
+  const metadataXmlPath = path.join(testDir, 'metadata.xml')
+
+  if (!fs.existsSync(metadataXmlPath)) {
+    return 0
+  }
+
+  try {
+    const xmlContent = fs.readFileSync(metadataXmlPath, 'utf8')
+
+    // Count direct children of root frame (first level only)
+    // Match tags that are indented by exactly 2 spaces (first level children)
+    // Matches: <instance, <frame, <rectangle, <text, etc.
+    const directChildrenRegex = /\n  <(\w+)\s/g
+    const matches = xmlContent.match(directChildrenRegex) || []
+
+    // Filter out any false positives and count unique elements
+    return matches.length
+  } catch (error) {
+    console.warn(`⚠️  Warning: Could not count sections from metadata.xml: ${error.message}`)
+    return 0
+  }
+}
+
 function main() {
   const args = process.argv.slice(2)
 
@@ -179,15 +207,20 @@ function main() {
   if (fs.existsSync(imgDir)) {
     const imgFiles = fs.readdirSync(imgDir).filter(f => {
       const ext = path.extname(f).toLowerCase()
+      // Exclude figma-screenshot.png (reference image, not a component asset)
+      const filename = path.basename(f)
       return ['.png', '.jpg', '.jpeg', '.svg', '.gif', '.webp'].includes(ext)
+        && filename !== 'figma-screenshot.png'
     })
     imagesOrganized = imgFiles.length
   }
 
-  // Inject imagesOrganized into stats if not already present
-  if (!processingStats.hasOwnProperty('imagesOrganized')) {
-    processingStats.imagesOrganized = imagesOrganized
-  }
+  // Always use the real count from the filesystem (override any passed value)
+  processingStats.imagesOrganized = imagesOrganized
+
+  // Auto-count sections from metadata.xml (direct children of root frame)
+  const sectionsDetected = countSectionsFromXML(testDir)
+  processingStats.sectionsDetected = sectionsDetected
 
   // Auto-extract design references from metadata.xml
   const designReferences = extractDesignReferences(testDir)

@@ -5,12 +5,14 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { LazyLog } from 'react-lazylog'
+import { useTranslation } from '../i18n/I18nContext'
 
 interface AnalysisFormProps {
   onAnalysisComplete?: () => void
 }
 
 export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) {
+  const { t } = useTranslation()
   const [figmaUrl, setFigmaUrl] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [jobId, setJobId] = useState<string | null>(null)
@@ -32,28 +34,28 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
   // Validation de l'URL Figma
   const validateFigmaUrl = (url: string): string | null => {
     if (!url.trim()) {
-      return 'Veuillez saisir une URL Figma'
+      return t('analysis.validation.empty')
     }
 
     // Vérifier que c'est une URL Figma
     if (!url.includes('figma.com')) {
-      return 'L\'URL doit contenir "figma.com"'
+      return t('analysis.validation.not_figma')
     }
 
     // Vérifier que c'est une URL de design
     if (!url.includes('figma.com/design/')) {
-      return 'L\'URL doit être au format : https://www.figma.com/design/...'
+      return t('analysis.validation.not_design')
     }
 
     // Vérifier la présence du paramètre node-id
     if (!url.includes('node-id=')) {
-      return 'L\'URL doit contenir le paramètre "node-id=" (ex: ?node-id=168-14226)'
+      return t('analysis.validation.missing_node_id')
     }
 
     // Vérifier le format du node-id (nombre-nombre ou nombre:nombre)
     const nodeIdMatch = url.match(/node-id=([0-9]+[-:][0-9]+)/)
     if (!nodeIdMatch) {
-      return 'Le paramètre node-id doit être au format "123-456" ou "123:456"'
+      return t('analysis.validation.invalid_node_id')
     }
 
     return null
@@ -73,7 +75,7 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
 
     setIsAnalyzing(true)
     setIsComplete(false)
-    setLogs('🚀 Lancement de l\'analyse...\n\n')
+    setLogs(t('analysis.status.launching') + '\n\n')
 
     try {
       // Start analysis
@@ -123,14 +125,14 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
       }
 
       eventSource.onerror = () => {
-        setLogs((prev) => prev + '\n✗ Erreur de connexion au serveur\n')
+        setLogs((prev) => prev + '\n' + t('analysis.status.error_connection') + '\n')
         setIsComplete(true)
         setIsSuccess(false)
         setIsAnalyzing(false)
         eventSource.close()
       }
     } catch (error: any) {
-      setLogs((prev) => prev + `\n✗ Erreur: ${error.message}\n`)
+      setLogs((prev) => prev + `\n✗ ${t('common.error')}: ${error.message}\n`)
       setIsComplete(true)
       setIsSuccess(false)
       setIsAnalyzing(false)
@@ -162,7 +164,7 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
       {/* Header */}
       <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        🚀 Nouvel export Figma
+        🚀 {t('analysis.title')}
       </h2>
 
       {/* Form */}
@@ -173,7 +175,7 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
               type="text"
               value={figmaUrl}
               onChange={handleUrlChange}
-              placeholder="https://www.figma.com/design/...?node-id=X-Y"
+              placeholder={t('analysis.placeholder')}
               disabled={isAnalyzing}
               className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors ${
                 urlError
@@ -189,11 +191,11 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
               {isAnalyzing ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  En cours...
+                  {t('analysis.in_progress')}
                 </>
               ) : (
                 <>
-                  <span>Lancer l'export</span>
+                  <span>{t('analysis.launch')}</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
@@ -227,20 +229,20 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
               </div>
               <span className="text-sm font-mono text-gray-300">
                 {isAnalyzing && (
-                  <span className="text-green-400">● En cours...</span>
+                  <span className="text-green-400">{t('analysis.status.in_progress')}</span>
                 )}
                 {isComplete && isSuccess && (
-                  <span className="text-green-400">✓ Terminé avec succès</span>
+                  <span className="text-green-400">{t('analysis.status.success')}</span>
                 )}
                 {isComplete && !isSuccess && (
-                  <span className="text-red-400">✗ Échec</span>
+                  <span className="text-red-400">{t('analysis.status.failed')}</span>
                 )}
               </span>
             </div>
             <button
               onClick={handleReset}
               className="text-gray-400 hover:text-white transition-colors"
-              title="Fermer"
+              title={t('common.close')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -274,14 +276,14 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
             <div className="bg-gray-800 px-4 py-3 border-t border-gray-700 flex items-center justify-between">
               <span className="text-sm text-gray-400">
                 {isSuccess
-                  ? 'Le nouveau test va apparaître dans la liste'
-                  : 'Vérifiez les logs ci-dessus pour plus de détails'}
+                  ? t('analysis.footer.success_message')
+                  : t('analysis.footer.error_message')}
               </span>
               <button
                 onClick={handleReset}
                 className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded transition-colors"
               >
-                Nouvel export
+                {t('analysis.footer.new_export')}
               </button>
             </div>
           )}
@@ -291,7 +293,7 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
       {/* Helper Text */}
       {!jobId && (
         <p className="text-sm text-gray-500 mt-3">
-          💡 Collez l'URL complète de votre design Figma avec le paramètre <code className="bg-gray-100 px-1 rounded">node-id</code>
+          {t('analysis.helper')} <code className="bg-gray-100 px-1 rounded">node-id</code>
         </p>
       )}
     </div>
