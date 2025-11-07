@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '../i18n/I18nContext';
+import { useTheme } from '../contexts/ThemeContext'
 
 interface UsageData {
   today: {
@@ -36,6 +37,7 @@ interface UsageData {
 export function UsageBar() {
   const { t } = useTranslation();
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const { theme } = useTheme()
   const [loading, setLoading] = useState(true);
   const [showTooltip, setShowTooltip] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -98,7 +100,7 @@ export function UsageBar() {
 
   // Couleur de la barre de progression - utilise --color-1 (la plus foncée du thème)
   const getBarColor = () => {
-    return 'var(--color-1)';
+    return 'var(--color-3)';
   };
 
   const formatNumber = (num: number) => {
@@ -158,7 +160,7 @@ export function UsageBar() {
       style={{
         backgroundColor: 'var(--bg-overlay-light)',
         borderWidth: '1px',
-        borderColor: 'var(--border-light)'
+        borderColor: 'var(--color-0)'
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -170,7 +172,7 @@ export function UsageBar() {
           <span className="text-sm md:text-base">{status.emoji}</span>
           <h3
             className="hidden md:block text-xs font-medium whitespace-nowrap"
-            style={{ color: 'var(--color-black)' }}
+            style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}
           >
             {t('usage.title')}
           </h3>
@@ -181,7 +183,7 @@ export function UsageBar() {
           <div className="flex-1 min-w-[80px] md:min-w-[120px]">
             <div
               className="h-1.5 rounded-full overflow-hidden"
-              style={{ backgroundColor: 'var(--color-2)' }}
+              style={{ backgroundColor: 'var(--color-5)' }}
             >
               <div
                 className="h-full transition-all duration-500 ease-out"
@@ -192,19 +194,19 @@ export function UsageBar() {
               ></div>
             </div>
           </div>
-          <div className="text-[10px] md:text-xs font-semibold whitespace-nowrap" style={{ color: 'var(--color-black)' }}>
+          <div className="text-[10px] md:text-xs font-semibold whitespace-nowrap" style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}>
             {percentUsed.toFixed(1)}%
           </div>
         </div>
 
         {/* Stats à droite (masqué sur très petits écrans, simplifié sur mobile) */}
         <div className="hidden sm:flex items-center gap-2 md:gap-3 whitespace-nowrap">
-          <div className="text-[9px] md:text-[10px]" style={{ color: 'var(--color-black)' }}>
+          <div className="text-[9px] md:text-[10px]" style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}>
             <span className="hidden md:inline">~{formatNumber(displayData.credits.typical)} / </span>
             {formatLimit(displayData.credits.dailyLimit)}
             <span className="hidden md:inline"> {t('usage.credits')} (Pro)</span>
           </div>
-          <div className="hidden md:block text-[10px]" style={{ color: 'var(--color-black)' }}>
+          <div className="hidden md:block text-[10px]" style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}>
             {displayData.analyses} {displayData.date === today.date ? t('usage.analyses_today') : 'analyses'}
           </div>
         </div>

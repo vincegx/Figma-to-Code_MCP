@@ -8,6 +8,7 @@ import LanguageSwitcher from './LanguageSwitcher'
 import ThemeToggle from './ThemeToggle'
 import { UsageBar } from './UsageBar'
 import { useTranslation } from '../i18n/I18nContext'
+import { useTheme } from '../contexts/ThemeContext'
 
 interface Test {
   testId: string
@@ -58,6 +59,7 @@ type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'
 
 export default function HomePage({ onSelectTest }: HomePageProps) {
   const { t } = useTranslation()
+  const { theme } = useTheme()
   const [tests, setTests] = useState<Test[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [mcpConnected, setMcpConnected] = useState<boolean>(false)
@@ -188,7 +190,7 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-white)' }}>
       {/* Header */}
       <header className="relative overflow-hidden" style={{
-        background: 'linear-gradient(to bottom right, var(--accent-primary), var(--accent-secondary))'
+        background: 'var(--color-1)'
       }}>
         {/* Background Pattern */}
         <div className="absolute inset-0 bg-grid-white/10 bg-[size:20px_20px]"></div>
@@ -256,20 +258,20 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
               <div className="w-16 h-16 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl" style={{
                 backgroundColor: 'var(--bg-overlay-light)',
                 borderWidth: '1px',
-                borderColor: 'var(--border-light)'
+                borderColor: 'var(--color-0)'
               }}>
-                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--color-black)' }}>
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--color-2)' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                 </svg>
               </div>
             </div>
 
-            <h1 className="text-5xl font-bold mb-3 tracking-tight" style={{ color: 'var(--color-black)' }}>
+            <h1 className="text-5xl font-bold mb-3 tracking-tight" style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}>
               {t('header.title')}
             </h1>
-            <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--color-black)' }}>
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}>
               {t('header.subtitle')}
-              <span className="block text-base mt-2" style={{ color: 'var(--color-black)' }}>
+              <span className="block text-base mt-2" style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}>
                 {t('header.subtitle_detail')}
               </span>
             </p>
@@ -281,57 +283,57 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
               <div className="backdrop-blur-sm rounded-xl p-3" style={{
                 backgroundColor: 'var(--bg-overlay-light)',
                 borderWidth: '1px',
-                borderColor: 'var(--border-light)'
+                borderColor: 'var(--color-0)'
               }}>
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
-                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-1)' }}>
+                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-2)' }}>
                       <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-2xl font-bold" style={{ color: 'var(--color-black)' }}>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--color-2)' }}>
                       {tests.reduce((acc, test) => acc + (test.stats?.totalNodes || 0), 0)}
                     </div>
-                    <div className="text-xs" style={{ color: 'var(--color-black)' }}>{t('header.stats.total_nodes')}</div>
+                    <div className="text-xs" style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}>{t('header.stats.total_nodes')}</div>
                   </div>
                 </div>
               </div>
               <div className="backdrop-blur-sm rounded-xl p-3" style={{
                 backgroundColor: 'var(--bg-overlay-light)',
                 borderWidth: '1px',
-                borderColor: 'var(--border-light)'
+                borderColor: 'var(--color-0)'
               }}>
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
-                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-1)' }}>
+                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-2)' }}>
                       <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-2xl font-bold" style={{ color: 'var(--color-black)' }}>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--color-2)' }}>
                       {tests.reduce((acc, test) => acc + (test.stats?.imagesOrganized || 0), 0)}
                     </div>
-                    <div className="text-xs" style={{ color: 'var(--color-black)' }}>{t('header.stats.images')}</div>
+                    <div className="text-xs" style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}>{t('header.stats.images')}</div>
                   </div>
                 </div>
               </div>
               <div className="backdrop-blur-sm rounded-xl p-3" style={{
                 backgroundColor: 'var(--bg-overlay-light)',
                 borderWidth: '1px',
-                borderColor: 'var(--border-light)'
+                borderColor: 'var(--color-0)'
               }}>
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
-                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-1)' }}>
+                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--color-2)' }}>
                       <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
                     </svg>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-2xl font-bold" style={{ color: 'var(--color-black)' }}>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--color-2)' }}>
                       {tests.reduce((acc, test) => acc + (test.stats?.totalFixes || test.stats?.classesOptimized || 0), 0)}
                     </div>
-                    <div className="text-xs" style={{ color: 'var(--color-black)' }}>{t('header.stats.total_fixes')}</div>
+                    <div className="text-xs" style={{ color: theme === 'dark' ? 'var(--color-white)' : 'var(--color-black)' }}>{t('header.stats.total_fixes')}</div>
                   </div>
                 </div>
               </div>
@@ -350,30 +352,30 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
           <div className="mb-6 flex flex-wrap items-center justify-between rounded-lg p-4 gap-4" style={{
             backgroundColor: 'var(--bg-card)',
             borderWidth: '1px',
-            borderColor: 'var(--border-subtle)',
+            borderColor: 'var(--color-4)',
             boxShadow: 'var(--shadow-sm)'
           }}>
             {/* Left: View Mode Toggle + Test Count */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{t('home.view')}</span>
-                <div className="flex rounded-lg p-1" style={{ backgroundColor: 'var(--bg-hover)' }}>
+                <div className="flex rounded-lg p-1" style={{ backgroundColor: 'var(--color-1)' }}>
                   <button
                     onClick={() => setViewMode('grid')}
                     className="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
                     style={{
-                      backgroundColor: viewMode === 'grid' ? 'var(--button-primary-bg)' : 'transparent',
-                      color: viewMode === 'grid' ? 'var(--button-primary-text)' : 'var(--text-secondary)',
+                      backgroundColor: viewMode === 'grid' ? 'var(--color-2)' : 'transparent',
+                      color: viewMode === 'grid' ? 'var(--button-primary-text)' : 'var(--color-white)',
                       boxShadow: viewMode === 'grid' ? 'var(--shadow-sm)' : 'none'
                     }}
                     onMouseEnter={(e) => {
                       if (viewMode !== 'grid') {
-                        e.currentTarget.style.color = 'var(--text-primary)'
+                        e.currentTarget.style.color = 'var(--color-2)'
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (viewMode !== 'grid') {
-                        e.currentTarget.style.color = 'var(--text-secondary)'
+                        e.currentTarget.style.color = 'var(--color-2)'
                       }
                     }}
                   >
@@ -385,18 +387,18 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                     onClick={() => setViewMode('list')}
                     className="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
                     style={{
-                      backgroundColor: viewMode === 'list' ? 'var(--button-primary-bg)' : 'transparent',
-                      color: viewMode === 'list' ? 'var(--button-primary-text)' : 'var(--text-secondary)',
+                      backgroundColor: viewMode === 'list' ? 'var(--color-2)' : 'transparent',
+                      color: viewMode === 'list' ? 'var(--button-primary-text)' : 'var(--color-white)',
                       boxShadow: viewMode === 'list' ? 'var(--shadow-sm)' : 'none'
                     }}
                     onMouseEnter={(e) => {
                       if (viewMode !== 'list') {
-                        e.currentTarget.style.color = 'var(--text-primary)'
+                        e.currentTarget.style.color = 'var(--color-2)'
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (viewMode !== 'list') {
-                        e.currentTarget.style.color = 'var(--text-secondary)'
+                        e.currentTarget.style.color = 'var(--color-2)'
                       }
                     }}
                   >
@@ -734,22 +736,18 @@ function TestCard({ test, onSelect }: TestCardProps) {
       className="rounded-xl overflow-hidden group cursor-pointer relative transition-all"
       style={{
         backgroundColor: 'var(--bg-card)',
-        borderWidth: '1px',
-        borderColor: 'var(--border-subtle)',
         boxShadow: 'var(--shadow-sm)'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow = 'var(--shadow-lg)'
-        e.currentTarget.style.borderColor = 'var(--accent-primary)'
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-        e.currentTarget.style.borderColor = 'var(--border-subtle)'
       }}>
 
       {/* Thumbnail Preview */}
       <div className="relative w-full h-52 overflow-hidden" style={{
-        background: 'linear-gradient(to bottom right, var(--accent-secondary), var(--bg-secondary))'
+        background: 'var(--color-5)'
       }}>
         <img
           src={thumbnailPath}
@@ -884,12 +882,12 @@ function TestCard({ test, onSelect }: TestCardProps) {
           onClick={handleCardClick}
           className="w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2"
           style={{
-            background: 'var(--button-primary-bg)',
-            color: 'var(--text-secondary)',
+            background: 'var(--color-1)',
+            color: 'var(--color-white)',
             boxShadow: 'var(--shadow-sm)'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--button-primary-hover)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--button-primary-bg)'}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-2)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-1)'}
         >
           <span>{t('home.card.view_details')}</span>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

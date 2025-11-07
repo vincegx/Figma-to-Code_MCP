@@ -6,6 +6,7 @@
 
 :root {
   /* Light Theme (Default) - Palette correcte */
+  --color-0: #5f7470;  /* darkest */
   --color-1: #5f7470;
   --color-2: #889696;
   --color-3: #b8bdb5;
@@ -84,11 +85,12 @@
 
 [data-theme="dark"] {
   /* Dark Theme - Palette correcte (UNIQUEMENT les 5 couleurs) */
-  --color-1: #87818b;  /* darkest */
-  --color-2: #a09a9f;  /* darker */
-  --color-3: #b9b3b2;  /* medium */
-  --color-4: #d3cdc6;  /* lighter */
-  --color-5: #eee7da;  /* lightest */
+  --color-0: #455975;  /* darkest */
+  --color-1: #1f2937;  /* darkest */
+  --color-2: #61a6fb;  /* darker */
+  --color-3: #94c5fd;  /* medium */
+  --color-4: #c3defe;  /* lighter */
+  --color-5: #ebf4ff;  /* lightest */
 
   /* Extra colors - Customizable black & white */
   --color-black: #494949;

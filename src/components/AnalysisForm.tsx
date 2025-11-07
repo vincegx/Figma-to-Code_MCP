@@ -161,11 +161,11 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
   }
 
   return (
-    <div className="rounded-lg p-3 mb-6" style={{
-      backgroundColor: 'var(--color-2)',
+    <div className="rounded-lg p-5 mb-6" style={{
+      backgroundColor: 'var(--color-1)',
       boxShadow: 'var(--shadow-sm)',
       borderWidth: '1px',
-      borderColor: 'var(--border-primary)'
+      borderColor: 'var(--color-1)'
     }}>
       {/* Header */}
       <h2 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--color-white)' }}>
@@ -219,7 +219,7 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
               }}
               onMouseLeave={(e) => {
                 if (!isAnalyzing && figmaUrl.trim()) {
-                  e.currentTarget.style.background = 'var(--button-primary-bg)'
+                  e.currentTarget.style.background = 'var(--color-4)'
                 }
               }}
             >
@@ -353,7 +353,7 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
       {/* Helper Text */}
       {!jobId && (
         <p className="text-sm mt-3" style={{ color: 'var(--color-white)' }}>
-          {t('analysis.helper')} <code className="px-1 rounded" style={{ backgroundColor: 'var(--color-5)', color: 'var(--text-secondary)' }}>node-id</code>
+          {t('analysis.helper')} <code className="px-1 rounded" style={{ backgroundColor: 'var(--color-5)', color: 'var(--color-black)' }}>node-id</code>
         </p>
       )}
     </div>

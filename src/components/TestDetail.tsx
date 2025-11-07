@@ -177,7 +177,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Header */}
       <header style={{
-        background: 'linear-gradient(to bottom right, var(--bg-secondary), var(--accent-secondary))',
+        background: 'var(--color-1)',
         borderBottom: '1px solid',
         borderColor: 'var(--border-primary)'
       }}>
@@ -839,18 +839,6 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
         borderBottom: '1px solid',
         borderColor: 'var(--border-primary)'
       }}>
-        <div className="px-6 py-3 flex items-center justify-between" style={{
-          backgroundColor: 'var(--color-white)',
-          borderBottom: '1px solid',
-          borderColor: 'var(--border-primary)'
-        }}>
-          <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-            {t('detail.preview.component_label')} {componentName}
-          </h3>
-          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {t('detail.preview.react_tailwind')}
-          </div>
-        </div>
 
         {/* Full width viewport simulator */}
         <div className="min-h-[600px] flex justify-center items-start pb-8" style={{
