@@ -72,6 +72,30 @@ export function convertCSSVarsInClass(classString) {
   // CUSTOM CSS CLASS GENERATOR: var(--any\/thing,fallback) → custom class
   // ═══════════════════════════════════════════════════════════
 
+  // PATTERN 0: Fix invalid border-width patterns from Figma
+  // border-[0px_0px_2px] → border-w-0-0-2 (custom class)
+  // CSS generated: .border-w-0-0-2 { border-width: 0px 0px 2px; }
+  converted = converted.replace(/border-\[([0-9px_]+)\]/g, (match, values) => {
+    const parts = values.split('_')
+
+    // Only process multi-value patterns (3 or 4 values)
+    if (parts.length < 3) return match
+
+    // Generate clean class name: border-w-0-0-2
+    const cleanName = 'border-w-' + parts.join('-').replace(/px/g, '')
+
+    // CSS value: 0px 0px 2px or 0px 0px 2px 0px
+    const cssValue = parts.join(' ')
+
+    // Store in Map for CSS generation
+    customCSSClasses.set(cleanName, {
+      property: 'border-width',
+      value: cssValue
+    })
+
+    return cleanName
+  })
+
   // PATTERN 1: Match special Tailwind arbitrary CSS syntax: text-[color:var(...)] or text-[length:var(...)]
   // These use CSS property:value syntax inside arbitrary values
   converted = converted.replace(/text-\[(color|length):var\(--([^,]+),([^\)]+)\)\]/g, (_match, cssType, varName, fallback) => {
@@ -81,6 +105,10 @@ export function convertCSSVarsInClass(classString) {
       .replace(/\\\\\//g, '-')
       .replace(/\\\//g, '-')
       .replace(/\//g, '-')
+      .replace(/\\\(/g, '_')
+      .replace(/\(/g, '_')
+      .replace(/\\\)/g, '')
+      .replace(/\)/g, '')
       .toLowerCase()
       .trim()
 
@@ -110,6 +138,10 @@ export function convertCSSVarsInClass(classString) {
       .replace(/\\\\\//g, '-')
       .replace(/\\\//g, '-')
       .replace(/\//g, '-')
+      .replace(/\\\(/g, '_')
+      .replace(/\(/g, '_')
+      .replace(/\\\)/g, '')
+      .replace(/\)/g, '')
       .toLowerCase()
       .trim()
 
@@ -195,6 +227,10 @@ export function applySafetyNetRegex(code) {
         .replace(/\\\\\//g, '-')
         .replace(/\\\//g, '-')
         .replace(/\//g, '-')
+        .replace(/\\\(/g, '_')
+        .replace(/\(/g, '_')
+        .replace(/\\\)/g, '')
+        .replace(/\)/g, '')
         .toLowerCase()
         .trim()
 
@@ -227,6 +263,10 @@ export function applySafetyNetRegex(code) {
         .replace(/\\\\\//g, '-')
         .replace(/\\\//g, '-')
         .replace(/\//g, '-')
+        .replace(/\\\(/g, '_')
+        .replace(/\(/g, '_')
+        .replace(/\\\)/g, '')
+        .replace(/\)/g, '')
         .toLowerCase()
         .trim()
 

@@ -444,7 +444,7 @@ if (fs.existsSync(variablesPath)) {
         fontPattern.lastIndex = 0
       } else if (typeof value === 'string' && !value.startsWith('Font(')) {
         // Convert Figma variable names to CSS custom property names
-        const cssVarName = '--' + key.toLowerCase().replace(/\//g, '-').replace(/\s+/g, '-')
+        const cssVarName = '--' + key.toLowerCase().replace(/\//g, '-').replace(/\s+/g, '-').replace(/\(/g, '_').replace(/\)/g, '')
 
         // Add 'px' unit to numeric values
         let cssValue = value
@@ -635,15 +635,31 @@ cssContent += `.content-end {\n  align-content: flex-end;\n}\n`
 if (context.customCSSClasses && context.customCSSClasses.size > 0) {
   cssContent += `\n/* Custom classes for Figma variables */\n`
 
-  for (const [className, { property, variable, fallback }] of context.customCSSClasses) {
+  for (const [className, classData] of context.customCSSClasses) {
+    const { property, variable, fallback, value } = classData
+
     if (Array.isArray(property)) {
+      // Multi-property case (e.g., px, py)
       cssContent += `.${className} {\n`
       for (const prop of property) {
-        cssContent += `  ${prop}: var(${variable}, ${fallback});\n`
+        if (value) {
+          // Direct value (e.g., border-width)
+          cssContent += `  ${prop}: ${value};\n`
+        } else {
+          // CSS variable with fallback
+          cssContent += `  ${prop}: var(${variable}, ${fallback});\n`
+        }
       }
       cssContent += `}\n`
     } else {
-      cssContent += `.${className} { ${property}: var(${variable}, ${fallback}); }\n`
+      // Single property case
+      if (value) {
+        // Direct value (e.g., border-width: 0px 0px 2px)
+        cssContent += `.${className} { ${property}: ${value}; }\n`
+      } else {
+        // CSS variable with fallback
+        cssContent += `.${className} { ${property}: var(${variable}, ${fallback}); }\n`
+      }
     }
   }
 }
