@@ -150,16 +150,25 @@ function countSectionsFromXML(testDir) {
   try {
     const content = fs.readFileSync(componentPath, 'utf8')
 
-    // Find direct children of root element
+    // Find direct children of root element of the default export component
     // Strategy: parse JSX and count data-name attributes at nesting level 2
     const lines = content.split('\n')
+    let inDefaultComponent = false
     let inReturn = false
     let rootFound = false
     let nestLevel = 0
     let sectionsCount = 0
 
     for (const line of lines) {
-      // Skip until we find return statement
+      // Skip until we find the export default component
+      if (!inDefaultComponent && line.includes('export default')) {
+        inDefaultComponent = true
+        continue
+      }
+
+      if (!inDefaultComponent) continue
+
+      // Skip until we find return statement of the default component
       if (line.includes('return (')) {
         inReturn = true
         continue

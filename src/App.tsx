@@ -54,6 +54,10 @@ function PreviewMode({ testId }: { testId: string }) {
   const [Component, setComponent] = useState<React.ComponentType | null>(null)
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null)
 
+  // Get version from URL params (clean or fixed)
+  const params = new URLSearchParams(window.location.search)
+  const version = params.get('version') === 'fixed' ? 'fixed' : 'clean'
+
   useEffect(() => {
     // Load metadata to get dimensions
     import(`./generated/tests/${testId}/metadata.xml?raw`)
@@ -73,15 +77,15 @@ function PreviewMode({ testId }: { testId: string }) {
         console.error('Failed to load metadata:', err)
       })
 
-    // Load CSS
+    // Load CSS based on version
     const link = document.createElement('link')
     link.rel = 'stylesheet'
-    link.href = `/src/generated/tests/${testId}/Component-clean.css`
+    link.href = `/src/generated/tests/${testId}/Component-${version}.css`
     link.id = `test-css-${testId}`
     document.head.appendChild(link)
 
-    // Dynamically import the generated component
-    import(`./generated/tests/${testId}/Component-clean.tsx`)
+    // Dynamically import the generated component based on version
+    import(`./generated/tests/${testId}/Component-${version}.tsx`)
       .then((module) => {
         setComponent(() => module.default)
       })
@@ -95,7 +99,7 @@ function PreviewMode({ testId }: { testId: string }) {
         document.head.removeChild(existingLink)
       }
     }
-  }, [testId])
+  }, [testId, version])
 
   if (!Component || !dimensions) {
     return <div>Loading...</div>
