@@ -350,7 +350,7 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
         {/* Controls Bar */}
         {tests.length > 0 && (
           <div className="mb-6 flex flex-wrap items-center justify-between rounded-lg p-4 gap-4" style={{
-            backgroundColor: 'var(--bg-card)',
+            backgroundColor: 'var(--color-2)',
             borderWidth: '1px',
             borderColor: 'var(--color-4)',
             boxShadow: 'var(--shadow-sm)'
@@ -365,17 +365,17 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                     className="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
                     style={{
                       backgroundColor: viewMode === 'grid' ? 'var(--color-2)' : 'transparent',
-                      color: viewMode === 'grid' ? 'var(--button-primary-text)' : 'var(--color-white)',
+                      color: viewMode === 'grid' ? 'var(--color-white)' : 'var(--color-white)',
                       boxShadow: viewMode === 'grid' ? 'var(--shadow-sm)' : 'none'
                     }}
                     onMouseEnter={(e) => {
                       if (viewMode !== 'grid') {
-                        e.currentTarget.style.color = 'var(--color-2)'
+                        e.currentTarget.style.color = 'var(--color-white)'
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (viewMode !== 'grid') {
-                        e.currentTarget.style.color = 'var(--color-2)'
+                        e.currentTarget.style.color = 'var(--color-white)'
                       }
                     }}
                   >
@@ -388,17 +388,17 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
                     className="px-3 py-1.5 rounded-md text-sm font-medium transition-all"
                     style={{
                       backgroundColor: viewMode === 'list' ? 'var(--color-2)' : 'transparent',
-                      color: viewMode === 'list' ? 'var(--button-primary-text)' : 'var(--color-white)',
+                      color: viewMode === 'list' ? 'var(--color-white)' : 'var(--color-white)',
                       boxShadow: viewMode === 'list' ? 'var(--shadow-sm)' : 'none'
                     }}
                     onMouseEnter={(e) => {
                       if (viewMode !== 'list') {
-                        e.currentTarget.style.color = 'var(--color-2)'
+                        e.currentTarget.style.color = 'var(--color-white)'
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (viewMode !== 'list') {
-                        e.currentTarget.style.color = 'var(--color-2)'
+                        e.currentTarget.style.color = 'var(--color-white)'
                       }
                     }}
                   >
@@ -412,7 +412,7 @@ export default function HomePage({ onSelectTest }: HomePageProps) {
               {/* Test Count */}
               <div className="px-3 py-1.5 rounded-lg text-sm font-medium" style={{
                 backgroundColor: 'var(--color-5)',
-                color: 'var(--text-secondary)'
+                color: 'var(--color-0)'
               }}>
                 <span className="flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -752,7 +752,7 @@ function TestCard({ test, onSelect }: TestCardProps) {
         <img
           src={thumbnailPath}
           alt={test.layerName || test.fileName || 'Preview'}
-          className="w-full h-full object-contain object-center group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
           onError={(e) => {
             e.currentTarget.style.display = 'none'
             e.currentTarget.nextElementSibling?.classList.remove('hidden')
@@ -877,23 +877,54 @@ function TestCard({ test, onSelect }: TestCardProps) {
           )}
         </div>
 
-        {/* Single Primary Action Button */}
-        <button
-          onClick={handleCardClick}
-          className="w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2"
-          style={{
-            background: 'var(--color-1)',
-            color: 'var(--color-white)',
-            boxShadow: 'var(--shadow-sm)'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-2)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-1)'}
-        >
-          <span>{t('home.card.view_details')}</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {/* Secondary Action - Preview */}
+          <button
+            onClick={handleOpenPreview}
+            className="px-4 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2"
+            style={{
+              backgroundColor: 'transparent',
+              color: 'var(--color-0)',
+              borderWidth: '1px',
+              borderColor: 'var(--color-0)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--color-1)'
+              e.currentTarget.style.borderColor = 'var(--color-1)'
+              e.currentTarget.style.color = 'var(--color-white)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+              e.currentTarget.style.borderColor = 'var(--color-0)'
+              e.currentTarget.style.color = 'var(--color-0)'
+            }}
+            title={t('home.card.open_preview')}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+
+          {/* Primary Action - View Details */}
+          <button
+            onClick={handleCardClick}
+            className="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2"
+            style={{
+              background: 'var(--color-1)',
+              color: 'var(--color-white)',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-2)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-1)'}
+          >
+            <span>{t('home.card.view_details')}</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -962,7 +993,7 @@ function TestCardList({ test, onSelect }: TestCardListProps) {
           <img
             src={thumbnailPath}
             alt={test.layerName || test.fileName || 'Preview'}
-            className="w-full h-full object-contain object-center group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
               e.currentTarget.style.display = 'none'
               e.currentTarget.nextElementSibling?.classList.remove('hidden')

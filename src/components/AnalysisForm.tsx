@@ -161,7 +161,7 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
   }
 
   return (
-    <div className="rounded-lg p-5 mb-6" style={{
+    <div className="rounded-lg p-5 mb-2" style={{
       backgroundColor: 'var(--color-1)',
       boxShadow: 'var(--shadow-sm)',
       borderWidth: '1px',

@@ -108,42 +108,25 @@ function extractDesignReferences(testDir) {
   try {
     const xmlContent = fs.readFileSync(metadataXmlPath, 'utf8')
 
-    // Extract frame name and dimensions (first line)
-    const frameMatch = xmlContent.match(/<frame[^>]+name="([^"]+)"/)
+    // Extract frame/symbol name and dimensions (first line)
+    // Support both <frame> and <symbol> elements
+    const frameMatch = xmlContent.match(/<(?:frame|symbol)[^>]+name="([^"]+)"/)
     const frameName = frameMatch ? frameMatch[1] : 'Unnamed Frame'
 
-    // Extract dimensions from the root frame
-    const dimensionsMatch = xmlContent.match(/<frame[^>]+width="([^"]+)"[^>]*height="([^"]+)"/)
+    // Extract dimensions from the root frame or symbol
+    const dimensionsMatch = xmlContent.match(/<(?:frame|symbol)[^>]+width="([^"]+)"[^>]*height="([^"]+)"/)
     const dimensions = dimensionsMatch ? {
       width: parseInt(dimensionsMatch[1], 10),
       height: parseInt(dimensionsMatch[2], 10)
     } : null
 
-    // Extract sections from text nodes with pattern "=== SECTION X: ... ==="
-    const sectionRegex = /name="===\s*SECTION\s+\d+:\s*([^=]+)==="\s*/g
-    const sections = []
-    let match
-
-    while ((match = sectionRegex.exec(xmlContent)) !== null) {
-      // Decode XML entities (&amp; → &, &lt; → <, etc.)
-      const sectionName = match[1].trim()
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-      sections.push(`SECTION ${sections.length + 1}: ${sectionName}`)
-    }
-
-    // Return design references if we have sections or dimensions
-    // Don't return null if we only have dimensions without sections
-    if (sections.length === 0 && !dimensions) {
+    // Return design references if we have dimensions
+    if (!dimensions) {
       return null
     }
 
     return {
       name: frameName,
-      ...(sections.length > 0 && { sections }),
       dimensions
     }
   } catch (error) {
@@ -153,29 +136,63 @@ function extractDesignReferences(testDir) {
 }
 
 /**
- * Count sections from metadata.xml
- * Sections are defined as direct children of the root frame
+ * Count sections from Component.tsx
+ * Sections are defined as direct children of the root element with data-name
+ * We use Component.tsx as source of truth since metadata.xml may be incomplete
  */
 function countSectionsFromXML(testDir) {
-  const metadataXmlPath = path.join(testDir, 'metadata.xml')
+  const componentPath = path.join(testDir, 'Component.tsx')
 
-  if (!fs.existsSync(metadataXmlPath)) {
+  if (!fs.existsSync(componentPath)) {
     return 0
   }
 
   try {
-    const xmlContent = fs.readFileSync(metadataXmlPath, 'utf8')
+    const content = fs.readFileSync(componentPath, 'utf8')
 
-    // Count direct children of root frame (first level only)
-    // Match tags that are indented by exactly 2 spaces (first level children)
-    // Matches: <instance, <frame, <rectangle, <text, etc.
-    const directChildrenRegex = /\n  <(\w+)\s/g
-    const matches = xmlContent.match(directChildrenRegex) || []
+    // Find direct children of root element
+    // Strategy: parse JSX and count data-name attributes at nesting level 2
+    const lines = content.split('\n')
+    let inReturn = false
+    let rootFound = false
+    let nestLevel = 0
+    let sectionsCount = 0
 
-    // Filter out any false positives and count unique elements
-    return matches.length
+    for (const line of lines) {
+      // Skip until we find return statement
+      if (line.includes('return (')) {
+        inReturn = true
+        continue
+      }
+
+      if (!inReturn) continue
+
+      // Count opening and closing div tags
+      const openDivs = (line.match(/<div/g) || []).length
+      const closeDivs = (line.match(/<\/div>/g) || []).length
+
+      // First div with data-name is the root
+      if (!rootFound && line.includes('data-name=')) {
+        rootFound = true
+        nestLevel = 1
+        continue
+      }
+
+      // Update nesting level
+      nestLevel += openDivs - closeDivs
+
+      // Count direct children (level 2) with data-name
+      if (rootFound && nestLevel === 2 && line.includes('data-name=')) {
+        sectionsCount++
+      }
+
+      // Stop if we've closed the root
+      if (nestLevel < 1) break
+    }
+
+    return sectionsCount
   } catch (error) {
-    console.warn(`⚠️  Warning: Could not count sections from metadata.xml: ${error.message}`)
+    console.warn(`⚠️  Warning: Could not count sections from Component.tsx: ${error.message}`)
     return 0
   }
 }

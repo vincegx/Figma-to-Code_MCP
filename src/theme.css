@@ -163,7 +163,7 @@
 
 .test-list-item {
   background-color: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--color-0);
   box-shadow: var(--shadow-sm);
 }
 

@@ -192,7 +192,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                   backgroundColor: 'var(--bg-card)',
                   boxShadow: 'var(--shadow-sm)',
                   borderWidth: '1px',
-                  borderColor: 'var(--border-primary)',
+                  borderColor: 'var(--color-0)',
                   color: 'var(--text-primary)'
                 }}
                 onMouseEnter={(e) => {
@@ -211,19 +211,19 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
               </button>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                  <h1 className="text-3xl font-bold" style={{ color: 'var(--color-white)' }}>
                     {metadata?.layerName || metadata?.fileName || 'Test'}
                   </h1>
                   {metadata?.figmaNodeId && (
                     <span className="px-3 py-1 backdrop-blur-sm text-xs rounded-lg font-mono" style={{
                       backgroundColor: 'var(--bg-overlay-dark)',
-                      color: 'var(--text-inverse)'
+                      color: 'var(--color-white)'
                     }}>
                       #{nodeIdDisplay}
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                <div className="flex items-center gap-3 text-sm" style={{ color: 'var(--color-white)' }}>
                   <span className="flex items-center gap-1.5">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -238,7 +238,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                       {metadata.dimensions.width} × {metadata.dimensions.height}
                     </span>
                   )}
-                  <span className="text-[10px] font-mono ml-2" style={{ color: 'var(--text-muted)' }}>{testId}</span>
+                  <span className="text-[10px] font-mono ml-2" style={{ color: 'var(--color-white)' }}>{testId}</span>
                 </div>
               </div>
             </div>
@@ -311,7 +311,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
           {metadata?.stats && (
             <div className="flex items-center gap-2 mt-4 pt-4" style={{
               borderTop: '1px solid',
-              borderColor: 'var(--border-light)'
+              borderColor: 'var(--color-0)'
             }}>
               {metadata.stats.totalNodes !== undefined && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 backdrop-blur-sm rounded-md" style={{
@@ -566,7 +566,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
       </nav>
 
       {/* Content */}
-      <main className={activeTab === 'preview' ? 'w-full py-1' : 'max-w-7xl mx-auto px-6 py-8'}>
+      <main className={activeTab === 'preview' ? 'w-full' : 'max-w-7xl mx-auto px-6 py-8'}>
         {activeTab === 'preview' && (
           <PreviewTab testId={testId} componentName={metadata?.componentName} dimensions={metadata?.dimensions} />
         )}
@@ -724,10 +724,10 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
   }
 
   return (
-    <div className="space-y-1">
+    <div>
       {/* Responsive Controls - Sticky */}
       <div className="sticky top-0 z-10 py-4" style={{
-        backgroundColor: 'var(--bg-primary)'
+        backgroundColor: 'var(--color-0)'
       }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="rounded-lg p-4" style={{
@@ -767,7 +767,7 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
                   backgroundColor: viewportWidth === preset.width ? 'var(--accent-primary)' : 'var(--bg-card)',
                   color: viewportWidth === preset.width ? 'var(--button-primary-text)' : 'var(--text-primary)',
                   borderWidth: '1px',
-                  borderColor: viewportWidth === preset.width ? 'var(--accent-primary)' : 'var(--border-primary)'
+                  borderColor: viewportWidth === preset.width ? 'var(--accent-primary)' : 'var(--color-0)'
                 }}
                 onMouseEnter={(e) => {
                   if (viewportWidth !== preset.width) {
@@ -819,11 +819,11 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
               onChange={(e) => setViewportWidth(Number(e.target.value))}
               className="w-full h-2 rounded-lg appearance-none cursor-pointer"
               style={{
-                backgroundColor: 'var(--bg-hover)',
-                accentColor: 'var(--accent-primary)'
+                backgroundColor: 'var(--color-0)',
+                accentColor: 'var(--color-2)'
               }}
             />
-            <div className="flex justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
+            <div className="flex justify-between text-xs" style={{ color: 'var(--color-black)' }}>
               <span>{minWidth}px</span>
               <span>{maxWidth}px</span>
             </div>
@@ -834,10 +834,7 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
 
       {/* Component Render - Full width container */}
       <div className="overflow-hidden" style={{
-        backgroundColor: 'var(--bg-card)',
-        borderTop: '1px solid',
-        borderBottom: '1px solid',
-        borderColor: 'var(--border-primary)'
+        backgroundColor: 'var(--bg-card)'
       }}>
 
         {/* Full width viewport simulator */}
