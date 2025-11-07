@@ -23,6 +23,8 @@ interface UsageData {
     totalCalls: number;
     analyses: number;
     creditsEstimate: number;
+    calls?: Record<string, number>;
+    tokens?: Record<string, number>;
   }>;
   status: {
     emoji: string;
@@ -38,6 +40,8 @@ export function UsageBar() {
   const [showTooltip, setShowTooltip] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchUsage();
@@ -64,7 +68,33 @@ export function UsageBar() {
   }
 
   const { today, status } = usage;
-  const percentUsed = today.credits.percentUsed;
+
+  // Determine which day to display (selected day or today)
+  const displayDay = selectedDate
+    ? usage.historical.find(d => d.date === selectedDate)
+    : null;
+
+  const displayData = displayDay
+    ? displayDay.date === today.date
+      ? today // If selected day is today, use full today data
+      : {
+          date: displayDay.date,
+          calls: displayDay.calls || {},
+          totalCalls: displayDay.totalCalls,
+          analyses: displayDay.analyses,
+          tokens: displayDay.tokens || {},
+          credits: {
+            min: displayDay.creditsEstimate,
+            typical: displayDay.creditsEstimate,
+            max: displayDay.creditsEstimate,
+            dailyLimit: today.credits.dailyLimit,
+            percentUsed: (displayDay.creditsEstimate / today.credits.dailyLimit) * 100,
+            isActual: false
+          }
+        }
+    : today;
+
+  const percentUsed = displayData.credits.percentUsed;
 
   // Couleur de la barre de progression - utilise --color-1 (la plus foncée du thème)
   const getBarColor = () => {
@@ -86,6 +116,12 @@ export function UsageBar() {
 
   // Calculer la position du tooltip quand il s'affiche
   const handleMouseEnter = () => {
+    // Cancel any pending close
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       setTooltipPosition({
@@ -94,6 +130,25 @@ export function UsageBar() {
       });
     }
     setShowTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    // Delay closing to allow moving to tooltip
+    closeTimeoutRef.current = setTimeout(() => {
+      setShowTooltip(false);
+    }, 200);
+  };
+
+  const handleTooltipEnter = () => {
+    // Cancel close if entering tooltip
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
+  const handleTooltipLeave = () => {
+    setShowTooltip(false);
   };
 
   return (
@@ -106,7 +161,7 @@ export function UsageBar() {
         borderColor: 'var(--border-light)'
       }}
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={() => setShowTooltip(false)}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Layout horizontal compact - Responsive */}
       <div className="flex items-center gap-2 md:gap-4">
@@ -145,12 +200,12 @@ export function UsageBar() {
         {/* Stats à droite (masqué sur très petits écrans, simplifié sur mobile) */}
         <div className="hidden sm:flex items-center gap-2 md:gap-3 whitespace-nowrap">
           <div className="text-[9px] md:text-[10px]" style={{ color: 'var(--color-black)' }}>
-            <span className="hidden md:inline">~{formatNumber(today.credits.typical)} / </span>
-            {formatLimit(today.credits.dailyLimit)}
+            <span className="hidden md:inline">~{formatNumber(displayData.credits.typical)} / </span>
+            {formatLimit(displayData.credits.dailyLimit)}
             <span className="hidden md:inline"> {t('usage.credits')} (Pro)</span>
           </div>
           <div className="hidden md:block text-[10px]" style={{ color: 'var(--color-black)' }}>
-            {today.analyses} {t('usage.analyses_today')}
+            {displayData.analyses} {displayData.date === today.date ? t('usage.analyses_today') : 'analyses'}
           </div>
         </div>
       </div>
@@ -164,8 +219,8 @@ export function UsageBar() {
             left: `${tooltipPosition.left}px`,
             zIndex: 99999
           }}
-          onMouseEnter={() => setShowTooltip(true)}
-          onMouseLeave={() => setShowTooltip(false)}
+          onMouseEnter={handleTooltipEnter}
+          onMouseLeave={handleTooltipLeave}
         >
           <div className="space-y-3">
             {/* Total de tokens utilisés */}
@@ -175,13 +230,15 @@ export function UsageBar() {
               </h4>
               <div className="rounded p-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border border-blue-200 dark:border-blue-700">
                 <div className="flex justify-between items-center">
-                  <div className="text-gray-700 dark:text-gray-300 font-medium">Total</div>
+                  <div className="text-gray-700 dark:text-gray-300 font-medium">
+                    {displayData.date === today.date ? 'Total' : displayData.date}
+                  </div>
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {formatNumber(today.credits.typical)}
+                    {formatNumber(displayData.credits.typical)}
                   </div>
                 </div>
                 <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                  {formatNumber(today.credits.dailyLimit)} limit / {percentUsed.toFixed(1)}% used
+                  {formatNumber(displayData.credits.dailyLimit)} limit / {percentUsed.toFixed(1)}% used
                 </div>
               </div>
             </div>
@@ -192,22 +249,25 @@ export function UsageBar() {
                 {t('usage.tooltip.mcp_tools')}
               </h4>
               <div className="space-y-1 text-xs">
-                {Object.entries(today.calls).map(([tool, count]) => (
-                  <div key={tool} className="flex justify-between items-center gap-3 py-1">
-                    <span className="font-mono text-gray-600 dark:text-gray-400 text-[10px]">
-                      {tool}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500 dark:text-gray-400">
-                        {count}×
-                      </span>
-                      <span className="font-semibold text-blue-600 dark:text-blue-400 min-w-[60px] text-right">
-                        {formatNumber(today.tokens?.[tool] || 0)} tk
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {Object.keys(today.calls).length === 0 && (
+                {Object.keys(displayData.calls).length > 0 ? (
+                  <>
+                    {Object.entries(displayData.calls).map(([tool, count]) => (
+                      <div key={tool} className="flex justify-between items-center gap-3 py-1">
+                        <span className="font-mono text-gray-600 dark:text-gray-400 text-[10px]">
+                          {tool}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 dark:text-gray-400">
+                            {count}×
+                          </span>
+                          <span className="font-semibold text-blue-600 dark:text-blue-400 min-w-[60px] text-right">
+                            {formatNumber(displayData.tokens?.[tool] || 0)} tk
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
                   <div className="italic text-gray-500 dark:text-gray-400">
                     {t('usage.tooltip.no_calls')}
                   </div>
@@ -220,26 +280,42 @@ export function UsageBar() {
               <h4 className="text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100">
                 {t('usage.tooltip.last_days')}
               </h4>
-              <div className="flex items-end justify-between gap-1 h-12">
-                {usage.historical.map((day) => {
-                  const maxCredits = Math.max(...usage.historical.map(d => d.creditsEstimate), 1);
-                  const height = (day.creditsEstimate / maxCredits) * 100;
-                  return (
-                    <div
-                      key={day.date}
-                      className="flex-1 group relative"
-                      title={`${day.date}: ${day.analyses} ${t('usage.tooltip.analyses')}`}
-                    >
+              <div className="flex items-end justify-between gap-2 h-28">
+                {(() => {
+                  const GRAPH_HEIGHT = 112; // h-28 = 112px
+                  const DAILY_LIMIT = today.credits.dailyLimit; // 1,200,000
+
+                  return usage.historical.map((day) => {
+                    const heightPercent = (day.creditsEstimate / DAILY_LIMIT);
+                    const heightPx = Math.max(Math.round(heightPercent * GRAPH_HEIGHT), day.creditsEstimate > 0 ? 4 : 0);
+                    const isSelected = selectedDate === day.date;
+
+                    return (
                       <div
-                        className="bg-blue-500 dark:bg-blue-400 rounded-t transition-all group-hover:bg-blue-600 dark:group-hover:bg-blue-300"
-                        style={{ height: `${height}%`, minHeight: day.creditsEstimate > 0 ? '4px' : '0' }}
-                      ></div>
-                      <div className="text-[9px] text-center mt-1 truncate text-gray-500 dark:text-gray-400">
-                        {day.date.slice(5)}
+                        key={day.date}
+                        className="flex-1 group relative cursor-pointer"
+                        title={`${day.date}: ${day.analyses} ${t('usage.tooltip.analyses')} - ${formatNumber(day.creditsEstimate)} tk`}
+                        onClick={() => setSelectedDate(day.date === selectedDate ? null : day.date)}
+                      >
+                        <div
+                          className={`rounded-t transition-all w-full ${
+                            isSelected
+                              ? 'bg-blue-700 dark:bg-blue-300'
+                              : 'bg-blue-500 dark:bg-blue-400 group-hover:bg-blue-600 dark:group-hover:bg-blue-300'
+                          }`}
+                          style={{ height: `${heightPx}px` }}
+                        ></div>
+                        <div className={`text-[9px] text-center mt-1 truncate ${
+                          isSelected
+                            ? 'text-blue-700 dark:text-blue-300 font-bold'
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {day.date.slice(5)}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </div>
 

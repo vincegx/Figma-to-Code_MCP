@@ -338,14 +338,18 @@ app.get('/api/usage', (req, res) => {
           date: dateStr,
           totalCalls: dayData.totalCalls,
           analyses: dayData.analyses,
-          creditsEstimate: dayData.totalTokens || 0
+          creditsEstimate: dayData.totalTokens || 0,
+          calls: dayData.calls || {},
+          tokens: dayData.tokens || {}
         })
       } else {
         historical.push({
           date: dateStr,
           totalCalls: 0,
           analyses: 0,
-          creditsEstimate: 0
+          creditsEstimate: 0,
+          calls: {},
+          tokens: {}
         })
       }
     }
