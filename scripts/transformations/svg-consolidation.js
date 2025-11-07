@@ -3,6 +3,7 @@ import * as t from '@babel/types'
 import fs from 'fs'
 import path from 'path'
 import * as cheerio from 'cheerio'
+import svgPathBbox from 'svg-path-bbox'
 
 export const meta = {
   name: 'svg-consolidation',
@@ -101,9 +102,9 @@ function findSVGGroups(ast, importMap) {
       // Find <img> children at depth 1-2 only (not recursive through entire tree)
       const svgElements = []
 
-      // Check direct children and grandchildren only
-      const checkNode = (node, depth) => {
-        if (depth > 2) return // Max 2 levels deep
+      // Check direct children and find positioned containers with SVG images
+      const checkNode = (node, depth, parentClassName, grandparentClassName) => {
+        if (depth > 3) return
 
         if (!node.children) return
 
@@ -111,6 +112,14 @@ function findSVGGroups(ast, importMap) {
           if (!t.isJSXElement(child)) continue
 
           const childName = child.openingElement.name.name
+
+          // Get this element's className
+          const classNameAttr = child.openingElement.attributes.find(
+            attr => attr.name && attr.name.name === 'className'
+          )
+          const currentClassName = classNameAttr && t.isStringLiteral(classNameAttr.value)
+            ? classNameAttr.value.value
+            : null
 
           if (childName === 'img') {
             const srcAttr = child.openingElement.attributes.find(
@@ -127,21 +136,41 @@ function findSVGGroups(ast, importMap) {
                 )
                 const dataName = imgDataNameAttr?.value?.value || filename.replace('.svg', '')
 
+                // Use grandparent's className if parent is just "inset-0", otherwise use parent
+                const positionClass = (parentClassName && parentClassName.includes('inset-0'))
+                  ? grandparentClassName
+                  : parentClassName
+
                 svgElements.push({
                   varName,
                   filename,
-                  dataName
+                  dataName,
+                  cssPosition: positionClass
                 })
               }
             }
           } else if (childName === 'div') {
-            // Continue one more level for divs
-            checkNode(child, depth + 1)
+            // Check if child div has its own data-name (might be processed separately)
+            const childDataNameAttr = child.openingElement.attributes.find(
+              attr => attr.name && attr.name.name === 'data-name'
+            )
+            const childDataName = childDataNameAttr?.value?.value
+
+            // Skip child divs with data-name UNLESS it's a technical wrapper like "Vector"
+            // Technical wrappers are part of the parent consolidation, not separate components
+            const isTechnicalWrapper = childDataName === 'Vector' || childDataName === 'Group'
+
+            if (childDataName && !isTechnicalWrapper) {
+              continue
+            }
+
+            // Continue traversing, passing className hierarchy
+            checkNode(child, depth + 1, currentClassName || parentClassName, parentClassName || grandparentClassName)
           }
         }
       }
 
-      checkNode(path.node, 0)
+      checkNode(path.node, 0, null, null)
 
       // Only consolidate groups with 5+ SVG elements
       if (svgElements.length >= 5) {
@@ -149,16 +178,80 @@ function findSVGGroups(ast, importMap) {
           ? containerDataName.replace(/\s+/g, '-').toLowerCase()
           : `group-${groups.length + 1}`
 
+        // Extract container dimensions from className (e.g., w-[140px] h-[49.551px])
+        let containerWidth = null
+        let containerHeight = null
+        const classNameAttr = openingElement.attributes.find(
+          attr => attr.name && attr.name.name === 'className'
+        )
+        if (classNameAttr && t.isStringLiteral(classNameAttr.value)) {
+          const className = classNameAttr.value.value
+          const widthMatch = className.match(/w-\[(\d+(?:\.\d+)?)px\]/)
+          const heightMatch = className.match(/h-\[(\d+(?:\.\d+)?)px\]/)
+          if (widthMatch) containerWidth = parseFloat(widthMatch[1])
+          if (heightMatch) containerHeight = parseFloat(heightMatch[1])
+        }
+
         groups.push({
           groupName,
           containerPath: path,
-          svgElements
+          svgElements,
+          containerWidth,
+          containerHeight
         })
       }
     }
   })
 
   return groups
+}
+
+/**
+ * Parse CSS positioning classes and calculate transform
+ */
+function parsePositionAndTransform(cssPosition, containerWidth, containerHeight, svgViewBox) {
+  if (!cssPosition || !containerWidth || !containerHeight || !svgViewBox) {
+    return null
+  }
+
+  const [vbX, vbY, vbW, vbH] = svgViewBox.split(' ').map(Number)
+
+  // Parse inset-[top right bottom left] or individual positions
+  const insetMatch = cssPosition.match(/inset-\[([^\]]+)\]/)
+  let top = 0, right = 0, bottom = 0, left = 0
+
+  if (insetMatch) {
+    const values = insetMatch[1].split('_').map(v => parseFloat(v))
+    ;[top, right, bottom, left] = values
+  } else {
+    // Parse individual left/right/top/bottom
+    const leftMatch = cssPosition.match(/left-\[([^\]]+)\]/)
+    const rightMatch = cssPosition.match(/right-\[([^\]]+)\]/)
+    const topMatch = cssPosition.match(/top-\[([^\]]+)\]/)
+    const bottomMatch = cssPosition.match(/bottom-\[([^\]]+)\]/)
+
+    if (leftMatch) left = parseFloat(leftMatch[1])
+    if (rightMatch) right = parseFloat(rightMatch[1])
+    if (topMatch) top = parseFloat(topMatch[1])
+    if (bottomMatch) bottom = parseFloat(bottomMatch[1])
+  }
+
+  // Calculate absolute position
+  const x = (left / 100) * containerWidth
+  const y = (top / 100) * containerHeight
+  const elementWidth = ((100 - left - right) / 100) * containerWidth
+  const elementHeight = ((100 - top - bottom) / 100) * containerHeight
+
+  // Calculate scale
+  const scaleX = elementWidth / vbW
+  const scaleY = elementHeight / vbH
+
+  return {
+    x,
+    y,
+    scaleX,
+    scaleY
+  }
 }
 
 /**
@@ -171,10 +264,9 @@ function consolidateGroup(group, testDir) {
   const consolidatedFilename = `${safeGroupName}.svg`
   const consolidatedPath = path.join(imgDir, consolidatedFilename)
 
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-  const paths = []
+  const svgGroups = []
 
-  // Extract paths from each SVG file
+  // Extract paths from each SVG file with transform info
   for (const svg of group.svgElements) {
     const svgPath = path.join(imgDir, svg.filename)
     if (!fs.existsSync(svgPath)) {
@@ -186,17 +278,19 @@ function consolidateGroup(group, testDir) {
     const $ = cheerio.load(content, { xmlMode: true })
     const $svg = $('svg')
 
-    // Extract viewBox or dimensions
+    // Extract viewBox
     const viewBox = $svg.attr('viewBox')
-    let vbX = 0, vbY = 0, vbW = 0, vbH = 0
-    if (viewBox) {
-      [vbX, vbY, vbW, vbH] = viewBox.split(' ').map(Number)
-    } else {
-      vbW = parseFloat($svg.attr('width') || 0)
-      vbH = parseFloat($svg.attr('height') || 0)
-    }
 
-    // Extract all <path> elements
+    // Calculate transform if position info available
+    const transform = parsePositionAndTransform(
+      svg.cssPosition,
+      group.containerWidth,
+      group.containerHeight,
+      viewBox
+    )
+
+    // Extract all <path> elements for this SVG
+    const paths = []
     $('path').each((_, pathEl) => {
       const d = $(pathEl).attr('d')
       if (d) {
@@ -210,36 +304,57 @@ function consolidateGroup(group, testDir) {
       }
     })
 
-    // Update bounding box
-    minX = Math.min(minX, vbX)
-    minY = Math.min(minY, vbY)
-    maxX = Math.max(maxX, vbX + vbW)
-    maxY = Math.max(maxY, vbY + vbH)
+    if (paths.length > 0) {
+      svgGroups.push({
+        paths,
+        transform,
+        dataName: svg.dataName
+      })
+    }
   }
 
-  if (paths.length === 0) {
-    console.warn(`[svg-consolidation] No paths found in group ${group.groupName}`)
+  if (svgGroups.length === 0) {
+    console.warn(`[svg-consolidation] No SVG groups found for ${group.groupName}`)
     return null
   }
 
-  // Create consolidated SVG
-  const width = maxX - minX
-  const height = maxY - minY
-  const viewBox = `${minX} ${minY} ${width} ${height}`
+  // Create consolidated SVG with container dimensions
+  const width = group.containerWidth || 100
+  const height = group.containerHeight || 100
+  const viewBox = `0 0 ${width} ${height}`
+
+  console.log(`[svg-consolidation] Creating ${consolidatedFilename} with ${svgGroups.length} SVG groups`)
 
   let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">\n`
-  for (const p of paths) {
-    svgContent += `  <path d="${p.d}"`
-    if (p.fill) svgContent += ` fill="${p.fill}"`
-    if (p.stroke) svgContent += ` stroke="${p.stroke}"`
-    if (p.strokeWidth) svgContent += ` stroke-width="${p.strokeWidth}"`
-    if (p.opacity) svgContent += ` opacity="${p.opacity}"`
-    svgContent += ' />\n'
+
+  let totalPaths = 0
+  for (const svgGroup of svgGroups) {
+    // Create group with transform if available
+    if (svgGroup.transform) {
+      const { x, y, scaleX, scaleY } = svgGroup.transform
+      svgContent += `  <g transform="translate(${x.toFixed(3)}, ${y.toFixed(3)}) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})">\n`
+    } else {
+      svgContent += `  <g>\n`
+    }
+
+    // Add all paths for this SVG
+    for (const p of svgGroup.paths) {
+      svgContent += `    <path d="${p.d}"`
+      if (p.fill) svgContent += ` fill="${p.fill}"`
+      if (p.stroke) svgContent += ` stroke="${p.stroke}"`
+      if (p.strokeWidth) svgContent += ` stroke-width="${p.strokeWidth}"`
+      if (p.opacity) svgContent += ` opacity="${p.opacity}"`
+      svgContent += ' />\n'
+      totalPaths++
+    }
+
+    svgContent += `  </g>\n`
   }
+
   svgContent += '</svg>'
 
   fs.writeFileSync(consolidatedPath, svgContent)
-  console.log(`[svg-consolidation] Created ${consolidatedFilename} with ${paths.length} paths`)
+  console.log(`[svg-consolidation] Created ${consolidatedFilename} with ${svgGroups.length} groups (${totalPaths} paths)`)
 
   return consolidatedFilename
 }

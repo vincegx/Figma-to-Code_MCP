@@ -103,11 +103,26 @@ function PreviewMode({ testId }: { testId: string }) {
 
   return (
     <div style={{
-      width: `${dimensions.width}px`,
-      height: `${dimensions.height}px`,
-      margin: '0 auto'
+      minHeight: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'start',
+      backgroundImage: `
+        linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+        linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)
+      `,
+      backgroundSize: '20px 20px',
+      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+      backgroundColor: '#ffffff'
     }}>
-      <Component />
+      <div style={{
+        width: `${dimensions.width}px`,
+        height: `${dimensions.height}px`
+      }}>
+        <Component />
+      </div>
     </div>
   )
 }

@@ -853,13 +853,20 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
         </div>
 
         {/* Full width viewport simulator */}
-        <div className="min-h-[600px] flex justify-center items-start py-8" style={{
-          background: 'var(--color-white)'
+        <div className="min-h-[600px] flex justify-center items-start pb-8" style={{
+          backgroundImage: `
+            linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+            linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+            linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)
+          `,
+          backgroundSize: '20px 20px',
+          backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+          backgroundColor: '#ffffff'
         }}>
           <div
-            className="shadow-xl transition-all duration-300 ease-in-out overflow-auto"
+            className="transition-all duration-300 ease-in-out overflow-auto"
             style={{
-              backgroundColor: 'var(--bg-card)',
               width: `${viewportWidth}px`,
               maxWidth: '100%',
               minHeight: '500px'
