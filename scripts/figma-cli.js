@@ -77,11 +77,14 @@ const log = {
 };
 
 class FigmaCLI {
-  constructor(url) {
+  constructor(url, cleanMode = false) {
     // Load config
     this.config = JSON.parse(
       fs.readFileSync(path.join(__dirname, '../cli/config/figma-params.json'), 'utf8')
     );
+
+    // Store clean mode flag
+    this.cleanMode = cleanMode;
 
     // Determine project root (works from both Docker and host)
     // MCP Figma Desktop runs on HOST, so we need the HOST path for dirForAssetWrites
@@ -609,6 +612,20 @@ class FigmaCLI {
     );
     log.success('Component-fixed.tsx + rapports générés\n');
 
+    // 2b. Generate clean version if --clean flag is set
+    if (this.cleanMode) {
+      log.task('✨', 'Génération version production (clean)');
+      execSync(
+        `node ${path.join(__dirname, 'unified-processor.js')} ` +
+        `${path.join(this.testDir, 'Component.tsx')} ` +
+        `${path.join(this.testDir, 'Component-clean.tsx')} ` +
+        `${path.join(this.testDir, 'metadata.xml')} ` +
+        `"${this.figmaUrl}" ` +
+        `--clean`
+      );
+      log.success('Component-clean.tsx + Component-clean.css générés\n');
+    }
+
     // 3. Fix SVG vars
     const imgDir = path.join(this.testDir, 'img');
     if (fs.existsSync(imgDir)) {
@@ -705,11 +722,14 @@ class FigmaCLI {
 
 // CLI entry point
 const url = process.argv[2];
+const cleanMode = process.argv[3] === '--clean';
+
 if (!url) {
-  log.error('Usage: node figma-cli.js <figma-url>');
+  log.error('Usage: node figma-cli.js <figma-url> [--clean]');
   console.log(`${colors.dim}Example: node figma-cli.js "https://www.figma.com/design/abc?node-id=9-2654"${colors.reset}`);
+  console.log(`${colors.dim}         node figma-cli.js "https://www.figma.com/design/abc?node-id=9-2654" --clean${colors.reset}`);
   process.exit(1);
 }
 
-const cli = new FigmaCLI(url);
+const cli = new FigmaCLI(url, cleanMode);
 await cli.run();

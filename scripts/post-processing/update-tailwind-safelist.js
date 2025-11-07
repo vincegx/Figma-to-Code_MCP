@@ -108,6 +108,25 @@ function updateTailwindConfig(configPath, newClasses) {
 }
 
 /**
+ * Save classes to test's metadata.json
+ */
+function saveClassesToMetadata(testDir, classes) {
+  const metadataPath = path.join(testDir, 'metadata.json')
+
+  if (!fs.existsSync(metadataPath)) {
+    return
+  }
+
+  try {
+    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'))
+    metadata.tailwindClasses = classes.sort()
+    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8')
+  } catch (err) {
+    console.warn(`   ⚠️  Could not save classes to metadata.json: ${err.message}`)
+  }
+}
+
+/**
  * Main function
  */
 export function updateSafelistForTest(testDir) {
@@ -127,6 +146,9 @@ export function updateSafelistForTest(testDir) {
     console.log(`   ℹ️  No arbitrary value classes found in test`)
     return { updated: false, classes: [] }
   }
+
+  // Save classes to this test's metadata.json
+  saveClassesToMetadata(testDir, newClasses)
 
   // Get current safelist
   const currentSafelist = getCurrentSafelist(configPath)

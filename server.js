@@ -56,7 +56,7 @@ app.post('/api/analyze', async (req, res) => {
 
   // Start the analysis process
   const cliPath = path.join(__dirname, 'scripts', 'figma-cli.js')
-  const child = spawn('node', [cliPath, figmaUrl], {
+  const child = spawn('node', [cliPath, figmaUrl, '--clean'], {
     cwd: __dirname,
     env: {
       ...process.env,

@@ -82,7 +82,9 @@ This project is **open-source** and I'd love your help to make it better! Whethe
 
 ### 🚀 Production-Ready Output
 - **React 19 + TypeScript** - Modern React components with full TypeScript support
-- **Tailwind CSS** - Optimized utility classes with automatic cleanup
+- **Dual Output Modes** - Generate both Tailwind-based and standalone CSS versions
+  - **Component-fixed.tsx/css** - Tailwind utilities with safelist (for Tailwind projects)
+  - **Component-clean.tsx/css** - Pure CSS with zero dependencies (copy/paste ready)
 - **Google Fonts Integration** - Auto-detection and import of custom fonts with weights
 - **Responsive Testing** - Built-in responsive testing interface with presets and custom widths
 
@@ -892,7 +894,35 @@ export const defaultConfig = {
 https://www.figma.com/design/ABC123?node-id=104-13741
 ```
 
-### Output: React Component
+### 🎯 Understanding Output Files: Fixed vs Clean
+
+The tool generates **two versions** of every component to fit different use cases:
+
+| File Type | Purpose | Dependencies | Use Case |
+|-----------|---------|--------------|----------|
+| **Component-fixed.tsx/css** | Tailwind-based development version | Requires Tailwind CSS + safelist config | For projects using Tailwind CSS |
+| **Component-clean.tsx/css** | Standalone production version | Zero dependencies | Copy/paste into any React project |
+
+#### Component-fixed.tsx/css (Tailwind Version)
+- ✅ Uses Tailwind utility classes (`flex`, `bg-white`, `text-lg`)
+- ✅ Uses arbitrary values (`bg-[#f0d9b5]`, `w-[480px]`)
+- ✅ Includes debug attributes (`data-name`, `data-node-id`)
+- ⚠️ Requires `tailwind.config.js` with safelist for arbitrary values
+- 🎯 **Best for**: Existing Tailwind projects
+
+#### Component-clean.tsx/css (Standalone Version)
+- ✅ Pure CSS classes (`.bg-custom-beige`, `.w-custom-480`)
+- ✅ No debug attributes - production ready
+- ✅ Organized CSS with semantic sections
+- ✅ Zero dependencies - works anywhere
+- ✅ Font styles extracted to CSS classes
+- 🎯 **Best for**: Copy/paste into any project, distribution, or non-Tailwind codebases
+
+**Both versions** are generated automatically when using `--clean` flag or via the dashboard.
+
+---
+
+### Output: React Component (Fixed Version)
 
 **Component-fixed.tsx**
 ```tsx

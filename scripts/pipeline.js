@@ -18,6 +18,7 @@ import * as positionFixes from './transformations/position-fixes.js'
 import * as strokeAlignment from './transformations/stroke-alignment.js'
 import * as cssVars from './transformations/css-vars.js'
 import * as tailwindOptimizer from './transformations/tailwind-optimizer.js'
+import * as productionCleaner from './transformations/production-cleaner.js'
 
 // Register all transforms
 const ALL_TRANSFORMS = [
@@ -30,7 +31,8 @@ const ALL_TRANSFORMS = [
   positionFixes,
   strokeAlignment,
   cssVars,
-  tailwindOptimizer
+  tailwindOptimizer,
+  productionCleaner
 ]
 
 /**

@@ -76,12 +76,12 @@ function PreviewMode({ testId }: { testId: string }) {
     // Load CSS
     const link = document.createElement('link')
     link.rel = 'stylesheet'
-    link.href = `/src/generated/tests/${testId}/Component-fixed.css`
+    link.href = `/src/generated/tests/${testId}/Component-clean.css`
     link.id = `test-css-${testId}`
     document.head.appendChild(link)
 
     // Dynamically import the generated component
-    import(`./generated/tests/${testId}/Component-fixed.tsx`)
+    import(`./generated/tests/${testId}/Component-clean.tsx`)
       .then((module) => {
         setComponent(() => module.default)
       })

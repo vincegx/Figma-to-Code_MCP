@@ -27,10 +27,15 @@ const inputFile = process.argv[2]
 const outputFile = process.argv[3]
 const metadataXmlPath = process.argv[4]
 const figmaUrl = process.argv[5]
+const cleanMode = process.argv[6] === '--clean'
 
 if (!inputFile || !outputFile) {
-  console.error('Usage: node unified-processor.js <input.tsx> <output.tsx> [metadata.xml] [figmaUrl]')
+  console.error('Usage: node unified-processor.js <input.tsx> <output.tsx> [metadata.xml] [figmaUrl] [--clean]')
   process.exit(1)
+}
+
+if (cleanMode) {
+  console.log('🧹 Clean mode enabled - generating production-ready version\n')
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -508,6 +513,7 @@ try {
     cssVariables,
     inputDir,
     metadataXmlPath,
+    cleanMode,
     analysis: {
       sections: [],
       totalNodes,
@@ -633,32 +639,140 @@ cssContent += `.content-end {\n  align-content: flex-end;\n}\n`
 
 // Add custom CSS classes
 if (context.customCSSClasses && context.customCSSClasses.size > 0) {
-  cssContent += `\n/* Custom classes for Figma variables */\n`
+  if (cleanMode) {
+    // Clean mode: organize CSS with semantic sections
+    const fontClasses = new Map()
+    const colorClasses = new Map()
+    const dimensionClasses = new Map()
+    const spacingClasses = new Map()
+    const otherClasses = new Map()
+    const figmaVarClasses = new Map()
 
-  for (const [className, classData] of context.customCSSClasses) {
-    const { property, variable, fallback, value } = classData
+    // Categorize classes
+    for (const [className, classData] of context.customCSSClasses) {
+      const { type, fontFamily, fontWeight, property, value } = classData
 
-    if (Array.isArray(property)) {
-      // Multi-property case (e.g., px, py)
-      cssContent += `.${className} {\n`
-      for (const prop of property) {
-        if (value) {
-          // Direct value (e.g., border-width)
-          cssContent += `  ${prop}: ${value};\n`
+      if (type === 'font') {
+        fontClasses.set(className, { fontFamily, fontWeight })
+      } else if (type === 'clean') {
+        if (property === 'background-color' || property === 'color' || property === 'border-color') {
+          colorClasses.set(className, { property, value })
+        } else if (property === 'width' || property === 'height' || property === 'min-width' || property === 'max-width' || property === 'min-height' || property === 'max-height') {
+          dimensionClasses.set(className, { property, value })
+        } else if (property === 'padding' || property === 'margin' || property === 'gap' || property.includes('padding') || property.includes('margin')) {
+          spacingClasses.set(className, { property, value })
         } else {
-          // CSS variable with fallback
-          cssContent += `  ${prop}: var(${variable}, ${fallback});\n`
+          otherClasses.set(className, { property, value })
+        }
+      } else {
+        // Figma variable classes (old format)
+        figmaVarClasses.set(className, classData)
+      }
+    }
+
+    // Generate organized CSS
+    if (fontClasses.size > 0) {
+      cssContent += `\n/* ===== 3. Font Combinations (Extracted from inline styles) ===== */\n`
+      for (const [className, { fontFamily, fontWeight }] of fontClasses) {
+        cssContent += `.${className} {\n`
+        cssContent += `  font-family: "${fontFamily}", sans-serif;\n`
+        cssContent += `  font-weight: ${fontWeight};\n`
+        cssContent += `}\n\n`
+      }
+    }
+
+    if (colorClasses.size > 0) {
+      cssContent += `\n/* ===== 4. Custom Color Classes ===== */\n`
+      for (const [className, { property, value }] of colorClasses) {
+        cssContent += `.${className} { ${property}: ${value}; }\n`
+      }
+    }
+
+    if (dimensionClasses.size > 0) {
+      cssContent += `\n\n/* ===== 5. Custom Dimension Classes ===== */\n`
+      for (const [className, { property, value }] of dimensionClasses) {
+        cssContent += `.${className} { ${property}: ${value}; }\n`
+      }
+    }
+
+    if (spacingClasses.size > 0) {
+      cssContent += `\n\n/* ===== 6. Custom Spacing Classes ===== */\n`
+      for (const [className, { property, value }] of spacingClasses) {
+        if (property === 'padding-left-right') {
+          cssContent += `.${className} {\n  padding-left: ${value};\n  padding-right: ${value};\n}\n\n`
+        } else if (property === 'padding-top-bottom') {
+          cssContent += `.${className} {\n  padding-top: ${value};\n  padding-bottom: ${value};\n}\n\n`
+        } else if (property === 'margin-left-right') {
+          cssContent += `.${className} {\n  margin-left: ${value};\n  margin-right: ${value};\n}\n\n`
+        } else if (property === 'margin-top-bottom') {
+          cssContent += `.${className} {\n  margin-top: ${value};\n  margin-bottom: ${value};\n}\n\n`
+        } else {
+          cssContent += `.${className} { ${property}: ${value}; }\n`
         }
       }
-      cssContent += `}\n`
-    } else {
-      // Single property case
-      if (value) {
-        // Direct value (e.g., border-width: 0px 0px 2px)
-        cssContent += `.${className} { ${property}: ${value}; }\n`
+    }
+
+    if (otherClasses.size > 0) {
+      cssContent += `\n\n/* ===== 7. Other Custom Classes ===== */\n`
+      for (const [className, { property, value }] of otherClasses) {
+        // Fix Figma-style underscores in values (e.g., inset: 4.16%_7.813%) → valid CSS spaces
+        const cleanValue = value.replace(/_/g, ' ')
+        cssContent += `.${className} { ${property}: ${cleanValue}; }\n`
+      }
+    }
+
+    if (figmaVarClasses.size > 0) {
+      cssContent += `\n\n/* ===== 8. Figma Variable Classes (Design System) ===== */\n`
+      for (const [className, classData] of figmaVarClasses) {
+        const { property, variable, fallback, value } = classData
+        if (Array.isArray(property)) {
+          cssContent += `.${className} {\n`
+          for (const prop of property) {
+            if (value) {
+              cssContent += `  ${prop}: ${value};\n`
+            } else {
+              cssContent += `  ${prop}: var(${variable}, ${fallback});\n`
+            }
+          }
+          cssContent += `}\n`
+        } else {
+          if (value) {
+            cssContent += `.${className} { ${property}: ${value}; }\n`
+          } else {
+            cssContent += `.${className} { ${property}: var(${variable}, ${fallback}); }\n`
+          }
+        }
+      }
+    }
+  } else {
+    // Standard mode: keep existing format
+    cssContent += `\n/* Custom classes for Figma variables */\n`
+
+    for (const [className, classData] of context.customCSSClasses) {
+      const { property, variable, fallback, value } = classData
+
+      if (Array.isArray(property)) {
+        // Multi-property case (e.g., px, py)
+        cssContent += `.${className} {\n`
+        for (const prop of property) {
+          if (value) {
+            // Direct value (e.g., border-width)
+            cssContent += `  ${prop}: ${value};\n`
+          } else {
+            // CSS variable with fallback
+            cssContent += `  ${prop}: var(${variable}, ${fallback});\n`
+          }
+        }
+        cssContent += `}\n`
       } else {
-        // CSS variable with fallback
-        cssContent += `.${className} { ${property}: var(${variable}, ${fallback}); }\n`
+        // Single property case
+        if (value) {
+          // Direct value (e.g., border-width: 0px 0px 2px)
+          cssContent += `.${className} { ${property}: ${value}; }\n`
+        } else {
+          // CSS variable with fallback
+          cssContent += `.${className} { ${property}: var(${variable}, ${fallback}); }\n`
+        }
       }
     }
   }

@@ -3,7 +3,7 @@
  *
  * 4 onglets :
  * 1. Preview - Rendu React du composant généré
- * 2. Code - Code source Component-fixed.tsx avec syntax highlighting
+ * 2. Code - Code source Component-clean.tsx avec syntax highlighting
  * 3. Rapport - Rapport HTML interactif (report.html)
  * 4. Technical Analysis - Documentation markdown technique (analysis.md)
  */
@@ -96,14 +96,14 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
       const analysisModule = await import(`../generated/tests/${testId}/analysis.md?raw`)
       setAnalysis(analysisModule.default)
 
-      // Load component code (Component-fixed.tsx ou .jsx)
+      // Load component code (Component-clean.tsx ou .jsx)
       try {
-        const codeModule = await import(`../generated/tests/${testId}/Component-fixed.tsx?raw`)
+        const codeModule = await import(`../generated/tests/${testId}/Component-clean.tsx?raw`)
         setComponentCode(codeModule.default)
       } catch (e) {
-        // Fallback sur Component-fixed.jsx
+        // Fallback sur Component-clean.jsx
         try {
-          const codeModule = await import(`../generated/tests/${testId}/Component-fixed.jsx?raw`)
+          const codeModule = await import(`../generated/tests/${testId}/Component-clean.jsx?raw`)
           setComponentCode(codeModule.default)
         } catch (e2) {
           // Fallback sur Component.tsx
@@ -250,7 +250,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 rel="noopener noreferrer"
                 className="px-4 py-2.5 text-sm font-medium rounded-xl transition-all flex items-center gap-2"
                 style={{
-                  background: 'var(--status-info-bg)',
+                  background: 'var(--color-5)',
                   color: 'var(--status-info-text)',
                   boxShadow: 'var(--shadow-sm)'
                 }}
@@ -367,8 +367,6 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
       {/* Tabs */}
       <nav style={{
         backgroundColor: 'var(--bg-card)',
-        borderBottom: '1px solid',
-        borderColor: 'var(--border-primary)'
       }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex justify-between items-center">
@@ -377,14 +375,14 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 onClick={() => setActiveTab('preview')}
                 className="py-4 px-1 font-medium text-sm transition-colors"
                 style={{
-                  borderBottom: '2px solid',
-                  borderColor: activeTab === 'preview' ? 'var(--accent-primary)' : 'transparent',
-                  color: activeTab === 'preview' ? 'var(--accent-primary)' : 'var(--text-secondary)'
+                  borderBottom: '3px solid',
+                  borderColor: activeTab === 'preview' ? 'var(--color-0)' : 'transparent',
+                  color: activeTab === 'preview' ? 'var(--color-1)' : 'var(--text-secondary)'
                 }}
                 onMouseEnter={(e) => {
                   if (activeTab !== 'preview') {
-                    e.currentTarget.style.color = 'var(--text-primary)'
-                    e.currentTarget.style.borderColor = 'var(--border-primary)'
+                    e.currentTarget.style.color = 'var(--color-0)'
+                    e.currentTarget.style.borderColor = 'var(--color-0)'
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -401,13 +399,13 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 className="py-4 px-1 font-medium text-sm transition-colors"
                 style={{
                   borderBottom: '2px solid',
-                  borderColor: activeTab === 'report' ? 'var(--accent-primary)' : 'transparent',
-                  color: activeTab === 'report' ? 'var(--accent-primary)' : 'var(--text-secondary)'
+                  borderColor: activeTab === 'report' ? 'var(--color-0)' : 'transparent',
+                  color: activeTab === 'report' ? 'var(--color-1)' : 'var(--text-secondary)'
                 }}
                 onMouseEnter={(e) => {
                   if (activeTab !== 'report') {
-                    e.currentTarget.style.color = 'var(--text-primary)'
-                    e.currentTarget.style.borderColor = 'var(--border-primary)'
+                    e.currentTarget.style.color = 'var(--color-0)'
+                    e.currentTarget.style.borderColor = 'var(--color-0)'
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -424,13 +422,13 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 className="py-4 px-1 font-medium text-sm transition-colors"
                 style={{
                   borderBottom: '2px solid',
-                  borderColor: activeTab === 'code' ? 'var(--accent-primary)' : 'transparent',
-                  color: activeTab === 'code' ? 'var(--accent-primary)' : 'var(--text-secondary)'
+                  borderColor: activeTab === 'code' ? 'var(--color-0)' : 'transparent',
+                  color: activeTab === 'code' ? 'var(--color-1)' : 'var(--text-secondary)'
                 }}
                 onMouseEnter={(e) => {
                   if (activeTab !== 'code') {
-                    e.currentTarget.style.color = 'var(--text-primary)'
-                    e.currentTarget.style.borderColor = 'var(--border-primary)'
+                    e.currentTarget.style.color = 'var(--color-0)'
+                    e.currentTarget.style.borderColor = 'var(--color-0)'
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -447,13 +445,13 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                 className="py-4 px-1 font-medium text-sm transition-colors"
                 style={{
                   borderBottom: '2px solid',
-                  borderColor: activeTab === 'technical' ? 'var(--accent-primary)' : 'transparent',
-                  color: activeTab === 'technical' ? 'var(--accent-primary)' : 'var(--text-secondary)'
+                  borderColor: activeTab === 'technical' ? 'var(--color-0)' : 'transparent',
+                  color: activeTab === 'technical' ? 'var(--color-1)' : 'var(--text-secondary)'
                 }}
                 onMouseEnter={(e) => {
                   if (activeTab !== 'technical') {
-                    e.currentTarget.style.color = 'var(--text-primary)'
-                    e.currentTarget.style.borderColor = 'var(--border-primary)'
+                    e.currentTarget.style.color = 'var(--color-0)'
+                    e.currentTarget.style.borderColor = 'var(--color-0)'
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -620,7 +618,7 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
   useEffect(() => {
     const link = document.createElement('link')
     link.rel = 'stylesheet'
-    link.href = `/src/generated/tests/${testId}/Component-fixed.css`
+    link.href = `/src/generated/tests/${testId}/Component-clean.css`
     link.id = `test-css-${testId}`
     document.head.appendChild(link)
 
@@ -641,13 +639,13 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
     try {
       setLoading(true)
 
-      // Import dynamique du composant - essayer d'abord la version fixed (.tsx puis .jsx)
+      // Import dynamique du composant - essayer d'abord la version clean (.tsx puis .jsx)
       let module: any
       try {
-        module = await import(`../generated/tests/${testId}/Component-fixed.tsx`)
+        module = await import(`../generated/tests/${testId}/Component-clean.tsx`)
       } catch (e) {
         try {
-          module = await import(`../generated/tests/${testId}/Component-fixed.jsx`)
+          module = await import(`../generated/tests/${testId}/Component-clean.jsx`)
         } catch (e2) {
           try {
             module = await import(`../generated/tests/${testId}/Component.tsx`)
@@ -894,74 +892,190 @@ interface CodeFile {
   icon: string
 }
 
+type CodeVersion = 'original' | 'fixed' | 'clean'
+
+type FileCache = {
+  original: CodeFile[]
+  fixed: CodeFile[]
+  clean: CodeFile[]
+}
+
 function CodeTab({ componentCode, testId }: CodeTabProps) {
   const { t } = useTranslation()
-  const [files, setFiles] = useState<CodeFile[]>([])
+  const [version, setVersion] = useState<CodeVersion>('clean')
+  const [fileCache, setFileCache] = useState<FileCache | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [tailwindClasses, setTailwindClasses] = useState<string[]>([])
 
+  // Load all files once on mount
   useEffect(() => {
     loadAllFiles()
+    loadTailwindClasses()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testId])
 
+  // Load Tailwind classes from metadata.json
+  const loadTailwindClasses = async () => {
+    try {
+      const response = await fetch(`/src/generated/tests/${testId}/metadata.json`)
+      if (response.ok) {
+        const metadata = await response.json()
+        setTailwindClasses(metadata.tailwindClasses || [])
+      }
+    } catch (err) {
+      console.warn('Could not load tailwindClasses from metadata.json')
+    }
+  }
+
+  // Reset selected index when version changes
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [version])
+
   const loadAllFiles = async () => {
     try {
-      const fileList: CodeFile[] = []
+      setLoading(true)
+      const cache: FileCache = {
+        original: [],
+        fixed: [],
+        clean: []
+      }
 
-      // 1. Component-fixed.tsx
-      fileList.push({
-        name: 'Component-fixed.tsx',
-        content: componentCode,
-        type: 'tsx',
-        icon: '⚛️'
-      })
+      // Load Original (MCP outputs)
+      try {
+        const originalModule = await import(`../generated/tests/${testId}/Component.tsx?raw`)
+        cache.original.push({
+          name: 'Component.tsx',
+          content: originalModule.default,
+          type: 'tsx',
+          icon: '📄'
+        })
+      } catch (e) {
+        console.warn('No original Component.tsx')
+      }
 
-      // 2. Component-fixed.css
+      // Load metadata.xml
+      try {
+        const metadataModule = await import(`../generated/tests/${testId}/metadata.xml?raw`)
+        cache.original.push({
+          name: 'metadata.xml',
+          content: metadataModule.default,
+          type: 'tsx',
+          icon: '📋'
+        })
+      } catch (e) {
+        console.warn('No metadata.xml')
+      }
+
+      // Load variables.json
+      try {
+        const variablesModule = await import(`../generated/tests/${testId}/variables.json?raw`)
+        cache.original.push({
+          name: 'variables.json',
+          content: variablesModule.default,
+          type: 'tsx',
+          icon: '🎨'
+        })
+      } catch (e) {
+        console.warn('No variables.json')
+      }
+
+      // Load Fixed
+      try {
+        const fixedModule = await import(`../generated/tests/${testId}/Component-fixed.tsx?raw`)
+        cache.fixed.push({
+          name: 'Component-fixed.tsx',
+          content: fixedModule.default,
+          type: 'tsx',
+          icon: '⚛️'
+        })
+      } catch (e) {
+        console.warn('No Component-fixed.tsx')
+      }
+
       try {
         const cssModule = await import(`../generated/tests/${testId}/Component-fixed.css?raw`)
-        fileList.push({
+        cache.fixed.push({
           name: 'Component-fixed.css',
           content: cssModule.default,
           type: 'css',
           icon: '🎨'
         })
       } catch (e) {
-        console.warn('No CSS file')
+        console.warn('No Component-fixed.css')
       }
 
-      // 3. Tous les chunks
-      const chunkNames = ['ImageText', 'Header', 'Footer', 'Hero', 'Card', 'Button', 'Navigation', 'Sidebar']
+      // Load tailwind.config.js (safelist for fixed version)
+      try {
+        const response = await fetch('/tailwind.config.js')
+        if (response.ok) {
+          const content = await response.text()
+          cache.fixed.push({
+            name: 'tailwind.config.js',
+            content: content,
+            type: 'tsx',
+            icon: '⚙️'
+          })
+        }
+      } catch (e) {
+        console.warn('No tailwind.config.js')
+      }
 
+      // Load Fixed Chunks
+      const chunkNames = ['ImageText', 'Header', 'Footer', 'Hero', 'Card', 'Button', 'Navigation', 'Sidebar']
       for (const chunkName of chunkNames) {
-        // TSX chunk
         try {
           const tsxModule = await import(`../generated/tests/${testId}/chunks-fixed/${chunkName}.tsx?raw`)
-          fileList.push({
+          cache.fixed.push({
             name: `chunks/${chunkName}.tsx`,
             content: tsxModule.default,
             type: 'tsx',
             icon: '🧩'
           })
         } catch (e) {
-          // Chunk n'existe pas
+          // Chunk doesn't exist
         }
 
-        // CSS chunk
         try {
           const cssModule = await import(`../generated/tests/${testId}/chunks-fixed/${chunkName}.css?raw`)
-          fileList.push({
+          cache.fixed.push({
             name: `chunks/${chunkName}.css`,
             content: cssModule.default,
             type: 'css',
             icon: '🎨'
           })
         } catch (e) {
-          // CSS n'existe pas
+          // CSS doesn't exist
         }
       }
 
-      setFiles(fileList)
+      // Load Clean
+      try {
+        const cleanModule = await import(`../generated/tests/${testId}/Component-clean.tsx?raw`)
+        cache.clean.push({
+          name: 'Component-clean.tsx',
+          content: cleanModule.default,
+          type: 'tsx',
+          icon: '✨'
+        })
+      } catch (e) {
+        console.warn('No Component-clean.tsx')
+      }
+
+      try {
+        const cssModule = await import(`../generated/tests/${testId}/Component-clean.css?raw`)
+        cache.clean.push({
+          name: 'Component-clean.css',
+          content: cssModule.default,
+          type: 'css',
+          icon: '🎨'
+        })
+      } catch (e) {
+        console.warn('No Component-clean.css')
+      }
+
+      setFileCache(cache)
       setLoading(false)
     } catch (err) {
       console.error('Error loading files:', err)
@@ -969,9 +1083,11 @@ function CodeTab({ componentCode, testId }: CodeTabProps) {
     }
   }
 
-  if (loading) {
+  if (loading || !fileCache) {
     return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>{t('detail.code.loading')}</div>
   }
+
+  const files = fileCache[version]
 
   if (files.length === 0) {
     return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>{t('detail.code.no_files')}</div>
@@ -979,140 +1095,186 @@ function CodeTab({ componentCode, testId }: CodeTabProps) {
 
   const selectedFile = files[selectedIndex]
 
-  // Séparer les fichiers principaux des chunks
-  const mainFiles = files.filter(f => !f.name.startsWith('chunks/'))
-  const chunkFiles = files.filter(f => f.name.startsWith('chunks/'))
-
   return (
-    <div>
-      {/* NAVIGATION - Boutons pour chaque fichier */}
+    <div style={{ display: 'flex', gap: '16px', height: '80vh' }}>
+      {/* LEFT SIDEBAR - File Tree */}
       <div style={{
-        backgroundColor: 'var(--bg-secondary)',
+        width: '280px',
+        backgroundColor: 'var(--color-white)',
         borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '16px',
-        border: '1px solid',
-        borderColor: 'var(--border-primary)'
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
       }}>
-        <div style={{ fontWeight: 'bold', marginBottom: '16px', fontSize: '16px', color: 'var(--text-primary)' }}>
-          📁 Navigation des fichiers ({files.length} fichiers)
+        {/* Version Tabs */}
+        <div style={{
+          display: 'flex',
+          backgroundColor: 'var(--color-white)'
+        }}>
+          {(['original', 'fixed', 'clean'] as CodeVersion[]).map((ver) => (
+            <button
+              key={ver}
+              onClick={() => setVersion(ver)}
+              style={{
+                flex: 1,
+                padding: '10px 8px',
+                border: 'none',
+                backgroundColor: version === ver ? 'var(--color-1)' : 'transparent',
+                color: version === ver ? 'var(--color-white)' : 'var(--color-black)',
+                cursor: 'pointer',
+                fontSize: '11px',
+                fontWeight: version === ver ? '600' : '400',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {ver === 'original' ? '📄 MCP' : ver === 'fixed' ? '⚛️ Fixed' : '✨ Clean'}
+            </button>
+          ))}
         </div>
 
-        {/* Fichiers principaux */}
-        <div style={{ marginBottom: '20px' }}>
+        {/* File Tree */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
+          {files.map((file, index) => {
+            const isChunk = file.name.startsWith('chunks/')
+            const displayName = isChunk ? file.name.replace('chunks/', '  ↳ ') : file.name
+            const isSelected = selectedIndex === index
+
+            return (
+              <div
+                key={index}
+                onClick={() => setSelectedIndex(index)}
+                style={{
+                  padding: '8px 12px',
+                  marginBottom: '2px',
+                  borderRadius: '4px',
+                  backgroundColor: isSelected ? 'var(--color-1)' : 'transparent',
+                  color: isSelected ? 'var(--color-white)' : 'var(--color-black)',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.15s ease',
+                  fontWeight: isSelected ? '600' : '400'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-card)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }
+                }}
+              >
+                <span style={{ fontSize: '14px', flexShrink: 0 }}>{file.icon}</span>
+                <span style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontSize: isChunk ? '12px' : '13px'
+                }}>
+                  {displayName}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Tailwind Classes (only for Fixed version) */}
+        {version === 'fixed' && tailwindClasses.length > 0 && (
           <div style={{
-            fontSize: '12px',
-            fontWeight: '600',
-            color: 'var(--text-secondary)',
-            textTransform: 'uppercase',
-            marginBottom: '8px',
-            letterSpacing: '0.5px'
+            borderTop: '1px solid var(--border-primary)',
+            padding: '12px',
+            maxHeight: '200px',
+            overflow: 'auto',
+            backgroundColor: 'var(--bg-card)'
           }}>
-            📦 Composant principal ({mainFiles.length})
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {mainFiles.map((file) => {
-              const actualIndex = files.indexOf(file)
-              return (
-                <button
-                  key={actualIndex}
-                  onClick={() => setSelectedIndex(actualIndex)}
-                  style={{
-                    padding: '8px 16px',
-                    border: selectedIndex === actualIndex ? '2px solid' : '1px solid',
-                    borderColor: selectedIndex === actualIndex ? 'var(--accent-primary)' : 'var(--border-primary)',
-                    borderRadius: '6px',
-                    backgroundColor: selectedIndex === actualIndex ? 'var(--accent-secondary)' : 'var(--bg-card)',
-                    color: selectedIndex === actualIndex ? 'var(--accent-primary)' : 'var(--text-primary)',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: selectedIndex === actualIndex ? '600' : '400',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span>{file.icon}</span>
-                  <span>{file.name}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Chunks */}
-        {chunkFiles.length > 0 && (
-          <div>
             <div style={{
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: '600',
               color: 'var(--text-secondary)',
-              textTransform: 'uppercase',
               marginBottom: '8px',
+              textTransform: 'uppercase',
               letterSpacing: '0.5px'
             }}>
-              🧩 Chunks - Composants découpés ({chunkFiles.length})
+              ⚙️ Tailwind Classes ({tailwindClasses.length})
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {chunkFiles.map((file) => {
-                const actualIndex = files.indexOf(file)
-                return (
-                  <button
-                    key={actualIndex}
-                    onClick={() => setSelectedIndex(actualIndex)}
-                    style={{
-                      padding: '8px 16px',
-                      border: selectedIndex === actualIndex ? '2px solid' : '1px solid',
-                      borderColor: selectedIndex === actualIndex ? 'var(--accent-primary)' : 'var(--border-primary)',
-                      borderRadius: '6px',
-                      backgroundColor: selectedIndex === actualIndex ? 'var(--accent-secondary)' : 'var(--bg-card)',
-                      color: selectedIndex === actualIndex ? 'var(--accent-primary)' : 'var(--text-primary)',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: selectedIndex === actualIndex ? '600' : '400',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>{file.icon}</span>
-                    <span>{file.name.replace('chunks/', '')}</span>
-                  </button>
-                )
-              })}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {tailwindClasses.slice(0, 10).map((cls, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    fontSize: '10px',
+                    fontFamily: 'monospace',
+                    color: 'var(--text-primary)',
+                    padding: '4px 6px',
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderRadius: '3px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {cls}
+                </div>
+              ))}
+              {tailwindClasses.length > 10 && (
+                <div style={{
+                  fontSize: '10px',
+                  color: 'var(--text-secondary)',
+                  fontStyle: 'italic',
+                  marginTop: '4px'
+                }}>
+                  +{tailwindClasses.length - 10} more...
+                </div>
+              )}
             </div>
           </div>
         )}
+
+        {/* Footer Info */}
+        <div style={{
+          borderTop: '1px solid var(--border-primary)',
+          padding: '8px 12px',
+          fontSize: '11px',
+          color: 'var(--text-secondary)',
+          backgroundColor: 'var(--bg-tertiary)'
+        }}>
+          {files.length} fichier{files.length > 1 ? 's' : ''}
+        </div>
       </div>
 
-      {/* AFFICHAGE DU CODE */}
+      {/* RIGHT PANEL - Code Display */}
       <div style={{
+        flex: 1,
         backgroundColor: 'var(--bg-card)',
         borderRadius: '8px',
-        border: '1px solid',
-        borderColor: 'var(--border-primary)',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
         {/* Header */}
         <div style={{
           backgroundColor: 'var(--bg-overlay-dark)',
           color: 'var(--text-inverse)',
-          padding: '12px 24px',
+          padding: '12px 20px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>{selectedFile.icon}</span>
-            <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{selectedFile.name}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '16px' }}>{selectedFile.icon}</span>
+            <span style={{ fontWeight: '600', fontSize: '13px' }}>{selectedFile.name}</span>
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '11px', color: 'var(--color-white)' }}>
             {selectedFile.content.split('\n').length} lignes
           </div>
         </div>
 
         {/* Code */}
-        <div style={{ overflow: 'auto', maxHeight: '70vh' }}>
+        <div style={{ flex: 1, overflow: 'auto' }}>
           <SyntaxHighlighter
             language={selectedFile.type === 'tsx' ? 'typescript' : 'css'}
             style={vscDarkPlus}
@@ -1120,7 +1282,8 @@ function CodeTab({ componentCode, testId }: CodeTabProps) {
               margin: 0,
               borderRadius: 0,
               fontSize: '13px',
-              lineHeight: '1.5'
+              lineHeight: '1.5',
+              height: '100%'
             }}
             showLineNumbers
           >
@@ -1209,9 +1372,7 @@ function TechnicalAnalysisTab({ analysis }: TechnicalAnalysisTabProps) {
       {/* Markdown code viewer */}
       <div className="rounded-lg overflow-hidden" style={{
         backgroundColor: 'var(--bg-card)',
-        boxShadow: 'var(--shadow-sm)',
-        borderWidth: '1px',
-        borderColor: 'var(--border-primary)'
+        boxShadow: 'var(--shadow-sm)'
       }}>
         <div className="px-6 py-3 flex items-center justify-between" style={{
           backgroundColor: 'var(--bg-overlay-dark)',
