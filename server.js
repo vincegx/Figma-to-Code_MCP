@@ -406,6 +406,115 @@ app.get('/api/usage', (req, res) => {
 })
 
 /**
+ * GET /api/tests/:testId/data
+ * Récupère les données complètes d'un test (metadata.json, metadata.xml, analysis.md)
+ */
+app.get('/api/tests/:testId/data', async (req, res) => {
+  const { testId } = req.params
+
+  if (!testId || !testId.startsWith('node-')) {
+    return res.status(400).json({ error: 'Test ID invalide' })
+  }
+
+  try {
+    const testPath = path.join(__dirname, 'src', 'generated', 'tests', testId)
+
+    // Vérifier que le dossier existe
+    if (!fs.existsSync(testPath)) {
+      return res.status(404).json({ error: 'Test non trouvé' })
+    }
+
+    const data = {}
+
+    // Lire metadata.json
+    const metadataPath = path.join(testPath, 'metadata.json')
+    if (fs.existsSync(metadataPath)) {
+      data.metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'))
+    }
+
+    // Lire metadata.xml
+    const xmlPath = path.join(testPath, 'metadata.xml')
+    if (fs.existsSync(xmlPath)) {
+      const xmlContent = fs.readFileSync(xmlPath, 'utf8')
+      data.metadataXml = xmlContent
+
+      // Extraire layerName depuis XML
+      const frameMatch = xmlContent.match(/<frame[^>]+name="([^"]+)"/)
+      if (frameMatch && data.metadata) {
+        data.metadata.layerName = frameMatch[1]
+      }
+    }
+
+    // Lire analysis.md
+    const analysisPath = path.join(testPath, 'analysis.md')
+    if (fs.existsSync(analysisPath)) {
+      data.analysis = fs.readFileSync(analysisPath, 'utf8')
+    }
+
+    res.json(data)
+  } catch (error) {
+    console.error('Error loading test data:', error)
+    res.status(500).json({ error: 'Failed to load test data' })
+  }
+})
+
+/**
+ * GET /api/tests
+ * Récupère la liste de tous les tests avec leurs métadonnées
+ */
+app.get('/api/tests', async (req, res) => {
+  try {
+    const testsDir = path.join(__dirname, 'src', 'generated', 'tests')
+
+    // Vérifier que le dossier existe
+    if (!fs.existsSync(testsDir)) {
+      return res.json([])
+    }
+
+    // Lire tous les dossiers de tests
+    const testFolders = fs.readdirSync(testsDir)
+      .filter(name => name.startsWith('node-'))
+
+    // Charger les métadonnées pour chaque test
+    const tests = testFolders.map(testId => {
+      try {
+        const testPath = path.join(testsDir, testId)
+        const metadataPath = path.join(testPath, 'metadata.json')
+        const xmlPath = path.join(testPath, 'metadata.xml')
+
+        // Lire metadata.json
+        let metadata = {}
+        if (fs.existsSync(metadataPath)) {
+          metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'))
+        }
+
+        // Lire layerName depuis metadata.xml
+        let layerName = null
+        if (fs.existsSync(xmlPath)) {
+          const xmlContent = fs.readFileSync(xmlPath, 'utf8')
+          const frameMatch = xmlContent.match(/<frame[^>]+name="([^"]+)"/)
+          layerName = frameMatch ? frameMatch[1] : null
+        }
+
+        return {
+          ...metadata,
+          testId,
+          layerName
+        }
+      } catch (error) {
+        console.error(`Error loading test ${testId}:`, error)
+        return null
+      }
+    }).filter(test => test !== null)
+
+    res.json(tests)
+  } catch (error) {
+    console.error('Error reading tests:', error)
+    res.status(500).json({ error: 'Failed to read tests' })
+  }
+})
+
+/**
  * GET /api/download/:testId
  * Télécharge un test complet en archive ZIP
  */

@@ -19,7 +19,7 @@ type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'
 export default function TestsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { tests, loading } = useTests()
+  const { tests, loading, reload } = useTests()
   const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [sortOption, setSortOption] = useState<SortOption>('date-desc')
@@ -145,11 +145,13 @@ export default function TestsPage() {
         <TestsGrid
           tests={currentTests}
           onSelectTest={handleSelectTest}
+          onRefresh={reload}
         />
       ) : (
         <TestsTable
           tests={currentTests}
           onSelectTest={handleSelectTest}
+          onRefresh={reload}
         />
       )}
 

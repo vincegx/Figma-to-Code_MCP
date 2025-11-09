@@ -25,9 +25,10 @@ interface Test {
 interface TestCardProps {
   test: Test
   onSelect: () => void
+  onRefresh?: () => void
 }
 
-export const TestCard = memo(function TestCard({ test, onSelect }: TestCardProps) {
+export const TestCard = memo(function TestCard({ test, onSelect, onRefresh }: TestCardProps) {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
   const { alert, AlertDialogComponent } = useAlert()
@@ -55,7 +56,13 @@ export const TestCard = memo(function TestCard({ test, onSelect }: TestCardProps
     try {
       const response = await fetch(`/api/tests/${test.testId}`, { method: 'DELETE' })
       if (response.ok) {
-        window.location.reload()
+        // Call refresh callback instead of window.location.reload()
+        // This allows proper refresh when watch.ignored is enabled
+        if (onRefresh) {
+          onRefresh()
+        } else {
+          window.location.reload()
+        }
       } else {
         alert({
           title: t('common.error'),
@@ -72,7 +79,7 @@ export const TestCard = memo(function TestCard({ test, onSelect }: TestCardProps
       })
       setIsDeleting(false)
     }
-  }, [test.testId, t, confirm, alert])
+  }, [test.testId, t, confirm, alert, onRefresh])
 
   const thumbnailPath = useMemo(
     () => `/src/generated/tests/${test.testId}/img/figma-screenshot.png`,

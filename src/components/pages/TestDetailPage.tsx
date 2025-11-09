@@ -108,24 +108,17 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
     try {
       setLoading(true)
 
-      const metadataModule = await import(`../../generated/tests/${testId}/metadata.json`)
-      let metadata = metadataModule.default
+      // Load test data via API instead of dynamic imports to avoid HMR issues
+      const response = await fetch(`/api/tests/${testId}/data`)
 
-      try {
-        const xmlModule = await import(`../../generated/tests/${testId}/metadata.xml?raw`)
-        const xmlContent = xmlModule.default
-        const frameMatch = xmlContent.match(/<frame[^>]+name="([^"]+)"/)
-        if (frameMatch) {
-          metadata = { ...metadata, layerName: frameMatch[1] }
-        }
-      } catch (e) {
-        console.warn('Could not load metadata.xml')
+      if (!response.ok) {
+        throw new Error('Failed to fetch test data')
       }
 
-      setMetadata(metadata)
+      const data = await response.json()
 
-      const analysisModule = await import(`../../generated/tests/${testId}/analysis.md?raw`)
-      setAnalysis(analysisModule.default)
+      setMetadata(data.metadata || {})
+      setAnalysis(data.analysis || '')
 
       setLoading(false)
     } catch (err) {

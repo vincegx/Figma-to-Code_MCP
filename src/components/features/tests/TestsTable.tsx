@@ -40,9 +40,10 @@ interface Test {
 interface TestsTableProps {
   tests: Test[]
   onSelectTest: (testId: string) => void
+  onRefresh?: () => void
 }
 
-const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableProps) {
+const TestsTable = memo(function TestsTable({ tests, onSelectTest, onRefresh }: TestsTableProps) {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
   const { alert, AlertDialogComponent } = useAlert()
@@ -83,7 +84,12 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
     try {
       const response = await fetch(`/api/tests/${testId}`, { method: 'DELETE' })
       if (response.ok) {
-        window.location.reload()
+        // Call refresh callback instead of window.location.reload()
+        if (onRefresh) {
+          onRefresh()
+        } else {
+          window.location.reload()
+        }
       } else {
         alert({
           title: t('common.error'),
@@ -129,7 +135,12 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
         fetch(`/api/tests/${testId}`, { method: 'DELETE' })
       )
       await Promise.all(deletePromises)
-      window.location.reload()
+      // Call refresh callback instead of window.location.reload()
+      if (onRefresh) {
+        onRefresh()
+      } else {
+        window.location.reload()
+      }
     } catch (error) {
       alert({
         title: t('common.error'),

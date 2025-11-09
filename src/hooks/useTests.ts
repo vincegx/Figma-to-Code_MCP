@@ -53,27 +53,14 @@ export function useTests() {
 
   const loadTests = async () => {
     try {
-      const testModules = import.meta.glob<{ default: any }>('../generated/tests/*/metadata.json', { eager: true })
-      const xmlModules = import.meta.glob<string>('../generated/tests/*/metadata.xml', { eager: true, as: 'raw' })
+      // Load tests via API instead of import.meta.glob to avoid HMR reload
+      const response = await fetch('/api/tests')
 
-      const loadedTests = Object.entries(testModules).map(([path, module]) => {
-        const testId = path.split('/')[3]
-        const xmlPath = path.replace('metadata.json', 'metadata.xml')
-        let layerName = null
+      if (!response.ok) {
+        throw new Error('Failed to fetch tests')
+      }
 
-        if (xmlModules[xmlPath]) {
-          const xmlContent = xmlModules[xmlPath]
-          const frameMatch = xmlContent.match(/<frame[^>]+name="([^"]+)"/)
-          layerName = frameMatch ? frameMatch[1] : null
-        }
-
-        return {
-          ...module.default,
-          testId,
-          layerName
-        } as Test
-      })
-
+      const loadedTests = await response.json()
       setTests(loadedTests)
       setLoading(false)
     } catch (error) {

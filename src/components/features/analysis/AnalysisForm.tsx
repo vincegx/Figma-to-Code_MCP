@@ -141,10 +141,12 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
           setIsSuccess(message.success)
           setIsAnalyzing(false)
           eventSource.close()
-          console.log('🛑 EventSource closed, NOT calling onAnalysisComplete')
 
-          // Don't auto-reload to prevent console refresh
-          // Tests list will update on manual reset or page navigation
+          // Refresh tests list automatically (HMR is now blocked via handleHotUpdate)
+          if (onAnalysisComplete) {
+            console.log('🔄 Calling onAnalysisComplete after analysis completion')
+            onAnalysisComplete()
+          }
         } else if (message.type === 'error') {
           setLogs((prev) => prev + message.message)
           setIsComplete(true)

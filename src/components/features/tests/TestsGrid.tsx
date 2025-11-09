@@ -19,9 +19,10 @@ interface Test {
 interface TestsGridProps {
   tests: Test[]
   onSelectTest: (testId: string) => void
+  onRefresh?: () => void
 }
 
-const TestsGrid = memo(function TestsGrid({ tests, onSelectTest }: TestsGridProps) {
+const TestsGrid = memo(function TestsGrid({ tests, onSelectTest, onRefresh }: TestsGridProps) {
   return (
     <div className="grid gap-4 sm:gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))' }}>
       {tests.map((test) => (
@@ -29,6 +30,7 @@ const TestsGrid = memo(function TestsGrid({ tests, onSelectTest }: TestsGridProp
           key={test.testId}
           test={test}
           onSelect={() => onSelectTest(test.testId)}
+          onRefresh={onRefresh}
         />
       ))}
     </div>
