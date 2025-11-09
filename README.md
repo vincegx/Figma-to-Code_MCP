@@ -111,7 +111,13 @@ Both versions generated automatically via CLI `--clean` flag or dashboard.
 
 ![Dashboard Interface](docs/images/image02.png)
 
+---
+
 ![Dashboard Interface](docs/images/image03.png)
+
+---
+
+![Dashboard Interface](docs/images/image04.png)
 
 ---
 
@@ -140,8 +146,6 @@ docker-compose up --build
 ```
 
 **That's it!** 🎉 The dashboard is now running.
-
-![Dashboard Interface](docs/images/image04.png)
 
 ### For Developers (Optional)
 
