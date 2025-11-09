@@ -6,6 +6,7 @@ import DashboardPage from './components/pages/DashboardPage'
 import AnalyzePage from './components/pages/AnalyzePage'
 import TestsPage from './components/pages/TestsPage'
 import TestDetailPage from './components/pages/TestDetailPage'
+import SettingsPage from './components/pages/SettingsPage'
 import { Switch } from './components/ui/switch'
 import { Label } from './components/ui/label'
 
@@ -22,6 +23,7 @@ function App() {
           <Route path="/analyze" element={<AnalyzePage />} />
           <Route path="/tests" element={<TestsPage />} />
           <Route path="/tests/:testId" element={<TestDetailWrapper />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
 
         {/* Redirect old paths */}

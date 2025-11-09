@@ -8,11 +8,11 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getApiLimits } from './settings-loader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DAILY_LIMIT = 1200000; // Figma Professional plan daily limit
 const DATA_FILE = path.join(__dirname, '../../data/figma-usage.json');
 
 export class UsageTracker {
@@ -172,8 +172,8 @@ export class UsageTracker {
         min: totalTokens,
         typical: totalTokens,
         max: totalTokens,
-        dailyLimit: DAILY_LIMIT,
-        percentUsed: (totalTokens / DAILY_LIMIT) * 100,
+        dailyLimit: getApiLimits().dailyTokenLimit,
+        percentUsed: (totalTokens / getApiLimits().dailyTokenLimit) * 100,
         isActual: true
       }
     };

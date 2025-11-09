@@ -3,7 +3,7 @@
  * Shows analysis form with real-time logs and recent tests
  */
 
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTests } from '../../hooks/useTests'
 import AnalysisForm from '../features/analysis/AnalysisForm'
@@ -14,6 +14,12 @@ export default function AnalyzePage() {
   const navigate = useNavigate()
   const { tests, reload } = useTests()
 
+  // DEBUG: Track AnalyzePage lifecycle
+  useEffect(() => {
+    console.log('🟢 AnalyzePage MOUNTED')
+    return () => console.log('🔴 AnalyzePage UNMOUNTED')
+  }, [])
+
   // Recent tests calculation (last 5)
   const recentTests = useMemo(() => {
     return [...tests]
@@ -23,7 +29,10 @@ export default function AnalyzePage() {
 
   return (
     <div className="w-full space-y-6">
-      <AnalysisForm onAnalysisComplete={reload} />
+      <AnalysisForm onAnalysisComplete={() => {
+        console.log('🔄 AnalyzePage calling reload()')
+        reload()
+      }} />
 
       {/* Recent Tests */}
       <Card>

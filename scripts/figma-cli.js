@@ -7,6 +7,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { UsageTracker } from './utils/usage-tracker.js';
+import { loadSettings, getMcpParams, getDirectories, getGenerationSettings } from './utils/settings-loader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,13 +79,39 @@ const log = {
 
 class FigmaCLI {
   constructor(url, cleanMode = false) {
-    // Load config
-    this.config = JSON.parse(
-      fs.readFileSync(path.join(__dirname, '../cli/config/figma-params.json'), 'utf8')
-    );
+    // Load settings
+    this.settings = loadSettings();
+    const mcpParams = getMcpParams();
+    const directories = getDirectories();
+    const generationSettings = getGenerationSettings();
 
-    // Store clean mode flag
-    this.cleanMode = cleanMode;
+    // Legacy config structure (for backward compatibility)
+    this.config = {
+      mcpServer: {
+        url: this.settings.mcp.serverUrl,
+        transport: 'sse'
+      },
+      commonParams: {
+        clientLanguages: mcpParams.clientLanguages,
+        clientFrameworks: mcpParams.clientFrameworks,
+        dirForAssetWrites: '' // Will be set below
+      },
+      directories: {
+        tmpAssets: directories.tmpAssets,
+        testsOutput: directories.testsOutput
+      },
+      docker: {
+        containerName: this.settings.docker.containerName,
+        vitePort: 5173
+      }
+    };
+
+    // Store clean mode flag (use settings default if not specified)
+    if (cleanMode === false && generationSettings.defaultMode !== 'fixed') {
+      this.cleanMode = generationSettings.defaultMode === 'both' || generationSettings.defaultMode === 'clean';
+    } else {
+      this.cleanMode = cleanMode;
+    }
 
     // Determine project root (works from both Docker and host)
     // MCP Figma Desktop runs on HOST, so we need the HOST path for dirForAssetWrites
@@ -417,7 +444,7 @@ class FigmaCLI {
       this.saveFile(`chunks/${node.name}.tsx`, code);
 
       if (i < nodes.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, this.settings.mcp.callDelay));
       }
     }
 

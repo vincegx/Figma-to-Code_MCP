@@ -1,6 +1,6 @@
 /**
  * AnalysisForm - Formulaire pour lancer une nouvelle analyse Figma
- * Affiche les logs en temps réel avec react-lazylog
+ * Affiche les logs en temps réel dans un terminal custom
  */
 
 import { useState, useEffect, useRef } from 'react'
@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Sparkles, ArrowRight, Loader2, X, AlertCircle } from 'lucide-react'
+import { Sparkles, ArrowRight, Loader2, X, AlertCircle, Trash2 } from 'lucide-react'
 
 interface AnalysisFormProps {
   onAnalysisComplete?: () => void
@@ -34,6 +34,18 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
   const [isSuccess, setIsSuccess] = useState(false)
   const [urlError, setUrlError] = useState<string | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
+  const logContainerRef = useRef<HTMLDivElement | null>(null)
+
+  // DEBUG: Track component lifecycle
+  useEffect(() => {
+    console.log('🔵 AnalysisForm MOUNTED')
+    return () => console.log('🔴 AnalysisForm UNMOUNTED')
+  }, [])
+
+  // DEBUG: Track logs changes
+  useEffect(() => {
+    console.log('📝 Logs changed, length:', logs.length)
+  }, [logs])
 
   // Cleanup EventSource on unmount
   useEffect(() => {
@@ -43,6 +55,13 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
       }
     }
   }, [])
+
+  // Auto-scroll to bottom when new logs arrive (only during analysis)
+  useEffect(() => {
+    if (isAnalyzing && logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight
+    }
+  }, [logs, isAnalyzing])
 
   // Validation de l'URL Figma
   const validateFigmaUrl = (url: string): string | null => {
@@ -117,17 +136,15 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
         if (message.type === 'log') {
           setLogs((prev) => prev + message.message)
         } else if (message.type === 'done') {
+          console.log('✅ Analysis DONE, success:', message.success)
           setIsComplete(true)
           setIsSuccess(message.success)
           setIsAnalyzing(false)
           eventSource.close()
+          console.log('🛑 EventSource closed, NOT calling onAnalysisComplete')
 
-          // Reload page to show new test with fresh images
-          if (message.success) {
-            setTimeout(() => {
-              window.location.reload()
-            }, 2000)
-          }
+          // Don't auto-reload to prevent console refresh
+          // Tests list will update on manual reset or page navigation
         } else if (message.type === 'error') {
           setLogs((prev) => prev + message.message)
           setIsComplete(true)
@@ -153,6 +170,7 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
   }
 
   const handleReset = () => {
+    console.log('🔄 handleReset called')
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
     }
@@ -163,6 +181,17 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
     setIsSuccess(false)
     setFigmaUrl('')
     setUrlError(null)
+
+    // Refresh tests list when user manually resets
+    if (onAnalysisComplete) {
+      console.log('🔄 Calling onAnalysisComplete from handleReset')
+      onAnalysisComplete()
+    }
+  }
+
+  const handleClearLogs = () => {
+    console.log('🗑️ handleClearLogs called')
+    setLogs('')
   }
 
   // Réinitialiser l'erreur quand l'utilisateur modifie l'URL
@@ -262,17 +291,30 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
                 )}
               </span>
             </div>
-            {jobId && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleReset}
-                title={t('common.close')}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {logs && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClearLogs}
+                  title="Clear logs"
+                  className="h-8 w-8"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              {jobId && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleReset}
+                  title={t('common.close')}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Logs Display with react-lazylog */}
@@ -280,12 +322,12 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
             <LazyLog
               text={logs || `# ${t('analysis.helper')}\n# Paste a Figma URL with node-id parameter and click Launch\n\nWaiting for analysis...`}
               height={296}
-              follow={true}
+              follow={isAnalyzing}
               selectableLines={true}
               enableSearch={false}
               caseInsensitive={true}
               extraLines={1}
-              stream={isAnalyzing}
+              stream={false}
               style={{
                 backgroundColor: '#000000',
                 color: '#e5e7eb',
@@ -295,24 +337,6 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
               }}
             />
           </div>
-
-          {/* Footer Actions */}
-          {isComplete && (
-            <div className="px-4 py-3 flex items-center justify-between border-t bg-muted/50">
-              <span className="text-sm text-muted-foreground">
-                {isSuccess
-                  ? t('analysis.footer.success_message')
-                  : t('analysis.footer.error_message')}
-              </span>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleReset}
-              >
-                {t('analysis.footer.new_export')}
-              </Button>
-            </div>
-          )}
         </Card>
       </CardContent>
     </Card>

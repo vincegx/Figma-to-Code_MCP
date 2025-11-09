@@ -190,5 +190,97 @@
       "analyses": "analyses",
       "disclaimer": "⚠️ Les crédits sont estimés selon les appels API. L'usage réel peut varier selon la complexité du design."
     }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "subtitle": "Configurez votre outil Figma to Code",
+    "loading": "Chargement des paramètres...",
+    "error_loading": "Erreur lors du chargement des paramètres",
+    "buttons": {
+      "reset": "Réinitialiser",
+      "save": "Sauvegarder",
+      "saving": "Sauvegarde..."
+    },
+    "messages": {
+      "saved": "Paramètres sauvegardés avec succès",
+      "error_save": "Erreur lors de la sauvegarde",
+      "error_load": "Erreur lors du chargement des paramètres",
+      "reset_confirm": "Voulez-vous vraiment réinitialiser tous les paramètres ?",
+      "reset_success": "Paramètres réinitialisés"
+    },
+    "tabs": {
+      "mcp": "MCP",
+      "generation": "Génération",
+      "directories": "Dossiers",
+      "api": "API",
+      "ui": "Interface",
+      "docker": "Docker",
+      "transforms": "Transforms",
+      "advanced": "Paramètres Avancés"
+    },
+    "advanced": {
+      "title": "Paramètres Avancés",
+      "description": "Configuration du système",
+      "warning": "⚠️ Attention : Les modifications dans cette section peuvent affecter le fonctionnement du système. Modifiez ces paramètres uniquement si vous savez ce que vous faites."
+    },
+    "mcp": {
+      "title": "Connexion MCP Figma Desktop",
+      "description": "Configuration du serveur MCP Figma Desktop",
+      "server_url": "URL du serveur MCP",
+      "server_url_help": "Docker: http://host.docker.internal:3845/mcp | Local: http://127.0.0.1:3845/mcp",
+      "call_delay": "Délai entre les appels MCP: {{delay}}ms",
+      "delay_help": "Min: {{min}}ms | Max: {{max}}ms"
+    },
+    "generation": {
+      "title": "Options de génération de code",
+      "description": "Configuration du mode de génération par défaut",
+      "default_mode": "Mode de génération par défaut",
+      "mode_fixed": "Fixed only (Tailwind)",
+      "mode_clean": "Clean only (Pure CSS)",
+      "mode_both": "Both (Fixed + Clean)",
+      "mode_help": "Fixed: Tailwind + debug | Clean: Production CSS | Both: Les deux versions",
+      "chunking": "Mode Chunking",
+      "chunking_help": "Découpage des designs complexes en chunks"
+    },
+    "directories": {
+      "title": "Chemins des dossiers",
+      "description": "Configuration des répertoires de sortie",
+      "tests_output": "Dossier de sortie des tests",
+      "tmp_assets": "Dossier des assets temporaires"
+    },
+    "api": {
+      "title": "Limites API Figma",
+      "description": "Configuration des seuils d'utilisation",
+      "daily_limit": "Limite quotidienne de tokens",
+      "daily_limit_help": "Professional plan: 1,200,000 tokens/jour",
+      "thresholds": "Seuils d'alerte (%)",
+      "threshold_warning": "Warning",
+      "threshold_critical": "Critical",
+      "threshold_danger": "Danger"
+    },
+    "ui": {
+      "title": "Préférences d'interface",
+      "description": "Configuration de l'affichage du dashboard",
+      "default_view": "Vue par défaut des tests",
+      "view_grid": "Grille",
+      "view_list": "Liste",
+      "items_per_page": "Éléments par page",
+      "screenshot_format": "Format des screenshots",
+      "format_png": "PNG (sans perte)",
+      "format_jpg": "JPG (compressé)",
+      "quality": "Qualité: {{quality}}%"
+    },
+    "docker": {
+      "title": "Configuration Docker",
+      "description": "Paramètres du container Docker",
+      "container_name": "Nom du container"
+    },
+    "transforms": {
+      "title": "Transformations AST",
+      "description": "Activer/désactiver les transformations de code",
+      "continue_on_error": "Continuer en cas d'erreur",
+      "continue_help": "Continue le traitement même si une transformation échoue",
+      "options": "options"
+    }
   }
 }

@@ -8,7 +8,7 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar"
 import { NavLink } from "react-router-dom"
-import { LayoutDashboard, Sparkles, FileText } from "lucide-react"
+import { LayoutDashboard, Sparkles, FileText, Settings } from "lucide-react"
 import ThemeToggle from '../common/ThemeToggle'
 import LanguageSwitcher from '../common/LanguageSwitcher'
 import { useTranslation } from '../../i18n/I18nContext'
@@ -62,7 +62,24 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t p-4">
+      <SidebarFooter className="border-t p-4 space-y-2">
+        {/* Settings Link */}
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''
+                }
+              >
+                <Settings className="h-4 w-4" />
+                <span>{t('settings.title')}</span>
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+
         {/* Theme & Language controls */}
         <div className="flex items-center justify-between gap-2">
           <ThemeToggle />

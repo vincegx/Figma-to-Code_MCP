@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useTranslation } from '../../../i18n/I18nContext'
+import { useConfirm } from '../../../hooks/useConfirm'
+import { useAlert } from '../../../hooks/useAlert'
 
 interface Test {
   testId: string
@@ -27,6 +29,8 @@ interface TestCardProps {
 
 export const TestCard = memo(function TestCard({ test, onSelect }: TestCardProps) {
   const { t } = useTranslation()
+  const { confirm, ConfirmDialog } = useConfirm()
+  const { alert, AlertDialogComponent } = useAlert()
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleOpenPreview = useCallback((e: React.MouseEvent) => {
@@ -36,7 +40,16 @@ export const TestCard = memo(function TestCard({ test, onSelect }: TestCardProps
 
   const handleDelete = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!confirm(t('home.card.delete_confirm'))) return
+
+    const confirmed = await confirm({
+      title: t('home.card.delete'),
+      description: t('home.card.delete_confirm'),
+      confirmText: t('home.card.delete'),
+      cancelText: t('common.close'),
+      variant: 'destructive'
+    })
+
+    if (!confirmed) return
 
     setIsDeleting(true)
     try {
@@ -44,14 +57,22 @@ export const TestCard = memo(function TestCard({ test, onSelect }: TestCardProps
       if (response.ok) {
         window.location.reload()
       } else {
-        alert(t('home.card.delete_error'))
+        alert({
+          title: t('common.error'),
+          description: t('home.card.delete_error'),
+          variant: 'destructive'
+        })
         setIsDeleting(false)
       }
     } catch (error) {
-      alert(t('home.card.delete_error'))
+      alert({
+        title: t('common.error'),
+        description: t('home.card.delete_error'),
+        variant: 'destructive'
+      })
       setIsDeleting(false)
     }
-  }, [test.testId, t])
+  }, [test.testId, t, confirm, alert])
 
   const thumbnailPath = useMemo(
     () => `/src/generated/tests/${test.testId}/img/figma-screenshot.png`,
@@ -79,12 +100,16 @@ export const TestCard = memo(function TestCard({ test, onSelect }: TestCardProps
   }, [test.timestamp])
 
   return (
-    <Card
-      className="group cursor-pointer overflow-hidden transition-shadow duration-200 hover:shadow-lg"
-      onClick={onSelect}
-      style={{ contain: 'layout style paint' }}
-    >
-      {/* Thumbnail */}
+    <>
+      <ConfirmDialog />
+      <AlertDialogComponent />
+
+      <Card
+        className="group cursor-pointer overflow-hidden transition-shadow duration-200 hover:shadow-lg"
+        onClick={onSelect}
+        style={{ contain: 'layout style paint' }}
+      >
+        {/* Thumbnail */}
       <div className="relative h-52 w-full overflow-hidden bg-muted">
         <img
           src={thumbnailPath}
@@ -202,5 +227,6 @@ export const TestCard = memo(function TestCard({ test, onSelect }: TestCardProps
         </div>
       </CardContent>
     </Card>
+    </>
   )
 })

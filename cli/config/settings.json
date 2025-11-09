@@ -1,0 +1,84 @@
+{
+  "mcp": {
+    "serverUrl": "http://host.docker.internal:3845/mcp",
+    "callDelay": 1000,
+    "minDelay": 500,
+    "maxDelay": 5000
+  },
+  "generation": {
+    "defaultMode": "both",
+    "chunking": {
+      "enabled": true
+    }
+  },
+  "directories": {
+    "testsOutput": "src/generated/tests",
+    "tmpAssets": "tmp/figma-assets"
+  },
+  "apiLimits": {
+    "dailyTokenLimit": 1200000,
+    "thresholds": {
+      "warning": 50,
+      "critical": 75,
+      "danger": 90
+    }
+  },
+  "ui": {
+    "defaultView": "list",
+    "itemsPerPage": 6
+  },
+  "screenshots": {
+    "format": "png",
+    "quality": 90
+  },
+  "docker": {
+    "containerName": "mcp-figma-v1"
+  },
+  "transforms": {
+    "font-detection": {
+      "enabled": true,
+      "usePostScriptName": true,
+      "useTextStyleId": true
+    },
+    "auto-layout": {
+      "enabled": true,
+      "fixMissingGap": true,
+      "fixMissingAlignments": true,
+      "fixSizing": true
+    },
+    "ast-cleaning": {
+      "enabled": true
+    },
+    "svg-icon-fixes": {
+      "enabled": true
+    },
+    "svg-consolidation": {
+      "enabled": true
+    },
+    "post-fixes": {
+      "enabled": true,
+      "fixShadows": true,
+      "fixTextTransform": true
+    },
+    "position-fixes": {
+      "enabled": true,
+      "convertAbsoluteToRelative": true,
+      "skipOverlays": true
+    },
+    "stroke-alignment": {
+      "enabled": true,
+      "useBoxShadowForInside": true,
+      "useOutlineForOutside": true
+    },
+    "css-vars": {
+      "enabled": true
+    },
+    "tailwind-optimizer": {
+      "enabled": true
+    },
+    "production-cleaner": {
+      "enabled": true
+    },
+    "continueOnError": false
+  }
+}

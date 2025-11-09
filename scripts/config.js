@@ -1,51 +1,13 @@
 /**
  * Transform Configuration
  *
- * Simple configuration for enabling/disabling transforms
- * and setting transform-specific options
+ * DEPRECATED: This file is deprecated in favor of settings.json
+ * Use getTransformConfig() from settings-loader.js instead
+ *
+ * This file is kept for backward compatibility only
  */
 
-export const defaultConfig = {
-  // Enable/disable individual transforms
-  'font-detection': {
-    enabled: true,
-    usePostScriptName: true,  // Use fontPostScriptName for accurate weight
-    useTextStyleId: true      // Use textStyleId for design system styles
-  },
-  'auto-layout': {
-    enabled: false,  // NEW - Disabled by default for testing
-    fixMissingGap: true,
-    fixMissingAlignments: true,
-    fixSizing: true
-  },
-  'ast-cleaning': {
-    enabled: true
-  },
-  'svg-icon-fixes': {
-    enabled: true
-  },
-  'post-fixes': {
-    enabled: true,
-    fixShadows: true,         // Fix shadow order, spread, visibility
-    fixTextTransform: true    // Add text-transform from textCase
-  },
-  'position-fixes': {
-    enabled: false,  // NEW - Disabled by default for testing
-    convertAbsoluteToRelative: true,
-    skipOverlays: true
-  },
-  'stroke-alignment': {
-    enabled: false,  // NEW - Disabled by default for testing
-    useBoxShadowForInside: true,
-    useOutlineForOutside: true
-  },
-  'css-vars': {
-    enabled: true
-  },
-  'tailwind-optimizer': {
-    enabled: true
-  },
+import { getTransformConfig } from './utils/settings-loader.js';
 
-  // Global options
-  continueOnError: false  // Stop on first error or continue
-}
+// Export function that loads from settings.json
+export const defaultConfig = getTransformConfig();

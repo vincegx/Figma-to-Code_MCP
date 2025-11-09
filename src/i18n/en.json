@@ -190,5 +190,97 @@
       "analyses": "analyses",
       "disclaimer": "⚠️ Credits are estimated based on API calls. Actual usage may vary depending on design complexity."
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure your Figma to Code tool",
+    "loading": "Loading settings...",
+    "error_loading": "Error loading settings",
+    "buttons": {
+      "reset": "Reset",
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "messages": {
+      "saved": "Settings saved successfully",
+      "error_save": "Error saving settings",
+      "error_load": "Error loading settings",
+      "reset_confirm": "Are you sure you want to reset all settings?",
+      "reset_success": "Settings reset to defaults"
+    },
+    "tabs": {
+      "mcp": "MCP",
+      "generation": "Generation",
+      "directories": "Directories",
+      "api": "API",
+      "ui": "Interface",
+      "docker": "Docker",
+      "transforms": "Transforms",
+      "advanced": "Advanced Settings"
+    },
+    "advanced": {
+      "title": "Advanced Settings",
+      "description": "System configuration settings",
+      "warning": "⚠️ Warning: Changes in this section may affect system functionality. Only modify these settings if you know what you are doing."
+    },
+    "mcp": {
+      "title": "MCP Figma Desktop Connection",
+      "description": "MCP Figma Desktop server configuration",
+      "server_url": "MCP server URL",
+      "server_url_help": "Docker: http://host.docker.internal:3845/mcp | Local: http://127.0.0.1:3845/mcp",
+      "call_delay": "Delay between MCP calls: {{delay}}ms",
+      "delay_help": "Min: {{min}}ms | Max: {{max}}ms"
+    },
+    "generation": {
+      "title": "Code generation options",
+      "description": "Default generation mode configuration",
+      "default_mode": "Default generation mode",
+      "mode_fixed": "Fixed only (Tailwind)",
+      "mode_clean": "Clean only (Pure CSS)",
+      "mode_both": "Both (Fixed + Clean)",
+      "mode_help": "Fixed: Tailwind + debug | Clean: Production CSS | Both: Both versions",
+      "chunking": "Chunking mode",
+      "chunking_help": "Split complex designs into chunks"
+    },
+    "directories": {
+      "title": "Directory paths",
+      "description": "Output directory configuration",
+      "tests_output": "Tests output directory",
+      "tmp_assets": "Temporary assets directory"
+    },
+    "api": {
+      "title": "Figma API limits",
+      "description": "Usage thresholds configuration",
+      "daily_limit": "Daily token limit",
+      "daily_limit_help": "Professional plan: 1,200,000 tokens/day",
+      "thresholds": "Alert thresholds (%)",
+      "threshold_warning": "Warning",
+      "threshold_critical": "Critical",
+      "threshold_danger": "Danger"
+    },
+    "ui": {
+      "title": "Interface preferences",
+      "description": "Dashboard display configuration",
+      "default_view": "Default tests view",
+      "view_grid": "Grid",
+      "view_list": "List",
+      "items_per_page": "Items per page",
+      "screenshot_format": "Screenshot format",
+      "format_png": "PNG (lossless)",
+      "format_jpg": "JPG (compressed)",
+      "quality": "Quality: {{quality}}%"
+    },
+    "docker": {
+      "title": "Docker configuration",
+      "description": "Docker container settings",
+      "container_name": "Container name"
+    },
+    "transforms": {
+      "title": "AST Transformations",
+      "description": "Enable/disable code transformations",
+      "continue_on_error": "Continue on error",
+      "continue_help": "Continue processing even if a transformation fails",
+      "options": "options"
+    }
   }
 }

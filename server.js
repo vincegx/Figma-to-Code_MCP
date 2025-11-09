@@ -277,6 +277,18 @@ app.get('/api/usage', (req, res) => {
   try {
     const usageFilePath = path.join(__dirname, 'data', 'figma-usage.json')
 
+    // Load settings for dailyTokenLimit
+    let dailyLimit = 1200000; // Default fallback
+    try {
+      const settingsPath = path.join(__dirname, 'cli', 'config', 'settings.json')
+      if (fs.existsSync(settingsPath)) {
+        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
+        dailyLimit = settings.apiLimits?.dailyTokenLimit || 1200000
+      }
+    } catch (err) {
+      console.warn('Failed to load dailyTokenLimit from settings, using default:', err.message)
+    }
+
     // Si le fichier n'existe pas, retourner des stats vides
     if (!fs.existsSync(usageFilePath)) {
       return res.json({
@@ -289,7 +301,7 @@ app.get('/api/usage', (req, res) => {
             min: 0,
             typical: 0,
             max: 0,
-            dailyLimit: 1200000,
+            dailyLimit: dailyLimit,
             percentUsed: 0
           }
         },
@@ -309,17 +321,31 @@ app.get('/api/usage', (req, res) => {
 
     // Use actual tokens from measurements
     const totalTokens = todayData.totalTokens || 0
-    const percentUsed = (totalTokens / 1200000) * 100
+    const percentUsed = (totalTokens / dailyLimit) * 100
+
+    // Load thresholds from settings
+    let thresholds = { warning: 50, critical: 75, danger: 90 }; // Defaults
+    try {
+      const settingsPath = path.join(__dirname, 'cli', 'config', 'settings.json')
+      if (fs.existsSync(settingsPath)) {
+        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
+        if (settings.apiLimits?.thresholds) {
+          thresholds = settings.apiLimits.thresholds
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load thresholds from settings:', err.message)
+    }
 
     // Déterminer le statut
     let status
     if (percentUsed < 10) {
       status = { emoji: '✅', text: 'SAFE - Plenty of quota remaining', level: 'safe' }
-    } else if (percentUsed < 50) {
+    } else if (percentUsed < thresholds.warning) {
       status = { emoji: '🟢', text: 'GOOD - Moderate usage', level: 'good' }
-    } else if (percentUsed < 80) {
+    } else if (percentUsed < thresholds.critical) {
       status = { emoji: '🟡', text: 'WARNING - High usage', level: 'warning' }
-    } else if (percentUsed < 95) {
+    } else if (percentUsed < thresholds.danger) {
       status = { emoji: '🟠', text: 'CRITICAL - Near limit', level: 'critical' }
     } else {
       status = { emoji: '🔴', text: 'DANGER - Likely exceeded limit', level: 'danger' }
@@ -365,7 +391,7 @@ app.get('/api/usage', (req, res) => {
           min: totalTokens,
           typical: totalTokens,
           max: totalTokens,
-          dailyLimit: 1200000,
+          dailyLimit: dailyLimit,
           percentUsed,
           isActual: true
         }
@@ -437,6 +463,155 @@ app.get('/api/download/:testId', async (req, res) => {
 })
 
 /**
+ * GET /api/settings
+ * Récupère la configuration actuelle
+ */
+app.get('/api/settings', (req, res) => {
+  try {
+    const settingsPath = path.join(__dirname, 'cli', 'config', 'settings.json')
+
+    if (!fs.existsSync(settingsPath)) {
+      return res.status(404).json({ error: 'Settings file not found' })
+    }
+
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'))
+    res.json(settings)
+  } catch (error) {
+    console.error('Error reading settings:', error)
+    res.status(500).json({ error: 'Failed to read settings' })
+  }
+})
+
+/**
+ * POST /api/settings
+ * Sauvegarde la configuration
+ */
+app.post('/api/settings', (req, res) => {
+  try {
+    const settingsPath = path.join(__dirname, 'cli', 'config', 'settings.json')
+    const newSettings = req.body
+
+    // Validation basique
+    if (!newSettings || typeof newSettings !== 'object') {
+      return res.status(400).json({ error: 'Invalid settings data' })
+    }
+
+    // Sauvegarder avec indentation pour lisibilité
+    fs.writeFileSync(settingsPath, JSON.stringify(newSettings, null, 2), 'utf8')
+
+    res.json({
+      success: true,
+      message: 'Settings saved successfully',
+      settings: newSettings
+    })
+  } catch (error) {
+    console.error('Error saving settings:', error)
+    res.status(500).json({ error: 'Failed to save settings' })
+  }
+})
+
+/**
+ * POST /api/settings/reset
+ * Réinitialise la configuration aux valeurs par défaut
+ */
+app.post('/api/settings/reset', (req, res) => {
+  try {
+    const settingsPath = path.join(__dirname, 'cli', 'config', 'settings.json')
+
+    // Valeurs par défaut
+    const defaultSettings = {
+      "mcp": {
+        "serverUrl": "http://host.docker.internal:3845/mcp",
+        "callDelay": 1000,
+        "minDelay": 500,
+        "maxDelay": 5000
+      },
+      "generation": {
+        "defaultMode": "both",
+        "chunking": {
+          "enabled": true
+        }
+      },
+      "directories": {
+        "testsOutput": "src/generated/tests",
+        "tmpAssets": "tmp/figma-assets"
+      },
+      "apiLimits": {
+        "dailyTokenLimit": 1200000,
+        "thresholds": {
+          "warning": 50,
+          "critical": 75,
+          "danger": 90
+        }
+      },
+      "ui": {
+        "defaultView": "grid",
+        "itemsPerPage": 12
+      },
+      "screenshots": {
+        "format": "png",
+        "quality": 90
+      },
+      "docker": {
+        "containerName": "mcp-figma-v1"
+      },
+      "transforms": {
+        "font-detection": {
+          "enabled": true,
+          "usePostScriptName": true,
+          "useTextStyleId": true
+        },
+        "auto-layout": {
+          "enabled": true,
+          "fixMissingGap": true,
+          "fixMissingAlignments": true,
+          "fixSizing": true
+        },
+        "ast-cleaning": {
+          "enabled": true
+        },
+        "svg-icon-fixes": {
+          "enabled": true
+        },
+        "post-fixes": {
+          "enabled": true,
+          "fixShadows": true,
+          "fixTextTransform": true
+        },
+        "position-fixes": {
+          "enabled": true,
+          "convertAbsoluteToRelative": true,
+          "skipOverlays": true
+        },
+        "stroke-alignment": {
+          "enabled": true,
+          "useBoxShadowForInside": true,
+          "useOutlineForOutside": true
+        },
+        "css-vars": {
+          "enabled": true
+        },
+        "tailwind-optimizer": {
+          "enabled": true
+        },
+        "continueOnError": false
+      }
+    }
+
+    fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2), 'utf8')
+
+    res.json({
+      success: true,
+      message: 'Settings reset to defaults',
+      settings: defaultSettings
+    })
+  } catch (error) {
+    console.error('Error resetting settings:', error)
+    res.status(500).json({ error: 'Failed to reset settings' })
+  }
+})
+
+/**
  * Start Vite dev server and API server
  */
 async function startServer() {
@@ -468,6 +643,9 @@ async function startServer() {
       console.log(`   GET  /api/analyze/status/:jobId`)
       console.log(`   GET  /api/usage`)
       console.log(`   GET  /api/mcp/health`)
+      console.log(`   GET  /api/settings`)
+      console.log(`   POST /api/settings`)
+      console.log(`   POST /api/settings/reset`)
       console.log(`\n💡 Open http://localhost:${PORT} in your browser`)
     })
 

@@ -19,6 +19,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { MoreVertical, ExternalLink, Trash2, Eye, Loader2, Package, FileImage, Zap, Layers } from 'lucide-react'
 import { useTranslation } from '../../../i18n/I18nContext'
+import { useConfirm } from '../../../hooks/useConfirm'
+import { useAlert } from '../../../hooks/useAlert'
 
 interface Test {
   testId: string
@@ -42,6 +44,8 @@ interface TestsTableProps {
 
 const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableProps) {
   const { t } = useTranslation()
+  const { confirm, ConfirmDialog } = useConfirm()
+  const { alert, AlertDialogComponent } = useAlert()
   const [selectedTests, setSelectedTests] = useState<Set<string>>(new Set())
   const [deletingTests, setDeletingTests] = useState<Set<string>>(new Set())
   const [isDeletingMultiple, setIsDeletingMultiple] = useState(false)
@@ -65,7 +69,15 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
   }
 
   const handleDelete = async (testId: string) => {
-    if (!confirm(t('home.card.delete_confirm'))) return
+    const confirmed = await confirm({
+      title: t('home.card.delete'),
+      description: t('home.card.delete_confirm'),
+      confirmText: t('home.card.delete'),
+      cancelText: t('common.close'),
+      variant: 'destructive'
+    })
+
+    if (!confirmed) return
 
     setDeletingTests(new Set(deletingTests).add(testId))
     try {
@@ -73,7 +85,11 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
       if (response.ok) {
         window.location.reload()
       } else {
-        alert(t('home.card.delete_error'))
+        alert({
+          title: t('common.error'),
+          description: t('home.card.delete_error'),
+          variant: 'destructive'
+        })
         setDeletingTests(prev => {
           const next = new Set(prev)
           next.delete(testId)
@@ -81,7 +97,11 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
         })
       }
     } catch (error) {
-      alert(t('home.card.delete_error'))
+      alert({
+        title: t('common.error'),
+        description: t('home.card.delete_error'),
+        variant: 'destructive'
+      })
       setDeletingTests(prev => {
         const next = new Set(prev)
         next.delete(testId)
@@ -92,7 +112,16 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
 
   const handleDeleteSelected = async () => {
     if (selectedTests.size === 0) return
-    if (!confirm(t('home.table.delete_selected_confirm', { count: selectedTests.size.toString() }))) return
+
+    const confirmed = await confirm({
+      title: t('home.table.delete_selected'),
+      description: t('home.table.delete_selected_confirm', { count: selectedTests.size.toString() }),
+      confirmText: t('home.table.delete_selected'),
+      cancelText: t('common.close'),
+      variant: 'destructive'
+    })
+
+    if (!confirmed) return
 
     setIsDeletingMultiple(true)
     try {
@@ -102,7 +131,11 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
       await Promise.all(deletePromises)
       window.location.reload()
     } catch (error) {
-      alert(t('home.card.delete_error'))
+      alert({
+        title: t('common.error'),
+        description: t('home.card.delete_error'),
+        variant: 'destructive'
+      })
       setIsDeletingMultiple(false)
     }
   }
@@ -132,8 +165,12 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
   }
 
   return (
-    <div className="space-y-4">
-      {/* Selection Bar */}
+    <>
+      <ConfirmDialog />
+      <AlertDialogComponent />
+
+      <div className="space-y-4">
+        {/* Selection Bar */}
       {selectedTests.size > 0 && (
         <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-2">
           <span className="text-sm text-muted-foreground">
@@ -313,6 +350,7 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
         </Table>
       </div>
     </div>
+    </>
   )
 })
 

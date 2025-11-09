@@ -20,10 +20,25 @@ export default function TestsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { tests, loading } = useTests()
+  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [sortOption, setSortOption] = useState<SortOption>('date-desc')
   const [currentPage, setCurrentPage] = useState<number>(1)
-  const [itemsPerPage, setItemsPerPage] = useState<number>(8)
+  const [itemsPerPage, setItemsPerPage] = useState<number>(12)
+
+  // Load settings on mount
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(settings => {
+        if (settings.ui) {
+          setViewMode(settings.ui.defaultView || 'grid')
+          setItemsPerPage(settings.ui.itemsPerPage || 12)
+        }
+      })
+      .catch(err => console.error('Failed to load settings:', err))
+      .finally(() => setSettingsLoaded(true))
+  }, [])
 
   const sortedTests = useMemo(() => {
     const sorted = [...tests]
@@ -86,7 +101,7 @@ export default function TestsPage() {
     setCurrentPage(1)
   }, [sortOption, itemsPerPage])
 
-  if (loading) {
+  if (loading || !settingsLoaded) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-center">

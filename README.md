@@ -7,14 +7,14 @@
 ```ascii
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║     ┌─────────┐                         ┌─────────┐       ║
-║     │  FIGMA  │  ─── MCP Protocol ───>  │  REACT  │       ║
-║     │ DESIGN  │                         │   CODE  │       ║
-║     └─────────┘                         └─────────┘       ║
-║          │  1. Extract via MCP               │            ║
-║          │  2. AST Processing                │            ║
-║          │  3. Visual Validation             │            ║
-║          └───── Code Fidelity ───────────────┘            ║
+║     ┌─────────┐                         ┌─────────┐        ║
+║     │  FIGMA  │  ─── MCP Protocol ───>  │  REACT  │        ║
+║     │ DESIGN  │                         │   CODE  │        ║
+║     └─────────┘                         └─────────┘        ║
+║          │  1. Extract via MCP               │             ║
+║          │  2. AST Processing                │             ║
+║          │  3. Visual Validation             │             ║
+║          └───── Code Fidelity ───────────────┘             ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
 ```
