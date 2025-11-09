@@ -67,8 +67,8 @@ WORKDIR /app
 # Copier package.json et package-lock.json
 COPY package*.json ./
 
-# Installer les dépendances Node.js
-RUN npm install
+# Installer les dépendances Node.js (avec --legacy-peer-deps pour React 19 compatibility)
+RUN npm install --legacy-peer-deps
 
 # Copier tout le code source
 COPY . .

@@ -3,34 +3,19 @@
  */
 
 import { useTranslation } from '../i18n/I18nContext'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 export default function LanguageSwitcher() {
   const { language, setLanguage } = useTranslation()
 
   return (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => setLanguage('fr')}
-        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-          language === 'fr'
-            ? 'bg-white text-purple-600 shadow-sm'
-            : 'bg-white/10 text-white/90 hover:bg-white/20'
-        }`}
-        title="Français"
-      >
+    <ToggleGroup type="single" value={language} onValueChange={(value: string) => value && setLanguage(value as 'fr' | 'en')}>
+      <ToggleGroupItem value="fr" aria-label="Français">
         🇫🇷 FR
-      </button>
-      <button
-        onClick={() => setLanguage('en')}
-        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
-          language === 'en'
-            ? 'bg-white text-purple-600 shadow-sm'
-            : 'bg-white/10 text-white/90 hover:bg-white/20'
-        }`}
-        title="English"
-      >
+      </ToggleGroupItem>
+      <ToggleGroupItem value="en" aria-label="English">
         🇬🇧 EN
-      </button>
-    </div>
+      </ToggleGroupItem>
+    </ToggleGroup>
   )
 }

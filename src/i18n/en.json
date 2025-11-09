@@ -6,6 +6,7 @@
     "delete": "Delete",
     "details": "Details",
     "close": "Close",
+    "ok": "OK",
     "tests": "test",
     "tests_plural": "tests",
     "nodes": "nodes",
@@ -15,8 +16,8 @@
     "fixes": "fixes"
   },
   "header": {
-    "title": "Figma Code Exporter",
-    "subtitle": "Transform your Figma designs into React + Tailwind components",
+    "title": "Figma Exporter",
+    "subtitle": "Transform your Figma designs into React components",
     "subtitle_detail": "MCP code exporter without dependencies",
     "mcp_checking": "Checking MCP...",
     "mcp_connected": "MCP Connected",
@@ -57,6 +58,19 @@
       "delete_error": "Error deleting test",
       "no_title": "Untitled",
       "delete": "Delete"
+    },
+    "table": {
+      "select_all": "Select all",
+      "select_row": "Select row",
+      "selected": "selected",
+      "preview": "Preview",
+      "name": "Name",
+      "node_id": "Node ID",
+      "date": "Date",
+      "stats": "Stats",
+      "deleting": "Deleting...",
+      "delete_selected": "Delete selected",
+      "delete_selected_confirm": "Are you sure you want to delete {{count}} test(s)?"
     }
   },
   "analysis": {
@@ -65,6 +79,7 @@
     "launch": "Launch export",
     "in_progress": "In progress...",
     "helper": "💡 Paste the full URL of your Figma design with the",
+    "error_title": "Invalid URL",
     "status": {
       "launching": "🚀 Launching analysis...",
       "in_progress": "● In progress...",
@@ -131,6 +146,8 @@
     },
     "code": {
       "title": "📁 File navigation",
+      "version": "Version",
+      "file": "File",
       "files_count": "files",
       "main_component": "📦 Main component",
       "chunks": "🧩 Chunks - Split components",

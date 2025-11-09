@@ -6,6 +6,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { LazyLog } from 'react-lazylog'
 import { useTranslation } from '../i18n/I18nContext'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Sparkles, ArrowRight, Loader2, X, AlertCircle } from 'lucide-react'
 
 interface AnalysisFormProps {
   onAnalysisComplete?: () => void
@@ -161,153 +174,115 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
   }
 
   return (
-    <div className="rounded-lg p-5 mb-2" style={{
-      backgroundColor: 'var(--color-1)',
-      boxShadow: 'var(--shadow-sm)',
-      borderWidth: '1px',
-      borderColor: 'var(--color-1)'
-    }}>
-      {/* Header */}
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--color-white)' }}>
-        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-        </svg>
-        {t('analysis.title')}
-      </h2>
+    <Card className="mb-2 bg-primary text-primary-foreground">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Sparkles className="w-6 h-6" />
+          {t('analysis.title')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="mb-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={figmaUrl}
-              onChange={handleUrlChange}
-              placeholder={t('analysis.placeholder')}
-              disabled={isAnalyzing}
-              className="flex-1 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
-              style={{
-                backgroundColor: isAnalyzing ? 'var(--color-1)' : 'var(--color-white)',
-                borderWidth: '1px',
-                // borderColor: urlError ? 'var(--status-error-border)' : 'var(--border-primary)',
-                color: isAnalyzing ? 'var(--text-primary)' : 'var(--color-1)',
-                outline: 'none'
-              }}
-              onFocus={(e) => {
-                if (!urlError) {
-                  e.currentTarget.style.boxShadow = 'var(--focus-ring)'
-                  e.currentTarget.style.borderColor = 'var(--accent-primary)'
-                }
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.boxShadow = 'none'
-                e.currentTarget.style.borderColor = urlError ? 'var(--status-error-border)' : 'var(--border-primary)'
-              }}
-            />
-            <button
-              type="submit"
-              disabled={isAnalyzing || !figmaUrl.trim()}
-              className="px-6 py-2 font-medium rounded-lg transition-colors disabled:cursor-not-allowed flex items-center gap-2"
-              style={{
-                background: (isAnalyzing || !figmaUrl.trim()) ? 'var(--color-5)' : 'var(--color-4)',
-                color: (isAnalyzing || !figmaUrl.trim()) ? 'var(--text-muted)' : 'var(--text-primary)'
-              }}
-              onMouseEnter={(e) => {
-                if (!isAnalyzing && figmaUrl.trim()) {
-                  e.currentTarget.style.background = 'var(--button-primary-hover)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isAnalyzing && figmaUrl.trim()) {
-                  e.currentTarget.style.background = 'var(--color-4)'
-                }
-              }}
-            >
-              {isAnalyzing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-t-transparent" style={{ borderColor: 'var(--text-muted)' }}></div>
-                  {t('analysis.in_progress')}
-                </>
-              ) : (
-                <>
-                  <span>{t('analysis.launch')}</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Error Message */}
-          {urlError && (
-            <div className="flex items-start gap-2 px-3 py-2 rounded-lg" style={{
-              backgroundColor: 'var(--status-error-bg)',
-              borderWidth: '1px',
-              borderColor: 'var(--status-error-border)'
-            }}>
-              <svg className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--status-error-text)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm" style={{ color: 'var(--status-error-text)' }}>{urlError}</p>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="mb-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-3">
+              <Input
+                type="text"
+                value={figmaUrl}
+                onChange={handleUrlChange}
+                placeholder={t('analysis.placeholder')}
+                disabled={isAnalyzing}
+                className="flex-1 bg-primary-foreground text-primary"
+              />
+              <Button
+                type="submit"
+                disabled={isAnalyzing || !figmaUrl.trim()}
+                variant="secondary"
+                className="gap-2"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('analysis.in_progress')}
+                  </>
+                ) : (
+                  <>
+                    <span>{t('analysis.launch')}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
             </div>
-          )}
+
+            {/* Error Dialog */}
+            <AlertDialog open={!!urlError} onOpenChange={(open: boolean) => !open && setUrlError(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    {t('analysis.error_title')}
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {urlError}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogAction onClick={() => setUrlError(null)}>
+                    {t('common.ok')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
         </div>
       </form>
 
-      {/* Terminal Logs */}
-      {jobId && (
-        <div className="rounded-lg overflow-hidden" style={{
-          backgroundColor: 'var(--bg-overlay-dark)',
-          borderWidth: '1px',
-          borderColor: 'var(--border-primary)'
-        }}>
+        {/* Terminal Logs - Always visible */}
+        <Card className="overflow-hidden bg-black border-0">
           {/* Terminal Header */}
-          <div className="px-4 py-2 flex items-center justify-between" style={{
-            backgroundColor: 'var(--bg-overlay-medium)',
-            borderBottom: '1px solid',
-            borderColor: 'var(--border-primary)'
-          }}>
+          <div className="px-4 py-2 flex items-center justify-between border-b bg-muted">
             <div className="flex items-center gap-3">
               <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--status-error-text)' }}></div>
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--status-warning-text)' }}></div>
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'var(--status-success-text)' }}></div>
+                <div className="w-3 h-3 rounded-full bg-destructive"></div>
+                <div className="w-3 h-3 rounded-full bg-chart-4"></div>
+                <div className="w-3 h-3 rounded-full bg-chart-2"></div>
               </div>
-              <span className="text-sm font-mono" style={{ color: 'var(--text-secondary)' }}>
+              <span className="text-sm font-mono text-muted-foreground">
+                {!jobId && (
+                  <span className="text-muted-foreground">Terminal ready</span>
+                )}
                 {isAnalyzing && (
-                  <span style={{ color: 'var(--status-success-text)' }}>{t('analysis.status.in_progress')}</span>
+                  <span className="text-chart-2">{t('analysis.status.in_progress')}</span>
                 )}
                 {isComplete && isSuccess && (
-                  <span style={{ color: 'var(--status-success-text)' }}>{t('analysis.status.success')}</span>
+                  <span className="text-chart-2">{t('analysis.status.success')}</span>
                 )}
                 {isComplete && !isSuccess && (
-                  <span style={{ color: 'var(--status-error-text)' }}>{t('analysis.status.failed')}</span>
+                  <span className="text-destructive">{t('analysis.status.failed')}</span>
                 )}
               </span>
             </div>
-            <button
-              onClick={handleReset}
-              className="transition-colors"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-inverse)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-              title={t('common.close')}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            {jobId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleReset}
+                title={t('common.close')}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
           {/* Logs Display with react-lazylog */}
-          <div style={{ backgroundColor: '#000000' }}>
+          <div style={{ backgroundColor: '#000000', padding: '12px 16px' }}>
             <LazyLog
-              text={logs}
-              height={320}
+              text={logs || `# ${t('analysis.helper')}\n# Paste a Figma URL with node-id parameter and click Launch\n\nWaiting for analysis...`}
+              height={296}
               follow={true}
               selectableLines={true}
-              enableSearch={true}
+              enableSearch={false}
               caseInsensitive={true}
               extraLines={1}
               stream={isAnalyzing}
@@ -323,39 +298,23 @@ export default function AnalysisForm({ onAnalysisComplete }: AnalysisFormProps) 
 
           {/* Footer Actions */}
           {isComplete && (
-            <div className="px-4 py-3 flex items-center justify-between" style={{
-              backgroundColor: 'var(--bg-overlay-medium)',
-              borderTop: '1px solid',
-              borderColor: 'var(--border-primary)'
-            }}>
-              <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            <div className="px-4 py-3 flex items-center justify-between border-t bg-muted/50">
+              <span className="text-sm text-muted-foreground">
                 {isSuccess
                   ? t('analysis.footer.success_message')
                   : t('analysis.footer.error_message')}
               </span>
-              <button
+              <Button
+                variant="default"
+                size="sm"
                 onClick={handleReset}
-                className="px-4 py-1.5 text-sm font-medium rounded transition-colors"
-                style={{
-                  background: 'var(--button-primary-bg)',
-                  color: 'var(--button-primary-text)'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--button-primary-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--button-primary-bg)'}
               >
                 {t('analysis.footer.new_export')}
-              </button>
+              </Button>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Helper Text */}
-      {!jobId && (
-        <p className="text-sm mt-3" style={{ color: 'var(--color-white)' }}>
-          {t('analysis.helper')} <code className="px-1 rounded" style={{ backgroundColor: 'var(--color-5)', color: 'var(--color-black)' }}>node-id</code>
-        </p>
-      )}
-    </div>
+        </Card>
+      </CardContent>
+    </Card>
   )
 }

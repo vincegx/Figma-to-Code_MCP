@@ -8,17 +8,48 @@
  * 4. Technical Analysis - Documentation markdown technique (analysis.md)
  */
 
-import React, { useState, useEffect, Suspense, ComponentType } from 'react'
+import { useState, useEffect, Suspense, ComponentType } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useTranslation } from '../i18n/I18nContext'
+import { useSidebar } from '@/components/ui/sidebar'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Slider } from '@/components/ui/slider'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Separator } from '@/components/ui/separator'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
+import {
+  ExternalLink,
+  Download,
+  Info,
+  Eye,
+  Clock,
+  Maximize2,
+  Smartphone,
+  Tablet,
+  Monitor,
+  Maximize,
+  MoreVertical,
+  Package,
+  FileText,
+  Image as ImageIcon,
+  Zap
+} from 'lucide-react'
 
 type Tab = 'preview' | 'code' | 'report' | 'technical'
 
 interface Metadata {
   fileName?: string
   layerName?: string
-  timestamp?: string | number  // Peut être une string ISO ou un nombre (secondes Unix)
+  timestamp?: string | number
   figmaUrl?: string
   figmaNodeId?: string
   componentName?: string
@@ -41,9 +72,7 @@ interface TestDetailProps {
   onBack: () => void
 }
 
-// Fonction utilitaire pour formater les dates/timestamps
 function formatDate(timestamp: string | number) {
-  // Si le timestamp est un nombre avec moins de 13 chiffres, c'est en secondes → convertir en millisecondes
   const dateValue = typeof timestamp === 'number' && timestamp < 10000000000
     ? timestamp * 1000
     : timestamp
@@ -59,12 +88,17 @@ function formatDate(timestamp: string | number) {
 
 export default function TestDetail({ testId, onBack }: TestDetailProps) {
   const { t } = useTranslation()
+  const { setOpen } = useSidebar()
   const [activeTab, setActiveTab] = useState<Tab>('preview')
   const [metadata, setMetadata] = useState<Metadata | null>(null)
   const [analysis, setAnalysis] = useState<string>('')
-  const [componentCode, setComponentCode] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Auto-collapse sidebar on mount only
+  useEffect(() => {
+    setOpen(false)
+  }, []) // Empty dependency array = runs once on mount only
 
   useEffect(() => {
     loadTestData()
@@ -74,11 +108,9 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
     try {
       setLoading(true)
 
-      // Load metadata
       const metadataModule = await import(`../generated/tests/${testId}/metadata.json`)
       let metadata = metadataModule.default
 
-      // Load layerName from metadata.xml
       try {
         const xmlModule = await import(`../generated/tests/${testId}/metadata.xml?raw`)
         const xmlContent = xmlModule.default
@@ -92,50 +124,23 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
 
       setMetadata(metadata)
 
-      // Load analysis markdown
       const analysisModule = await import(`../generated/tests/${testId}/analysis.md?raw`)
       setAnalysis(analysisModule.default)
-
-      // Load component code (Component-clean.tsx ou .jsx)
-      try {
-        const codeModule = await import(`../generated/tests/${testId}/Component-clean.tsx?raw`)
-        setComponentCode(codeModule.default)
-      } catch (e) {
-        // Fallback sur Component-clean.jsx
-        try {
-          const codeModule = await import(`../generated/tests/${testId}/Component-clean.jsx?raw`)
-          setComponentCode(codeModule.default)
-        } catch (e2) {
-          // Fallback sur Component.tsx
-          try {
-            const codeModule = await import(`../generated/tests/${testId}/Component.tsx?raw`)
-            setComponentCode(codeModule.default)
-          } catch (e3) {
-            // Fallback sur Component.jsx
-            try {
-              const codeModule = await import(`../generated/tests/${testId}/Component.jsx?raw`)
-              setComponentCode(codeModule.default)
-            } catch (err) {
-              console.warn('No component code found')
-            }
-          }
-        }
-      }
 
       setLoading(false)
     } catch (err) {
       console.error('Error loading test:', err)
-      setError(err.message)
+      setError(err instanceof Error ? err.message : 'Unknown error')
       setLoading(false)
     }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--accent-primary)' }}></div>
-          <p style={{ color: 'var(--text-secondary)' }}>{t('detail.loading')}</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">{t('detail.loading')}</p>
         </div>
       </div>
     )
@@ -143,450 +148,294 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
-        <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">❌</div>
-          <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="max-w-md text-center">
+          <div className="mb-4 text-6xl">❌</div>
+          <h3 className="mb-2 text-xl font-semibold text-foreground">
             {t('detail.error.title')}
           </h3>
-          <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>{error}</p>
-          <button
-            onClick={onBack}
-            className="px-4 py-2 rounded-lg transition-all"
-            style={{
-              background: 'var(--button-primary-bg)',
-              color: 'var(--button-primary-text)'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--button-primary-hover)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--button-primary-bg)'}
-          >
+          <p className="mb-6 text-muted-foreground">{error}</p>
+          <Button onClick={onBack}>
             {t('detail.error.back')}
-          </button>
+          </Button>
         </div>
       </div>
     )
   }
 
-  // Extract nodeId from testId for display
   const nodeIdDisplay = (() => {
     const match = testId?.match(/^node-(.+)-\d+$/)
     return match ? match[1] : testId?.replace('node-', '')
   })()
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      {/* Header */}
-      <header style={{
-        background: 'var(--color-1)',
-        borderBottom: '1px solid',
-        borderColor: 'var(--border-primary)'
-      }}>
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          {/* Back button + Title row */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-start gap-4">
-              <button
-                onClick={onBack}
-                className="mt-1 p-2.5 backdrop-blur-sm rounded-xl transition-all"
-                style={{
-                  backgroundColor: 'var(--bg-card)',
-                  boxShadow: 'var(--shadow-sm)',
-                  borderWidth: '1px',
-                  borderColor: 'var(--color-0)',
-                  color: 'var(--text-primary)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = 'var(--shadow-md)'
-                  e.currentTarget.style.backgroundColor = 'var(--bg-hover)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-                  e.currentTarget.style.backgroundColor = 'var(--bg-card)'
-                }}
-                title="Retour"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold" style={{ color: 'var(--color-white)' }}>
-                    {metadata?.layerName || metadata?.fileName || 'Test'}
-                  </h1>
-                  {metadata?.figmaNodeId && (
-                    <span className="px-3 py-1 backdrop-blur-sm text-xs rounded-lg font-mono" style={{
-                      backgroundColor: 'var(--bg-overlay-dark)',
-                      color: 'var(--color-white)'
-                    }}>
-                      #{nodeIdDisplay}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 text-sm" style={{ color: 'var(--color-white)' }}>
+    <div className="min-h-screen bg-background">
+      {/* Compact Hero Section */}
+      <div className="border-b bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5">
+        <div className="w-full px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            {/* Title & Metadata */}
+            <div className="flex-1 space-y-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                  {metadata?.layerName || metadata?.fileName || 'Test'}
+                </h1>
+                {metadata?.figmaNodeId && (
+                  <Badge variant="outline" className="font-mono text-xs">
+                    #{nodeIdDisplay}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  {metadata?.timestamp && formatDate(metadata.timestamp)}
+                </span>
+                {metadata?.dimensions && (
                   <span className="flex items-center gap-1.5">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {metadata?.timestamp && formatDate(metadata.timestamp)}
+                    <Maximize2 className="h-4 w-4" />
+                    {metadata.dimensions.width} × {metadata.dimensions.height}
                   </span>
-                  {metadata?.dimensions && (
-                    <span className="flex items-center gap-1.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                      </svg>
-                      {metadata.dimensions.width} × {metadata.dimensions.height}
-                    </span>
-                  )}
-                  <span className="text-[10px] font-mono ml-2" style={{ color: 'var(--color-white)' }}>{testId}</span>
-                </div>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <a
-                href={`http://localhost:5173/?preview=true&test=${testId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2.5 text-sm font-medium rounded-xl transition-all flex items-center gap-2"
-                style={{
-                  background: 'var(--color-5)',
-                  color: 'var(--status-info-text)',
-                  boxShadow: 'var(--shadow-sm)'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
-                onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-sm)'}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Preview
-              </a>
-              <a
-                href={`/api/download/${testId}`}
-                download={`${testId}.zip`}
-                className="px-4 py-2.5 text-sm font-medium rounded-xl transition-all flex items-center gap-2"
-                style={{
-                  background: 'var(--status-success-bg)',
-                  color: 'var(--status-success-text)',
-                  boxShadow: 'var(--shadow-sm)'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
-                onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'var(--shadow-sm)'}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download
-              </a>
-              <a
-                href={metadata?.figmaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2.5 text-sm font-medium rounded-xl transition-all flex items-center gap-2"
-                style={{
-                  background: 'var(--color-4)',
-                  color: 'var(--button-primary-text)',
-                  boxShadow: 'var(--shadow-sm)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--button-primary-hover)'
-                  e.currentTarget.style.boxShadow = 'var(--shadow-md)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--button-primary-bg)'
-                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-                Figma
-              </a>
+            {/* Actions & Stats - Right side */}
+            <div className="flex flex-col gap-3">
+              {/* Actions - Desktop */}
+              <div className="hidden sm:flex items-center gap-2">
+                <Button variant="default" size="sm" asChild>
+                  <a
+                    href={`/preview?test=${testId}`}
+                    className="[&]:dark:text-white [&>svg]:dark:text-white"
+                    style={{ color: 'white' }}
+                  >
+                    <Eye className="mr-2 h-4 w-4" style={{ color: 'white' }} />
+                    Preview
+                  </a>
+                </Button>
+                <Button variant="outline" size="sm" asChild className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+                  <a
+                    href={`/api/download/${testId}`}
+                    download={`${testId}.zip`}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </a>
+                </Button>
+                <Button variant="secondary" size="sm" asChild className="bg-foreground/90 text-background hover:bg-foreground font-semibold">
+                  <a
+                    href={metadata?.figmaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Figma
+                  </a>
+                </Button>
+              </div>
+
+              {/* Actions - Mobile (Dropdown) */}
+              <div className="sm:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <a
+                        href={`/preview?test=${testId}`}
+                        className="flex items-center"
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        Preview
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <a
+                        href={`/api/download/${testId}`}
+                        download={`${testId}.zip`}
+                        className="flex items-center"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <a
+                        href={metadata?.figmaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center"
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Open in Figma
+                      </a>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Stats Bar */}
+              {metadata?.stats && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                  {metadata.stats.totalNodes !== undefined && (
+                    <Card className="p-2">
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-md bg-primary/10 p-1.5">
+                          <Package className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <p className="text-lg font-bold">{metadata.stats.totalNodes}</p>
+                          <p className="text-[10px] text-muted-foreground">Nodes</p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  {metadata.stats.sectionsDetected !== undefined && metadata.stats.sectionsDetected > 0 && (
+                    <Card className="p-2">
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-md bg-primary/10 p-1.5">
+                          <FileText className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <p className="text-lg font-bold">{metadata.stats.sectionsDetected}</p>
+                          <p className="text-[10px] text-muted-foreground">Sections</p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  {metadata.stats.imagesOrganized !== undefined && metadata.stats.imagesOrganized > 0 && (
+                    <Card className="p-2">
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-md bg-primary/10 p-1.5">
+                          <ImageIcon className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <p className="text-lg font-bold">{metadata.stats.imagesOrganized}</p>
+                          <p className="text-[10px] text-muted-foreground">Images</p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  {(metadata.stats.totalFixes !== undefined || metadata.stats.classesOptimized !== undefined) && (
+                    <Card className="p-2">
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-md bg-primary/10 p-1.5">
+                          <Zap className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                        <div className="flex items-baseline gap-1">
+                          <p className="text-lg font-bold">
+                            {metadata.stats.totalFixes || metadata.stats.classesOptimized || 0}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">Fixes</p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-
-          {/* Stats bar */}
-          {metadata?.stats && (
-            <div className="flex items-center gap-2 mt-4 pt-4" style={{
-              borderTop: '1px solid',
-              borderColor: 'var(--color-0)'
-            }}>
-              {metadata.stats.totalNodes !== undefined && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 backdrop-blur-sm rounded-md" style={{
-                  backgroundColor: 'var(--bg-hover)',
-                  borderWidth: '1px',
-                  borderColor: 'var(--border-subtle)'
-                }}>
-                  <span className="text-xs">📦</span>
-                  <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{metadata.stats.totalNodes}</span>
-                  <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{t('common.nodes')}</span>
-                </div>
-              )}
-              {metadata.stats.sectionsDetected !== undefined && metadata.stats.sectionsDetected > 0 && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 backdrop-blur-sm rounded-md" style={{
-                  backgroundColor: 'var(--accent-secondary)',
-                  borderWidth: '1px',
-                  borderColor: 'var(--border-subtle)'
-                }}>
-                  <span className="text-xs">📑</span>
-                  <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{metadata.stats.sectionsDetected}</span>
-                  <span className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>{t('common.sections')}</span>
-                </div>
-              )}
-              {metadata.stats.imagesOrganized !== undefined && metadata.stats.imagesOrganized > 0 && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 backdrop-blur-sm rounded-md" style={{
-                  backgroundColor: 'var(--status-info-bg)',
-                  borderWidth: '1px',
-                  borderColor: 'var(--status-info-border)'
-                }}>
-                  <span className="text-xs">🖼️</span>
-                  <span className="text-xs font-semibold" style={{ color: 'var(--status-info-text)' }}>{metadata.stats.imagesOrganized}</span>
-                  <span className="text-[10px]" style={{ color: 'var(--status-info-text)' }}>{t('common.images')}</span>
-                </div>
-              )}
-              {(metadata.stats.totalFixes !== undefined || metadata.stats.classesOptimized !== undefined) && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 backdrop-blur-sm rounded-md" style={{
-                  backgroundColor: 'var(--status-warning-bg)',
-                  borderWidth: '1px',
-                  borderColor: 'var(--status-warning-border)'
-                }}>
-                  <span className="text-xs">⚡</span>
-                  <span className="text-xs font-semibold" style={{ color: 'var(--status-warning-text)' }}>
-                    {metadata.stats.totalFixes || metadata.stats.classesOptimized || 0}
-                  </span>
-                  <span className="text-[10px]" style={{ color: 'var(--status-warning-text)' }}>{t('common.fixes')}</span>
-                </div>
-              )}
-            </div>
-          )}
         </div>
-      </header>
+      </div>
 
       {/* Tabs */}
-      <nav style={{
-        backgroundColor: 'var(--bg-card)',
-      }}>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex justify-between items-center">
-            <div className="flex space-x-8">
-              <button
-                onClick={() => setActiveTab('preview')}
-                className="py-4 px-1 font-medium text-sm transition-colors"
-                style={{
-                  borderBottom: '3px solid',
-                  borderColor: activeTab === 'preview' ? 'var(--color-0)' : 'transparent',
-                  color: activeTab === 'preview' ? 'var(--color-1)' : 'var(--text-secondary)'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== 'preview') {
-                    e.currentTarget.style.color = 'var(--color-0)'
-                    e.currentTarget.style.borderColor = 'var(--color-0)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== 'preview') {
-                    e.currentTarget.style.color = 'var(--text-secondary)'
-                    e.currentTarget.style.borderColor = 'transparent'
-                  }
-                }}
-              >
+      <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as Tab)} className="w-full max-w-full">
+        <div className="bg-card px-6 py-4 max-w-full">
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="preview">
                 {t('detail.tabs.preview')}
-              </button>
-              <button
-                onClick={() => setActiveTab('report')}
-                className="py-4 px-1 font-medium text-sm transition-colors"
-                style={{
-                  borderBottom: '2px solid',
-                  borderColor: activeTab === 'report' ? 'var(--color-0)' : 'transparent',
-                  color: activeTab === 'report' ? 'var(--color-1)' : 'var(--text-secondary)'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== 'report') {
-                    e.currentTarget.style.color = 'var(--color-0)'
-                    e.currentTarget.style.borderColor = 'var(--color-0)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== 'report') {
-                    e.currentTarget.style.color = 'var(--text-secondary)'
-                    e.currentTarget.style.borderColor = 'transparent'
-                  }
-                }}
-              >
+              </TabsTrigger>
+              <TabsTrigger value="report">
                 {t('detail.tabs.report')}
-              </button>
-              <button
-                onClick={() => setActiveTab('code')}
-                className="py-4 px-1 font-medium text-sm transition-colors"
-                style={{
-                  borderBottom: '2px solid',
-                  borderColor: activeTab === 'code' ? 'var(--color-0)' : 'transparent',
-                  color: activeTab === 'code' ? 'var(--color-1)' : 'var(--text-secondary)'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== 'code') {
-                    e.currentTarget.style.color = 'var(--color-0)'
-                    e.currentTarget.style.borderColor = 'var(--color-0)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== 'code') {
-                    e.currentTarget.style.color = 'var(--text-secondary)'
-                    e.currentTarget.style.borderColor = 'transparent'
-                  }
-                }}
-              >
+              </TabsTrigger>
+              <TabsTrigger value="code">
                 {t('detail.tabs.code')}
-              </button>
-              <button
-                onClick={() => setActiveTab('technical')}
-                className="py-4 px-1 font-medium text-sm transition-colors"
-                style={{
-                  borderBottom: '2px solid',
-                  borderColor: activeTab === 'technical' ? 'var(--color-0)' : 'transparent',
-                  color: activeTab === 'technical' ? 'var(--color-1)' : 'var(--text-secondary)'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== 'technical') {
-                    e.currentTarget.style.color = 'var(--color-0)'
-                    e.currentTarget.style.borderColor = 'var(--color-0)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== 'technical') {
-                    e.currentTarget.style.color = 'var(--text-secondary)'
-                    e.currentTarget.style.borderColor = 'transparent'
-                  }
-                }}
-              >
+              </TabsTrigger>
+              <TabsTrigger value="technical">
                 {t('detail.tabs.technical')}
-              </button>
-            </div>
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Info button with hover tooltip */}
+            {/* Info popover - only show on preview tab */}
             {activeTab === 'preview' && (
-              <div className="relative group">
-                <button className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200" style={{
-                  color: 'var(--text-secondary)',
-                  backgroundColor: 'var(--status-info-bg)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--status-info-text)'
-                  e.currentTarget.style.backgroundColor = 'var(--status-info-bg)'
-                  e.currentTarget.style.borderColor = 'var(--status-info-border)'
-                  e.currentTarget.style.boxShadow = 'var(--shadow-md)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--text-secondary)'
-                  e.currentTarget.style.backgroundColor = 'var(--status-info-bg)'
-                  e.currentTarget.style.borderColor = 'var(--border-primary)'
-                  e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-                }}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Info</span>
-                </button>
-
-                {/* Tooltip on hover */}
-                <div className="absolute right-0 top-full mt-3 w-96 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden" style={{
-                  backgroundColor: 'var(--bg-card)',
-                  borderWidth: '1px',
-                  borderColor: 'var(--border-primary)',
-                  boxShadow: 'var(--shadow-lg)'
-                }}>
-                  {/* Info section */}
-                  <div className="p-4" style={{
-                    background: 'var(--status-info-bg)',
-                    borderBottom: '1px solid',
-                    borderColor: 'var(--status-info-border)'
-                  }}>
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{
-                        color: 'var(--bg-card)',
-                        boxShadow: 'var(--shadow-sm)'
-                      }}>
-                        ℹ️
-                      </div>
-                      <div className="text-sm flex-1">
-                        <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{t('detail.preview.banner_title')}</p>
-                        <p className="leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{t('detail.preview.banner_text')}</p>
-                      </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <Info className="mr-2 h-4 w-4" />
+                    Info
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-96">
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      <p className="mb-2 font-semibold">{t('detail.preview.banner_title')}</p>
+                      <p className="text-sm">{t('detail.preview.banner_text')}</p>
+                    </AlertDescription>
+                  </Alert>
+                  <Separator className="my-4" />
+                  <div>
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-sm">💡</span>
+                      <p className="text-sm font-semibold">{t('detail.preview.tips_title')}</p>
                     </div>
-                  </div>
-
-                  {/* Tips section */}
-                  <div className="p-4" style={{
-                    background: 'var(--color-white)'
-                  }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-sm" style={{
-                        backgroundColor: 'var(--status-info-bg)',
-                        color: 'var(--bg-card)',
-                        boxShadow: 'var(--shadow-sm)'
-                      }}>
-                        💡
-                      </div>
-                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{t('detail.preview.tips_title')}</p>
-                    </div>
-                    <ul className="text-sm space-y-2 ml-8" style={{ color: 'var(--text-secondary)' }}>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
                       {metadata?.dimensions && (
                         <li className="flex items-start gap-2">
-                          <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
+                          <span>→</span>
                           <span>{t('detail.preview.tips.0', { width: metadata.dimensions.width.toString(), height: metadata.dimensions.height.toString() })}</span>
                         </li>
                       )}
                       <li className="flex items-start gap-2">
-                        <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
+                        <span>→</span>
                         <span>{t('detail.preview.tips.1')}</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
+                        <span>→</span>
                         <span>{t('detail.preview.tips.2')}</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
-                        <span>{t('detail.preview.tips.3')}</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="mt-0.5" style={{ color: 'var(--status-info-bg)' }}>→</span>
-                        <span>{t('detail.preview.tips.4')}</span>
                       </li>
                     </ul>
                   </div>
-                </div>
-              </div>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
         </div>
-      </nav>
 
-      {/* Content */}
-      <main className={activeTab === 'preview' ? 'w-full' : 'max-w-7xl mx-auto px-6 py-8'}>
-        {activeTab === 'preview' && (
-          <PreviewTab testId={testId} componentName={metadata?.componentName} dimensions={metadata?.dimensions} />
-        )}
+        {/* Tab Content */}
+        <main className={activeTab === 'preview' ? 'w-full max-w-full' : 'w-full max-w-full px-6 py-8'}>
+          <TabsContent value="preview" className="mt-0 max-w-full">
+            <PreviewTab testId={testId} componentName={metadata?.componentName} dimensions={metadata?.dimensions} />
+          </TabsContent>
 
-        {activeTab === 'code' && (
-          <CodeTab componentCode={componentCode} testId={testId} />
-        )}
+          <TabsContent value="code" className="mt-0 max-w-full">
+            <CodeTab testId={testId} />
+          </TabsContent>
 
-        {activeTab === 'report' && (
-          <ReportTab testId={testId} />
-        )}
+          <TabsContent value="report" className="mt-0 max-w-full">
+            <ReportTab testId={testId} />
+          </TabsContent>
 
-        {activeTab === 'technical' && (
-          <TechnicalAnalysisTab analysis={analysis} />
-        )}
-      </main>
+          <TabsContent value="technical" className="mt-0 max-w-full">
+            <TechnicalAnalysisTab analysis={analysis} />
+          </TabsContent>
+        </main>
+      </Tabs>
     </div>
   )
 }
 
 /**
- * TAB 1: Preview - Rendu React du composant généré
+ * TAB 1: Preview - Rendu React du composant généré avec ResizablePanel
  */
 interface PreviewTabProps {
   testId: string
@@ -597,24 +446,19 @@ interface PreviewTabProps {
   }
 }
 
-function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
+function PreviewTab({ testId, dimensions }: PreviewTabProps) {
   const { t } = useTranslation()
   const [Component, setComponent] = useState<ComponentType | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Responsive viewport simulator - use dimensions if available, otherwise default to 1200
   const defaultWidth = dimensions?.width || 1200
   const [viewportWidth, setViewportWidth] = useState<number>(defaultWidth)
-  const [customInput, setCustomInput] = useState<string>(defaultWidth.toString())
-  const minWidth = 320
-  const maxWidth = 1920
 
   useEffect(() => {
     loadComponent()
   }, [testId])
 
-  // Charger le CSS du composant généré
   useEffect(() => {
     const link = document.createElement('link')
     link.rel = 'stylesheet'
@@ -630,16 +474,10 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
     }
   }, [testId])
 
-  // Sync customInput with viewportWidth when changed by presets or slider
-  useEffect(() => {
-    setCustomInput(viewportWidth.toString())
-  }, [viewportWidth])
-
   const loadComponent = async () => {
     try {
       setLoading(true)
 
-      // Import dynamique du composant - essayer d'abord la version clean (.tsx puis .jsx)
       let module: any
       try {
         module = await import(`../generated/tests/${testId}/Component-clean.tsx`)
@@ -650,7 +488,6 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
           try {
             module = await import(`../generated/tests/${testId}/Component.tsx`)
           } catch (e3) {
-            // Fallback final sur Component.jsx
             module = await import(`../generated/tests/${testId}/Component.jsx`)
           }
         }
@@ -660,217 +497,125 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
       setLoading(false)
     } catch (err) {
       console.error('Error loading component:', err)
-      setError(err.message)
+      setError(err instanceof Error ? err.message : 'Unknown error')
       setLoading(false)
     }
   }
 
   const presets = [
-    ...(dimensions ? [{ name: 'Native', width: dimensions.width, icon: '🎯' }] : []),
-    { name: 'Mobile', width: 375, icon: '📱' },
-    { name: 'Tablet', width: 768, icon: '📱' },
-    { name: 'Desktop', width: 1200, icon: '💻' },
-    { name: 'Large', width: 1920, icon: '🖥️' }
-  ]
-
-  // Check if current width matches any preset
-  const isCustomWidth = !presets.some(preset => preset.width === viewportWidth)
-
-  const handleCustomWidthChange = (value: string) => {
-    setCustomInput(value)
-    const numValue = parseInt(value)
-    if (!isNaN(numValue) && numValue >= minWidth && numValue <= maxWidth) {
-      setViewportWidth(numValue)
-    } else if (value === '') {
-      // Allow clearing the field
-      setCustomInput('')
-    }
-  }
+    { name: 'Mobile', width: 375, icon: Smartphone },
+    { name: 'Tablet', width: 768, icon: Tablet },
+    ...(dimensions ? [{ name: 'Native', width: dimensions.width, icon: Maximize }] : []),
+    { name: 'Desktop', width: 1200, icon: Monitor },
+    { name: 'Large', width: 1920, icon: Maximize }
+  ].sort((a, b) => a.width - b.width)
 
   if (loading) {
     return (
-      <div className="rounded-lg p-12 text-center" style={{
-        backgroundColor: 'var(--bg-card)',
-        boxShadow: 'var(--shadow-sm)',
-        borderWidth: '1px',
-        borderColor: 'var(--border-primary)'
-      }}>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--accent-primary)' }}></div>
-        <p style={{ color: 'var(--text-secondary)' }}>{t('detail.preview.loading_component')}</p>
-      </div>
+      <Card className="p-12 text-center">
+        <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">{t('detail.preview.loading_component')}</p>
+      </Card>
     )
   }
 
   if (error) {
     return (
-      <div className="rounded-lg p-12 text-center" style={{
-        backgroundColor: 'var(--bg-card)',
-        boxShadow: 'var(--shadow-sm)',
-        borderWidth: '1px',
-        borderColor: 'var(--border-primary)'
-      }}>
-        <div className="text-6xl mb-4">⚠️</div>
-        <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-          {t('detail.preview.error_title')}
-        </h3>
-        <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>{error}</p>
-        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-          {t('detail.preview.error_text')}
-        </p>
-      </div>
+      <Card className="p-12 text-center">
+        <div className="mb-4 text-6xl">⚠️</div>
+        <h3 className="mb-2 text-xl font-semibold">{t('detail.preview.error_title')}</h3>
+        <p className="mb-4 text-muted-foreground">{error}</p>
+        <p className="text-sm text-muted-foreground">{t('detail.preview.error_text')}</p>
+      </Card>
     )
   }
 
   return (
     <div>
       {/* Responsive Controls - Sticky */}
-      <div className="sticky top-0 z-10 py-4" style={{
-        backgroundColor: 'var(--color-0)'
-      }}>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="rounded-lg p-4" style={{
-            backgroundColor: 'var(--bg-card)',
-            boxShadow: 'var(--shadow-sm)',
-            borderWidth: '1px',
-            borderColor: 'var(--border-primary)'
-          }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{t('detail.preview.responsive_test')}</h3>
+      <div className="sticky top-0 z-10 bg-muted/50 py-4 backdrop-blur">
+        <div className="w-full px-4 sm:px-6">
+          <Card className="p-3 sm:p-4">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="font-semibold text-sm sm:text-base">{t('detail.preview.responsive_test')}</h3>
               <div className="flex items-center gap-2">
                 {dimensions && viewportWidth === dimensions.width && (
-                  <span className="text-sm px-2 py-1 rounded flex items-center gap-1" style={{
-                    backgroundColor: 'var(--status-success-bg)',
-                    color: 'var(--status-success-text)'
-                  }}>
-                    <span>🎯</span> {t('detail.preview.native')}
-                  </span>
+                  <Badge variant="default" className="gap-1 text-xs">
+                    <Maximize className="h-3 w-3" />
+                    {t('detail.preview.native')}
+                  </Badge>
                 )}
-                <div className="text-sm font-mono px-3 py-1.5 rounded" style={{
-                  backgroundColor: 'var(--accent-secondary)',
-                  color: 'var(--text-secondary)'
-                }}>
+                <Badge variant="secondary" className="font-mono text-xs">
                   {viewportWidth}px
-                </div>
+                </Badge>
               </div>
             </div>
 
-          {/* Presets */}
-          <div className="flex gap-2 mb-4 flex-wrap items-center">
-            {presets.map((preset) => (
-              <button
-                key={preset.name}
-                onClick={() => setViewportWidth(preset.width)}
-                className="px-3 py-2 text-sm rounded-lg transition-all"
-                style={{
-                  backgroundColor: viewportWidth === preset.width ? 'var(--accent-primary)' : 'var(--bg-card)',
-                  color: viewportWidth === preset.width ? 'var(--button-primary-text)' : 'var(--text-primary)',
-                  borderWidth: '1px',
-                  borderColor: viewportWidth === preset.width ? 'var(--accent-primary)' : 'var(--color-0)'
-                }}
-                onMouseEnter={(e) => {
-                  if (viewportWidth !== preset.width) {
-                    e.currentTarget.style.borderColor = 'var(--accent-hover)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (viewportWidth !== preset.width) {
-                    e.currentTarget.style.borderColor = 'var(--border-primary)'
-                  }
-                }}
-              >
-                {preset.icon} {preset.name} ({preset.width}px)
-              </button>
-            ))}
+            {/* Presets */}
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              {presets.map((preset) => {
+                const Icon = preset.icon
+                const isActive = viewportWidth === preset.width
+                return (
+                  <button
+                    key={preset.name}
+                    onClick={() => setViewportWidth(preset.width)}
+                    className={`flex items-center gap-1.5 rounded-md px-2 sm:px-3 py-1.5 text-xs sm:text-sm transition-colors ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted hover:bg-muted/80'
+                    }`}
+                  >
+                    <Icon className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                    <span className="hidden sm:inline">{preset.name}</span>
+                    <span className={`text-xs ${isActive ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                      {preset.width}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
 
-            {/* Custom width input */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center rounded-lg transition-all" style={{
-                backgroundColor: 'var(--bg-card)',
-                borderWidth: isCustomWidth ? '2px' : '1px',
-                borderColor: isCustomWidth ? 'var(--accent-primary)' : 'var(--border-primary)',
-                boxShadow: isCustomWidth ? 'var(--focus-ring)' : 'none'
-              }}>
-                <span className="pl-3 pr-1 text-sm" style={{ color: 'var(--text-muted)' }}>✏️</span>
-                <input
-                  type="text"
-                  value={customInput}
-                  onChange={(e) => handleCustomWidthChange(e.target.value)}
-                  placeholder="Custom"
-                  className="w-16 px-2 py-2 text-sm outline-none"
-                  style={{
-                    backgroundColor: 'transparent',
-                    color: 'var(--text-primary)'
-                  }}
-                />
-                <span className="pr-3 pl-1 text-xs" style={{ color: 'var(--text-muted)' }}>px</span>
+            {/* Slider */}
+            <div className="space-y-2">
+              <Slider
+                value={[viewportWidth]}
+                onValueChange={(value: number[]) => setViewportWidth(value[0])}
+                min={320}
+                max={1920}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>320px</span>
+                <span>1920px</span>
               </div>
             </div>
-          </div>
-
-          {/* Slider */}
-          <div className="space-y-2">
-            <input
-              type="range"
-              min={minWidth}
-              max={maxWidth}
-              value={viewportWidth}
-              onChange={(e) => setViewportWidth(Number(e.target.value))}
-              className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-              style={{
-                backgroundColor: 'var(--color-0)',
-                accentColor: 'var(--color-2)'
-              }}
-            />
-            <div className="flex justify-between text-xs" style={{ color: 'var(--color-black)' }}>
-              <span>{minWidth}px</span>
-              <span>{maxWidth}px</span>
-            </div>
-          </div>
-          </div>
+          </Card>
         </div>
       </div>
 
-      {/* Component Render - Full width container */}
-      <div className="overflow-hidden" style={{
-        backgroundColor: 'var(--bg-card)'
-      }}>
-
-        {/* Full width viewport simulator */}
-        <div className="min-h-[600px] flex justify-center items-start pb-8" style={{
+      {/* Component Render */}
+      <div
+        className="flex min-h-[calc(100vh-300px)] justify-center overflow-auto py-8"
+        style={{
+          backgroundColor: '#fafafa',
           backgroundImage: `
-            linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
-            linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
-            linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
-            linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)
+            linear-gradient(to right, rgb(209 213 219 / 0.5) 1px, transparent 1px),
+            linear-gradient(to bottom, rgb(209 213 219 / 0.5) 1px, transparent 1px)
           `,
-          backgroundSize: '20px 20px',
-          backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-          backgroundColor: '#ffffff'
-        }}>
-          <div
-            className="transition-all duration-300 ease-in-out overflow-auto"
-            style={{
-              width: `${viewportWidth}px`,
-              maxWidth: '100%',
-              minHeight: '500px'
-            }}
-          >
-            {Component && (
-              <Suspense fallback={<div className="p-8 text-center" style={{ color: 'var(--text-muted)' }}>Loading component...</div>}>
-                {dimensions ? (
-                  <div style={{
-                    width: `${dimensions.width}px`,
-                    height: `${dimensions.height}px`,
-                    margin: '0 auto'
-                  }}>
-                    <Component />
-                  </div>
-                ) : (
-                  <Component />
-                )}
-              </Suspense>
-            )}
-          </div>
+          backgroundSize: '20px 20px'
+        }}
+      >
+        <div
+          className="bg-white shadow-lg"
+          style={{ width: `${viewportWidth}px` }}
+        >
+          {Component && (
+            <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading component...</div>}>
+              <Component />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>
@@ -881,7 +626,6 @@ function PreviewTab({ testId, componentName, dimensions }: PreviewTabProps) {
  * TAB 2: Code - Navigation entre tous les fichiers
  */
 interface CodeTabProps {
-  componentCode: string
   testId: string
 }
 
@@ -900,35 +644,17 @@ type FileCache = {
   clean: CodeFile[]
 }
 
-function CodeTab({ componentCode, testId }: CodeTabProps) {
+function CodeTab({ testId }: CodeTabProps) {
   const { t } = useTranslation()
   const [version, setVersion] = useState<CodeVersion>('clean')
   const [fileCache, setFileCache] = useState<FileCache | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [tailwindClasses, setTailwindClasses] = useState<string[]>([])
 
-  // Load all files once on mount
   useEffect(() => {
     loadAllFiles()
-    loadTailwindClasses()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testId])
 
-  // Load Tailwind classes from metadata.json
-  const loadTailwindClasses = async () => {
-    try {
-      const response = await fetch(`/src/generated/tests/${testId}/metadata.json`)
-      if (response.ok) {
-        const metadata = await response.json()
-        setTailwindClasses(metadata.tailwindClasses || [])
-      }
-    } catch (err) {
-      console.warn('Could not load tailwindClasses from metadata.json')
-    }
-  }
-
-  // Reset selected index when version changes
   useEffect(() => {
     setSelectedIndex(0)
   }, [version])
@@ -942,81 +668,48 @@ function CodeTab({ componentCode, testId }: CodeTabProps) {
         clean: []
       }
 
-      // Load Original (MCP outputs)
+      // Load Original files
       try {
         const originalModule = await import(`../generated/tests/${testId}/Component.tsx?raw`)
-        cache.original.push({
-          name: 'Component.tsx',
-          content: originalModule.default,
-          type: 'tsx',
-          icon: '📄'
-        })
+        cache.original.push({ name: 'Component.tsx', content: originalModule.default, type: 'tsx', icon: '📄' })
       } catch (e) {
         console.warn('No original Component.tsx')
       }
 
-      // Load metadata.xml
       try {
         const metadataModule = await import(`../generated/tests/${testId}/metadata.xml?raw`)
-        cache.original.push({
-          name: 'metadata.xml',
-          content: metadataModule.default,
-          type: 'tsx',
-          icon: '📋'
-        })
+        cache.original.push({ name: 'metadata.xml', content: metadataModule.default, type: 'tsx', icon: '📋' })
       } catch (e) {
         console.warn('No metadata.xml')
       }
 
-      // Load variables.json
       try {
         const variablesModule = await import(`../generated/tests/${testId}/variables.json?raw`)
-        cache.original.push({
-          name: 'variables.json',
-          content: variablesModule.default,
-          type: 'tsx',
-          icon: '🎨'
-        })
+        cache.original.push({ name: 'variables.json', content: variablesModule.default, type: 'tsx', icon: '🎨' })
       } catch (e) {
         console.warn('No variables.json')
       }
 
-      // Load Fixed
+      // Load Fixed files
       try {
         const fixedModule = await import(`../generated/tests/${testId}/Component-fixed.tsx?raw`)
-        cache.fixed.push({
-          name: 'Component-fixed.tsx',
-          content: fixedModule.default,
-          type: 'tsx',
-          icon: '⚛️'
-        })
+        cache.fixed.push({ name: 'Component-fixed.tsx', content: fixedModule.default, type: 'tsx', icon: '⚛️' })
       } catch (e) {
         console.warn('No Component-fixed.tsx')
       }
 
       try {
         const cssModule = await import(`../generated/tests/${testId}/Component-fixed.css?raw`)
-        cache.fixed.push({
-          name: 'Component-fixed.css',
-          content: cssModule.default,
-          type: 'css',
-          icon: '🎨'
-        })
+        cache.fixed.push({ name: 'Component-fixed.css', content: cssModule.default, type: 'css', icon: '🎨' })
       } catch (e) {
         console.warn('No Component-fixed.css')
       }
 
-      // Load tailwind.config.js (safelist for fixed version)
       try {
         const response = await fetch('/tailwind.config.js')
         if (response.ok) {
           const content = await response.text()
-          cache.fixed.push({
-            name: 'tailwind.config.js',
-            content: content,
-            type: 'tsx',
-            icon: '⚙️'
-          })
+          cache.fixed.push({ name: 'tailwind.config.js', content: content, type: 'tsx', icon: '⚙️' })
         }
       } catch (e) {
         console.warn('No tailwind.config.js')
@@ -1027,50 +720,30 @@ function CodeTab({ componentCode, testId }: CodeTabProps) {
       for (const chunkName of chunkNames) {
         try {
           const tsxModule = await import(`../generated/tests/${testId}/chunks-fixed/${chunkName}.tsx?raw`)
-          cache.fixed.push({
-            name: `chunks/${chunkName}.tsx`,
-            content: tsxModule.default,
-            type: 'tsx',
-            icon: '🧩'
-          })
+          cache.fixed.push({ name: `chunks/${chunkName}.tsx`, content: tsxModule.default, type: 'tsx', icon: '🧩' })
         } catch (e) {
           // Chunk doesn't exist
         }
 
         try {
           const cssModule = await import(`../generated/tests/${testId}/chunks-fixed/${chunkName}.css?raw`)
-          cache.fixed.push({
-            name: `chunks/${chunkName}.css`,
-            content: cssModule.default,
-            type: 'css',
-            icon: '🎨'
-          })
+          cache.fixed.push({ name: `chunks/${chunkName}.css`, content: cssModule.default, type: 'css', icon: '🎨' })
         } catch (e) {
           // CSS doesn't exist
         }
       }
 
-      // Load Clean
+      // Load Clean files
       try {
         const cleanModule = await import(`../generated/tests/${testId}/Component-clean.tsx?raw`)
-        cache.clean.push({
-          name: 'Component-clean.tsx',
-          content: cleanModule.default,
-          type: 'tsx',
-          icon: '✨'
-        })
+        cache.clean.push({ name: 'Component-clean.tsx', content: cleanModule.default, type: 'tsx', icon: '✨' })
       } catch (e) {
         console.warn('No Component-clean.tsx')
       }
 
       try {
         const cssModule = await import(`../generated/tests/${testId}/Component-clean.css?raw`)
-        cache.clean.push({
-          name: 'Component-clean.css',
-          content: cssModule.default,
-          type: 'css',
-          icon: '🎨'
-        })
+        cache.clean.push({ name: 'Component-clean.css', content: cssModule.default, type: 'css', icon: '🎨' })
       } catch (e) {
         console.warn('No Component-clean.css')
       }
@@ -1084,197 +757,85 @@ function CodeTab({ componentCode, testId }: CodeTabProps) {
   }
 
   if (loading || !fileCache) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>{t('detail.code.loading')}</div>
+    return <div className="p-10 text-center text-muted-foreground">{t('detail.code.loading')}</div>
   }
 
   const files = fileCache[version]
 
   if (files.length === 0) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>{t('detail.code.no_files')}</div>
+    return <div className="p-10 text-center text-muted-foreground">{t('detail.code.no_files')}</div>
   }
 
   const selectedFile = files[selectedIndex]
 
   return (
-    <div style={{ display: 'flex', gap: '16px', height: '80vh' }}>
-      {/* LEFT SIDEBAR - File Tree */}
-      <div style={{
-        width: '280px',
-        backgroundColor: 'var(--color-white)',
-        borderRadius: '8px',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}>
-        {/* Version Tabs */}
-        <div style={{
-          display: 'flex',
-          backgroundColor: 'var(--color-white)'
-        }}>
-          {(['original', 'fixed', 'clean'] as CodeVersion[]).map((ver) => (
-            <button
-              key={ver}
-              onClick={() => setVersion(ver)}
-              style={{
-                flex: 1,
-                padding: '10px 8px',
-                border: 'none',
-                backgroundColor: version === ver ? 'var(--color-1)' : 'transparent',
-                color: version === ver ? 'var(--color-white)' : 'var(--color-black)',
-                cursor: 'pointer',
-                fontSize: '11px',
-                fontWeight: version === ver ? '600' : '400',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {ver === 'original' ? '📄 MCP' : ver === 'fixed' ? '⚛️ Fixed' : '✨ Clean'}
-            </button>
-          ))}
-        </div>
-
-        {/* File Tree */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '12px' }}>
-          {files.map((file, index) => {
-            const isChunk = file.name.startsWith('chunks/')
-            const displayName = isChunk ? file.name.replace('chunks/', '  ↳ ') : file.name
-            const isSelected = selectedIndex === index
-
-            return (
-              <div
-                key={index}
-                onClick={() => setSelectedIndex(index)}
-                style={{
-                  padding: '8px 12px',
-                  marginBottom: '2px',
-                  borderRadius: '4px',
-                  backgroundColor: isSelected ? 'var(--color-1)' : 'transparent',
-                  color: isSelected ? 'var(--color-white)' : 'var(--color-black)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.15s ease',
-                  fontWeight: isSelected ? '600' : '400'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-card)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = 'transparent'
-                  }
-                }}
-              >
-                <span style={{ fontSize: '14px', flexShrink: 0 }}>{file.icon}</span>
-                <span style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  fontSize: isChunk ? '12px' : '13px'
-                }}>
-                  {displayName}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Tailwind Classes (only for Fixed version) */}
-        {version === 'fixed' && tailwindClasses.length > 0 && (
-          <div style={{
-            borderTop: '1px solid var(--border-primary)',
-            padding: '12px',
-            maxHeight: '200px',
-            overflow: 'auto',
-            backgroundColor: 'var(--bg-card)'
-          }}>
-            <div style={{
-              fontSize: '11px',
-              fontWeight: '600',
-              color: 'var(--text-secondary)',
-              marginBottom: '8px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              ⚙️ Tailwind Classes ({tailwindClasses.length})
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              {tailwindClasses.slice(0, 10).map((cls, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    fontSize: '10px',
-                    fontFamily: 'monospace',
-                    color: 'var(--text-primary)',
-                    padding: '4px 6px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    borderRadius: '3px',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {cls}
-                </div>
-              ))}
-              {tailwindClasses.length > 10 && (
-                <div style={{
-                  fontSize: '10px',
-                  color: 'var(--text-secondary)',
-                  fontStyle: 'italic',
-                  marginTop: '4px'
-                }}>
-                  +{tailwindClasses.length - 10} more...
-                </div>
-              )}
-            </div>
+    <div className="space-y-4">
+      {/* Controls - Version & File Selection */}
+      <Card>
+        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Version Selector */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-muted-foreground">{t('detail.code.version')}:</span>
+            <Tabs value={version} onValueChange={(value: string) => setVersion(value as CodeVersion)} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="original" className="gap-1.5">
+                  <span>📄</span>
+                  <span className="hidden sm:inline">MCP</span>
+                </TabsTrigger>
+                <TabsTrigger value="fixed" className="gap-1.5">
+                  <span>⚛️</span>
+                  <span className="hidden sm:inline">Fixed</span>
+                </TabsTrigger>
+                <TabsTrigger value="clean" className="gap-1.5">
+                  <span>✨</span>
+                  <span className="hidden sm:inline">Clean</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
-        )}
 
-        {/* Footer Info */}
-        <div style={{
-          borderTop: '1px solid var(--border-primary)',
-          padding: '8px 12px',
-          fontSize: '11px',
-          color: 'var(--text-secondary)',
-          backgroundColor: 'var(--bg-tertiary)'
-        }}>
-          {files.length} fichier{files.length > 1 ? 's' : ''}
+          {/* File Selector */}
+          <div className="flex flex-1 items-center gap-3 sm:max-w-md">
+            <span className="text-sm font-medium text-muted-foreground">{t('detail.code.file')}:</span>
+            <Select value={selectedIndex.toString()} onValueChange={(val) => setSelectedIndex(parseInt(val))}>
+              <SelectTrigger className="flex-1">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    <span>{selectedFile.icon}</span>
+                    <span className="truncate">{selectedFile.name}</span>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {files.map((file, index) => (
+                  <SelectItem key={index} value={index.toString()}>
+                    <div className="flex items-center gap-2">
+                      <span>{file.icon}</span>
+                      <span>{file.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      {/* RIGHT PANEL - Code Display */}
-      <div style={{
-        flex: 1,
-        backgroundColor: 'var(--bg-card)',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
+      {/* Code Viewer */}
+      <Card className="overflow-hidden">
         {/* Header */}
-        <div style={{
-          backgroundColor: 'var(--bg-overlay-dark)',
-          color: 'var(--text-inverse)',
-          padding: '12px 20px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '16px' }}>{selectedFile.icon}</span>
-            <span style={{ fontWeight: '600', fontSize: '13px' }}>{selectedFile.name}</span>
+        <div className="flex items-center justify-between border-b bg-muted px-5 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-base">{selectedFile.icon}</span>
+            <span className="text-sm font-semibold">{selectedFile.name}</span>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--color-white)' }}>
-            {selectedFile.content.split('\n').length} lignes
-          </div>
+          <span className="text-xs text-muted-foreground">
+            {selectedFile.content.split('\n').length} {t('detail.code.lines')}
+          </span>
         </div>
 
         {/* Code */}
-        <div style={{ flex: 1, overflow: 'auto' }}>
+        <ScrollArea className="h-[65vh]">
           <SyntaxHighlighter
             language={selectedFile.type === 'tsx' ? 'typescript' : 'css'}
             style={vscDarkPlus}
@@ -1283,14 +844,14 @@ function CodeTab({ componentCode, testId }: CodeTabProps) {
               borderRadius: 0,
               fontSize: '13px',
               lineHeight: '1.5',
-              height: '100%'
+              minHeight: '65vh'
             }}
             showLineNumbers
           >
             {selectedFile.content}
           </SyntaxHighlighter>
-        </div>
-      </div>
+        </ScrollArea>
+      </Card>
     </div>
   )
 }
@@ -1304,20 +865,14 @@ interface ReportTabProps {
 
 function ReportTab({ testId }: ReportTabProps) {
   return (
-    <div className="rounded-lg overflow-hidden" style={{
-      backgroundColor: 'var(--bg-card)',
-      boxShadow: 'var(--shadow-sm)',
-      borderWidth: '1px',
-      borderColor: 'var(--border-primary)'
-    }}>
-      {/* Embed report.html in iframe */}
+    <Card className="overflow-hidden">
       <iframe
         src={`/src/generated/tests/${testId}/report.html`}
         className="w-full border-0"
         style={{ minHeight: 'calc(100vh - 300px)' }}
         title="Test Analysis Report"
       />
-    </div>
+    </Card>
   )
 }
 
@@ -1333,58 +888,35 @@ function TechnicalAnalysisTab({ analysis }: TechnicalAnalysisTabProps) {
 
   if (!analysis) {
     return (
-      <div className="rounded-lg p-12 text-center" style={{
-        backgroundColor: 'var(--bg-card)',
-        boxShadow: 'var(--shadow-sm)',
-        borderWidth: '1px',
-        borderColor: 'var(--border-primary)'
-      }}>
-        <div className="text-6xl mb-4">📄</div>
-        <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-          {t('detail.technical.no_analysis_title')}
-        </h3>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          {t('detail.technical.no_analysis_text')}
-        </p>
-      </div>
+      <Card className="p-12 text-center">
+        <div className="mb-4 text-6xl">📄</div>
+        <h3 className="mb-2 text-xl font-semibold">{t('detail.technical.no_analysis_title')}</h3>
+        <p className="text-muted-foreground">{t('detail.technical.no_analysis_text')}</p>
+      </Card>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-full">
       {/* Info banner */}
-      <div className="rounded-lg p-4" style={{
-        backgroundColor: 'var(--status-info-bg)',
-        borderWidth: '1px',
-        borderColor: 'var(--status-info-border)'
-      }}>
-        <div className="flex items-start gap-3">
-          <div className="text-xl" style={{ color: 'var(--status-info-text)' }}>🔧</div>
-          <div className="text-sm">
-            <p className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>{t('detail.technical.banner_title')}</p>
-            <p style={{ color: 'var(--text-secondary)' }}>
-              {t('detail.technical.banner_text')}
-            </p>
-          </div>
-        </div>
-      </div>
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <p className="mb-1 font-semibold">{t('detail.technical.banner_title')}</p>
+          <p className="text-sm">{t('detail.technical.banner_text')}</p>
+        </AlertDescription>
+      </Alert>
 
       {/* Markdown code viewer */}
-      <div className="rounded-lg overflow-hidden" style={{
-        backgroundColor: 'var(--bg-card)',
-        boxShadow: 'var(--shadow-sm)'
-      }}>
-        <div className="px-6 py-3 flex items-center justify-between" style={{
-          backgroundColor: 'var(--bg-overlay-dark)',
-          color: 'var(--text-inverse)'
-        }}>
+      <Card className="overflow-hidden min-w-0">
+        <div className="flex items-center justify-between border-b bg-muted px-6 py-3">
           <h3 className="font-semibold">analysis.md</h3>
-          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          <span className="text-xs text-muted-foreground">
             {analysis.split('\n').length} lignes
-          </div>
+          </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <ScrollArea className="h-[600px]">
           <SyntaxHighlighter
             language="markdown"
             style={vscDarkPlus}
@@ -1398,9 +930,8 @@ function TechnicalAnalysisTab({ analysis }: TechnicalAnalysisTabProps) {
           >
             {analysis}
           </SyntaxHighlighter>
-        </div>
-      </div>
+        </ScrollArea>
+      </Card>
     </div>
   )
 }
-
