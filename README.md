@@ -59,8 +59,6 @@
 
 **Contributions welcome!** ⭐ Star the repo • 🐛 Report bugs • 💡 Suggest features • 🔨 Submit PRs
 
-![Dashboard Interface](docs/images/image02.png)
-
 ---
 
 ## 🌟 Features
@@ -80,8 +78,6 @@
 | **Clean** | `Component-clean.tsx/css` | Pure CSS, zero dependencies, copy/paste ready |
 
 Both versions generated automatically via CLI `--clean` flag or dashboard.
-
-![Dashboard Interface](docs/images/image03.png)
 
 ### 📊 Modern Dashboard (shadcn/ui)
 
@@ -110,6 +106,12 @@ Both versions generated automatically via CLI `--clean` flag or dashboard.
 - **Docker Support** - One-command setup with hot reload
 - **TypeScript** - Full type safety across codebase
 - **Modular Architecture** - Features organized by domain
+
+---
+
+![Dashboard Interface](docs/images/image02.png)
+
+![Dashboard Interface](docs/images/image03.png)
 
 ---
 
