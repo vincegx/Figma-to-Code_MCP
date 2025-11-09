@@ -59,6 +59,8 @@
 
 **Contributions welcome!** ⭐ Star the repo • 🐛 Report bugs • 💡 Suggest features • 🔨 Submit PRs
 
+![Dashboard Interface](docs/images/image02.png)
+
 ---
 
 ## 🌟 Features
@@ -78,6 +80,8 @@
 | **Clean** | `Component-clean.tsx/css` | Pure CSS, zero dependencies, copy/paste ready |
 
 Both versions generated automatically via CLI `--clean` flag or dashboard.
+
+![Dashboard Interface](docs/images/image03.png)
 
 ### 📊 Modern Dashboard (shadcn/ui)
 
@@ -134,6 +138,8 @@ docker-compose up --build
 ```
 
 **That's it!** 🎉 The dashboard is now running.
+
+![Dashboard Interface](docs/images/image04.png)
 
 ### For Developers (Optional)
 
