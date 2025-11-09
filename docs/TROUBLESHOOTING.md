@@ -748,6 +748,162 @@ eventSource.addEventListener('error', (e) => {
 
 ---
 
+## Page Reloads & HMR Issues
+
+### 🔴 Page Reloads During Analysis
+
+**Symptoms:**
+- Analysis starts successfully on `/analyze` page
+- Logs appear in real-time
+- Suddenly page refreshes mid-analysis
+- All logs disappear
+- Analysis completes but you can't see what happened
+
+**Cause:**
+
+Vite's HMR (Hot Module Replacement) detects new files being created in `src/generated/tests/` and triggers a full page reload.
+
+**Solution:**
+
+This is already fixed in the current version via selective file watching in `vite.config.js`:
+
+```javascript
+// vite.config.js
+server: {
+  watch: {
+    ignored: [
+      '**/src/generated/**/*.html',
+      '**/src/generated/**/*.png',
+      '**/src/generated/**/*.jpg',
+      '**/src/generated/**/*.svg',
+      '**/src/generated/**/*.json',
+      '**/src/generated/**/*.xml',
+      '**/src/generated/**/*.md',
+      '**/src/generated/**/*.css',
+    ]
+  }
+}
+```
+
+**If you encounter this issue:**
+
+1. **Verify vite.config.js has the ignored list:**
+   ```bash
+   grep -A 10 "watch:" vite.config.js
+   ```
+
+2. **Restart Vite server:**
+   ```bash
+   docker-compose restart
+   ```
+
+3. **Ensure .tsx/.jsx files are NOT in the ignored list** (they need to be watched for dynamic imports)
+
+### 🔴 DELETE Not Refreshing List
+
+**Symptoms:**
+- Delete a test from the dashboard
+- DELETE API call succeeds (file deleted from disk)
+- Test still appears in the list
+- Need to manually refresh page or restart server to see deletion
+
+**Cause:**
+
+When `watch.ignored` is configured, Vite doesn't detect file deletions in `src/generated/tests/`. Components used to call `window.location.reload()`, which relied on Vite's cache, but Vite doesn't know the file was deleted.
+
+**Solution:**
+
+This is already fixed via callback-based refresh:
+
+```typescript
+// TestCard.tsx - DELETE handler
+if (onRefresh) {
+  onRefresh()  // Calls API to fetch fresh list
+} else {
+  window.location.reload()  // Fallback
+}
+```
+
+**If you encounter this issue:**
+
+1. **Verify the component chain passes onRefresh:**
+   ```bash
+   # Check TestsPage passes reload to children
+   grep "onRefresh={reload}" src/components/pages/TestsPage.tsx
+
+   # Check TestCard receives onRefresh prop
+   grep "onRefresh?" src/components/features/tests/TestCard.tsx
+   ```
+
+2. **Check useTests hook exposes reload:**
+   ```bash
+   grep "reload:" src/hooks/useTests.ts
+   ```
+
+3. **Restart containers:**
+   ```bash
+   docker-compose restart
+   ```
+
+### 🔴 Dynamic Imports Failing on New Tests
+
+**Symptoms:**
+- Analysis completes successfully
+- Old tests (created before recent changes) preview correctly
+- New tests (freshly created) show error: "Unknown variable dynamic import: ../../generated/tests/node-XXX/Component.jsx"
+- Error message: "Le composant est peut-être manquant ou invalide"
+
+**Cause:**
+
+If `.tsx` or `.jsx` files are added to `watch.ignored`, Vite stops watching AND transforming them. Old tests work because they were already transformed before the change. New tests fail because Vite never transforms them.
+
+**Solution:**
+
+**CRITICAL:** Never add `.tsx` or `.jsx` to the `watch.ignored` list.
+
+**Verify your vite.config.js:**
+
+```javascript
+// ❌ WRONG - Will break dynamic imports
+ignored: [
+  '**/src/generated/**'  // Too broad!
+]
+
+// ❌ WRONG - Will break dynamic imports
+ignored: [
+  '**/src/generated/**/*.tsx',  // Don't ignore .tsx!
+  '**/src/generated/**/*.jsx',  // Don't ignore .jsx!
+]
+
+// ✅ CORRECT - Ignore only non-code files
+ignored: [
+  '**/src/generated/**/*.html',
+  '**/src/generated/**/*.png',
+  '**/src/generated/**/*.jpg',
+  '**/src/generated/**/*.svg',
+  '**/src/generated/**/*.json',
+  '**/src/generated/**/*.xml',
+  '**/src/generated/**/*.md',
+  '**/src/generated/**/*.css',
+]
+```
+
+**If you made this mistake:**
+
+1. **Fix vite.config.js** - Remove `.tsx` and `.jsx` from ignored list
+2. **Restart Vite server:**
+   ```bash
+   docker-compose restart
+   ```
+3. **Clear Vite cache (if needed):**
+   ```bash
+   docker exec mcp-figma-v1 rm -rf /app/node_modules/.vite
+   docker-compose restart
+   ```
+4. **New tests should now work** - Old tests will continue working
+
+---
+
 ## General Debugging Tips
 
 ### Enable Verbose Logging

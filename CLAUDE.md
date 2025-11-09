@@ -305,6 +305,45 @@ Dockerfile                    # Alpine Linux + Chromium + Node.js
 - React Router (client-side routing)
 - Server-Sent Events (real-time logs)
 
+#### HMR Configuration
+
+**Important:** Vite is configured with selective file watching to prevent page reloads during analysis:
+
+```javascript
+// vite.config.js
+server: {
+  watch: {
+    ignored: [
+      '**/src/generated/**/*.html',
+      '**/src/generated/**/*.png',
+      '**/src/generated/**/*.jpg',
+      '**/src/generated/**/*.svg',
+      '**/src/generated/**/*.json',
+      '**/src/generated/**/*.xml',
+      '**/src/generated/**/*.md',
+      '**/src/generated/**/*.css',
+    ]
+  }
+}
+```
+
+**Why This Matters:**
+
+- **Problem:** When Figma analyses complete, new files are created in `src/generated/tests/`. Vite's HMR detects these and triggers a full page reload, losing all analysis logs on `/analyze` page.
+- **Solution:** Ignore non-code files (HTML, images, JSON, CSS) to prevent HMR triggers.
+- **Critical:** `.tsx` and `.jsx` files are NOT ignored - Vite must watch and transform them for dynamic imports to work.
+
+**Architecture:**
+
+- **Data Loading:** Components use `fetch('/api/tests')` instead of `import.meta.glob` to avoid file dependencies.
+- **Refresh Mechanism:** DELETE operations call `onRefresh()` callback instead of `window.location.reload()`.
+- **Component Chain:** TestsPage → TestsGrid/TestsTable → TestCard all pass `reload()` function via `onRefresh` prop.
+
+**When modifying dashboard code:**
+- Never add `.tsx` or `.jsx` to `watch.ignored`
+- Use API endpoints for data fetching, not file system imports
+- Use callback props (`onRefresh`) for refresh operations, not `window.location.reload()`
+
 **Key components:**
 - `AnalysisForm.tsx`: POST /api/analyze → jobId → SSE /api/analyze/logs/:jobId
 - `TestsPage.tsx`: Lists all tests with pagination/sorting
@@ -414,6 +453,13 @@ const usage = tracker.getUsage() // { today: { ... }, historical: [...], status:
 - Images organized with Figma layer names (not hashes)
 - Chunk files use component names from metadata.xml
 - CSS files always use -fixed or -clean suffix to match component
+
+### Vite HMR Configuration
+- Vite is configured to ignore non-code files in `src/generated/` to prevent page reloads during analysis (see [vite.config.js:8-22](vite.config.js#L8-L22))
+- **Critical:** `.tsx` and `.jsx` files are NOT ignored - Vite must watch and transform them for dynamic imports
+- Components use `fetch('/api/tests')` instead of `import.meta.glob` to avoid file dependencies
+- DELETE operations use `onRefresh()` callback instead of `window.location.reload()` for proper refresh
+- See "Working with the Dashboard" section for full architecture details
 
 ### Testing
 - Always test transforms with real Figma designs

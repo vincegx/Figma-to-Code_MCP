@@ -126,6 +126,52 @@ volumes:
 docker-compose restart
 ```
 
+#### Vite HMR & Generated Files
+
+**Challenge:** When Figma analyses complete, new files are created in `src/generated/tests/`. Vite's HMR (Hot Module Replacement) detects these new files and triggers a full page reload, causing logs to disappear on the `/analyze` page.
+
+**Solution:** Selective file watching in `vite.config.js`
+
+```javascript
+// vite.config.js
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    watch: {
+      // Ignore non-code files to prevent auto-reload during analysis
+      // BUT allow .tsx/.jsx so Vite can transform them for dynamic imports
+      ignored: [
+        '**/src/generated/**/*.html',
+        '**/src/generated/**/*.png',
+        '**/src/generated/**/*.jpg',
+        '**/src/generated/**/*.svg',
+        '**/src/generated/**/*.json',
+        '**/src/generated/**/*.xml',
+        '**/src/generated/**/*.md',
+        '**/src/generated/**/*.css',
+      ]
+    }
+  }
+})
+```
+
+**Why This Works:**
+
+1. **Non-code files ignored:** HTML, images, JSON, XML, Markdown, and CSS files don't trigger HMR
+2. **Code files watched:** `.tsx/.jsx` files are NOT ignored, so Vite can transform them for dynamic imports
+3. **API-based data loading:** Tests list uses `fetch('/api/tests')` instead of `import.meta.glob`
+4. **Callback-based refresh:** DELETE operations call `onRefresh()` instead of `window.location.reload()`
+
+**Architecture:**
+
+```
+Analysis Complete → New files created → Vite ignores non-code → No reload ✅
+User clicks test → import(`../../generated/.../Component.jsx`) → Vite transforms → Works ✅
+User deletes test → DELETE API → onRefresh() callback → fetch('/api/tests') → List updated ✅
+```
+
+**Important:** Never add `.tsx` or `.jsx` to the `ignored` list, as Vite needs to watch and transform these files for dynamic imports to work.
+
 ---
 
 ## Adding Transforms

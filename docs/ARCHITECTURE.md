@@ -722,6 +722,59 @@ Generated HTML includes:
 
 ## Dashboard Architecture
 
+### HMR & File Watching Strategy
+
+**Challenge:** Vite's HMR system watches all files in `src/` by default. When Figma analyses complete, new files are created in `src/generated/tests/`, triggering full page reloads that lose analysis logs.
+
+**Solution:** Selective file watching that separates code transformation from data loading.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Vite File Watching                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ✅ Watched (.tsx/.jsx)      ❌ Ignored (non-code)         │
+│  - Vite transforms           - No HMR trigger              │
+│  - Dynamic imports work      - No page reload              │
+│                                                             │
+│  Component.tsx               report.html                   │
+│  chunks-fixed/*.tsx          *.png, *.jpg, *.svg           │
+│                              metadata.json, metadata.xml    │
+│                              *.md, *.css                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    Data Loading Strategy                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ❌ Don't Use              ✅ Use Instead                   │
+│                                                             │
+│  import.meta.glob()        fetch('/api/tests')             │
+│  - Creates file deps       - No file dependency            │
+│  - Triggers HMR            - Manual refresh control        │
+│                                                             │
+│  window.location.reload()  onRefresh() callback            │
+│  - Forces full reload      - Controlled refresh            │
+│  - Loses component state   - Preserves state               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Implementation Details:**
+
+- **vite.config.js:** `watch.ignored` prevents HMR on non-code files
+- **useTests hook:** Fetches data via API, exposes `reload()` function
+- **Component tree:** Passes `onRefresh` callback from TestsPage → TestsGrid/TestsTable → TestCard
+- **DELETE handler:** Calls `onRefresh()` instead of `window.location.reload()`
+
+**Benefits:**
+
+1. **No reload during analysis** - Logs remain visible on `/analyze` page
+2. **Dynamic imports work** - Vite transforms `.tsx/.jsx` files as needed
+3. **DELETE refreshes properly** - Callback triggers API fetch, bypassing Vite cache
+4. **Better UX** - No full page reload, faster, preserves scroll position
+
 ### State Management
 
 **No Redux/Context - Local State Only**
@@ -830,6 +883,7 @@ export const I18nProvider = ({ children }) => {
 - **Pagination** - Limit tests per page (6, 9, 12, 18, 24)
 - **Image optimization** - Lazy loading with IntersectionObserver
 - **Memoization** - `useMemo` for expensive calculations
+- **Selective file watching** - Vite HMR ignores non-code files in `src/generated/` to prevent page reloads during analysis
 
 ### Docker
 
