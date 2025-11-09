@@ -16,7 +16,7 @@
     "tmpAssets": "tmp/figma-assets"
   },
   "apiLimits": {
-    "dailyTokenLimit": 1200000,
+    "dailyTokenLimit": 5000000,
     "thresholds": {
       "warning": 50,
       "critical": 75,

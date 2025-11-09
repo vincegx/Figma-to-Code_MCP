@@ -135,23 +135,20 @@ export class UsageTracker {
     if (tokensUsed !== null) {
       this.data.daily[this.today].tokens[cleanToolName] += tokensUsed;
 
-      // Images (get_screenshot) are counted separately - they are processed by Figma's AI vision
-      // and NOT counted against the MCP text token quota
+      // Track images separately for informational purposes
       const isImageTool = cleanToolName === 'get_screenshot';
-
       if (isImageTool) {
-        // Track image tokens separately (informational only)
         if (!this.data.daily[this.today].imageTokens) {
           this.data.daily[this.today].imageTokens = 0;
         }
         this.data.daily[this.today].imageTokens += tokensUsed;
-      } else {
-        // Only count non-image tokens in total (these count against quota)
-        if (!this.data.daily[this.today].totalTokens) {
-          this.data.daily[this.today].totalTokens = 0;
-        }
-        this.data.daily[this.today].totalTokens += tokensUsed;
       }
+
+      // All tokens (text + images) count against the daily quota
+      if (!this.data.daily[this.today].totalTokens) {
+        this.data.daily[this.today].totalTokens = 0;
+      }
+      this.data.daily[this.today].totalTokens += tokensUsed;
     }
 
     // Save immediately
@@ -211,7 +208,7 @@ export class UsageTracker {
           date: dateStr,
           totalCalls: dayData.totalCalls,
           analyses: dayData.analyses,
-          creditsEstimate: dayData.totalTokens || 0, // Excludes image tokens
+          creditsEstimate: dayData.totalTokens || 0, // Includes all tokens (text + images)
           imageTokens: dayData.imageTokens || 0
         });
       } else {

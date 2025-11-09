@@ -157,7 +157,7 @@ export const UsageBar = memo(function UsageBar() {
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <div className="text-xs text-muted-foreground">
-                  {formatNumber(displayData.credits.dailyLimit)} limit / {percentUsed.toFixed(1)}% used
+                  {formatNumber(displayData.credits.dailyLimit)} / {percentUsed.toFixed(1)}% used
                 </div>
                 <div className="text-xs font-semibold text-primary">
                   {displayData.analyses} {displayData.date === today.date ? t('usage.analyses_today') : 'analyses'}
@@ -174,24 +174,21 @@ export const UsageBar = memo(function UsageBar() {
             <div className="space-y-1 text-xs">
               {Object.keys(displayData.calls).length > 0 ? (
                 <>
-                  {Object.entries(displayData.calls).map(([tool, count]) => {
-                    const isImageTool = tool === 'get_screenshot';
-                    return (
-                      <div key={tool} className="flex justify-between items-center gap-3 py-1">
-                        <span className="font-mono text-muted-foreground text-[10px]">
-                          {tool}
+                  {Object.entries(displayData.calls).map(([tool, count]) => (
+                    <div key={tool} className="flex justify-between items-center gap-3 py-1">
+                      <span className="font-mono text-muted-foreground text-[10px]">
+                        {tool}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">
+                          {count}×
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">
-                            {count}×
-                          </span>
-                          <span className={`font-semibold min-w-[60px] text-right ${isImageTool ? 'text-muted-foreground' : 'text-primary'}`}>
-                            {formatNumber(displayData.tokens?.[tool] || 0)} tk
-                          </span>
-                        </div>
+                        <span className="font-semibold min-w-[60px] text-right text-primary">
+                          {formatNumber(displayData.tokens?.[tool] || 0)} tk
+                        </span>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </>
               ) : (
                 <div className="italic text-muted-foreground">
@@ -200,26 +197,6 @@ export const UsageBar = memo(function UsageBar() {
               )}
             </div>
           </div>
-
-          {/* Info sur les images */}
-          {(displayData.imageTokens || 0) > 0 && (
-            <div className="rounded-lg p-3 bg-muted/50 border border-border">
-              <div className="flex items-start gap-2">
-                <span className="text-lg">📸</span>
-                <div className="flex-1">
-                  <h5 className="text-xs font-semibold mb-1">
-                    {t('usage.tooltip.images_info_title')}
-                  </h5>
-                  <p className="text-[10px] text-muted-foreground mb-2">
-                    {t('usage.tooltip.images_info_text')}
-                  </p>
-                  <div className="text-xs font-semibold text-muted-foreground">
-                    {formatNumber(displayData.imageTokens || 0)} tk (informatif)
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Mini graphique 7 derniers jours */}
           <div>
@@ -268,10 +245,10 @@ export const UsageBar = memo(function UsageBar() {
           {/* Disclaimer */}
           <div className="pt-2 border-t">
             <p className="text-xs italic text-muted-foreground">
-              {t('usage.tooltip.disclaimer')}
+              ⚠️ {t('usage.tooltip.rate_limit_info')}
             </p>
             <p className="text-xs italic text-muted-foreground mt-1">
-              {t('usage.tooltip.images_excluded')}
+              💡 {t('usage.tooltip.daily_limit_estimated')}
             </p>
           </div>
         </div>

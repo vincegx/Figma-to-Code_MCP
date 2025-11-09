@@ -188,10 +188,8 @@
       "no_calls": "Aucun appel API aujourd'hui",
       "last_days": "7 derniers jours",
       "analyses": "analyses",
-      "disclaimer": "⚠️ Les crédits sont estimés selon les appels API. L'usage réel peut varier selon la complexité du design.",
-      "images_info_title": "Images (screenshots)",
-      "images_info_text": "Les images sont traitées par l'IA vision de Figma et ne comptent PAS dans le quota MCP text.",
-      "images_excluded": "💡 Les tokens d'images sont exclus du calcul du quota quotidien."
+      "rate_limit_info": "Limite Figma confirmée : 15 requêtes/minute (protection automatique)",
+      "daily_limit_estimated": "Limite quotidienne estimée à ~4M tokens (texte + images inclus)"
     }
   },
   "settings": {

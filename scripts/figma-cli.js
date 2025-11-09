@@ -364,22 +364,30 @@ class FigmaCLI {
 
   /**
    * Check if code looks like valid React component
+   * @param {string} code - Code to validate
+   * @param {boolean} isChunk - If true, use more flexible validation for chunks
+   * @returns {object} { valid: boolean, reason: string }
    */
-  isValidReactCode(code) {
+  isValidReactCode(code, isChunk = false) {
     // Check for error patterns first
     const errorPatterns = [
-      /rate limit exceeded/i,
-      /please try again/i,
-      /^error:/i,
-      /api error/i,
-      /request failed/i,
-      /unauthorized/i,
-      /forbidden/i,
-      /not found/i
+      { pattern: /rate limit exceeded/i, message: 'Rate limit exceeded' },
+      { pattern: /please try again/i, message: 'API requested retry' },
+      { pattern: /^error:/i, message: 'Error message detected' },
+      { pattern: /api error/i, message: 'API error' },
+      { pattern: /request failed/i, message: 'Request failed' },
+      { pattern: /unauthorized/i, message: 'Unauthorized' },
+      { pattern: /forbidden/i, message: 'Forbidden' },
+      { pattern: /not found/i, message: 'Not found' },
+      { pattern: /node is empty/i, message: 'Empty node' },
+      { pattern: /no code available/i, message: 'No code available' },
+      { pattern: /cannot generate/i, message: 'Code generation failed' }
     ];
 
-    if (errorPatterns.some(pattern => pattern.test(code))) {
-      return false;
+    for (const { pattern, message } of errorPatterns) {
+      if (pattern.test(code)) {
+        return { valid: false, reason: message };
+      }
     }
 
     // Valid React code should have:
@@ -389,9 +397,26 @@ class FigmaCLI {
     const hasExport = code.includes('export');
     const hasReactSyntax = code.includes('function') || code.includes('const') || code.includes('return');
     const hasJSX = code.includes('<') && code.includes('>');
-    const hasMinLength = code.length > 500;
 
-    return hasExport && hasReactSyntax && hasJSX && hasMinLength;
+    // More flexible minimum length for chunks (some chunks can be small)
+    const minLength = isChunk ? 100 : 500;
+    const hasMinLength = code.length > minLength;
+
+    // Check each requirement and provide specific feedback
+    if (!hasExport) {
+      return { valid: false, reason: 'Missing export statement' };
+    }
+    if (!hasReactSyntax) {
+      return { valid: false, reason: 'Missing React syntax (function/const/return)' };
+    }
+    if (!hasJSX) {
+      return { valid: false, reason: 'Missing JSX syntax' };
+    }
+    if (!hasMinLength) {
+      return { valid: false, reason: `Code too short (${code.length} chars, need ${minLength}+)` };
+    }
+
+    return { valid: true, reason: 'OK' };
   }
 
   /**
@@ -435,10 +460,32 @@ class FigmaCLI {
 
       const code = codeResult.content[0].text;
 
-      // Validate code
-      if (!this.isValidReactCode(code)) {
-        log.error('Code invalide pour chunk');
-        throw new Error(`Invalid chunk code for ${node.name}`);
+      // Validate code (use flexible validation for chunks)
+      const validation = this.isValidReactCode(code, true);
+      if (!validation.valid) {
+        log.error(`Code invalide pour chunk "${node.name}": ${validation.reason}`);
+        log.info(`Longueur du code: ${code.length} caractères`);
+
+        // Save invalid code for debugging
+        const debugPath = `chunks/${node.name}.invalid.tsx`;
+        this.saveFile(debugPath, code);
+        log.info(`Code invalide sauvegardé dans ${debugPath}`);
+
+        // Show first 500 chars for quick analysis
+        const preview = code.substring(0, 500);
+        log.info(`Aperçu du code:\n${preview}...`);
+
+        // Check if this is a "node not found" error - provide helpful guidance
+        const isNodeNotFound = /no node could be found/i.test(code);
+        if (isNodeNotFound) {
+          log.error('\n❌ NODE INTROUVABLE DANS FIGMA');
+          log.info('   → Ouvrez Figma Desktop');
+          log.info('   → Assurez-vous que le document contenant ce node est l\'onglet ACTIF');
+          log.info(`   → Node ID recherché: ${node.id}`);
+          throw new Error(`Node ${node.id} not found in Figma Desktop. Make sure the correct document is open and active.`);
+        }
+
+        throw new Error(`Invalid chunk code for ${node.name}: ${validation.reason}`);
       }
 
       this.saveFile(`chunks/${node.name}.tsx`, code);
@@ -526,10 +573,10 @@ class FigmaCLI {
 
     // 2. Check if code is valid and not too large
     const code = codeResult.content[0].text;
-    const isValid = this.isValidReactCode(code);
+    const validation = this.isValidReactCode(code);
     const isTooLarge = code.length > 100000;
 
-    if (isValid && !isTooLarge) {
+    if (validation.valid && !isTooLarge) {
       // SIMPLE MODE (4 calls total)
       log.success('✅ MODE SIMPLE: Code valide et taille OK');
       this.saveFile('Component.tsx', code);
@@ -546,7 +593,10 @@ class FigmaCLI {
 
     // CHUNK MODE (5+N calls)
     log.warning('⚠️  MODE CHUNKING: Code invalide ou trop volumineux');
-    log.info(`   Code valide: ${isValid}`);
+    log.info(`   Code valide: ${validation.valid}`);
+    if (!validation.valid) {
+      log.info(`   Raison: ${validation.reason}`);
+    }
     log.info(`   Taille: ${(code.length / 1000).toFixed(1)}k caractères\n`);
 
     // 3. Extract child nodes
