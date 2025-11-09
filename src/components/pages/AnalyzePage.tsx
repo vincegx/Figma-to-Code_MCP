@@ -6,7 +6,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTests } from '../../hooks/useTests'
-import AnalysisForm from '../AnalysisForm'
+import AnalysisForm from '../features/analysis/AnalysisForm'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Package, Image, Zap } from "lucide-react"
 

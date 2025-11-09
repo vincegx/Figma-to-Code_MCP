@@ -1,5 +1,5 @@
 import { useState, useEffect, memo } from 'react';
-import { useTranslation } from '../i18n/I18nContext';
+import { useTranslation } from '../../../i18n/I18nContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 interface UsageData {

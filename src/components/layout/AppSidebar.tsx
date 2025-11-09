@@ -9,9 +9,9 @@ import {
 } from "@/components/ui/sidebar"
 import { NavLink } from "react-router-dom"
 import { LayoutDashboard, Sparkles, FileText } from "lucide-react"
-import ThemeToggle from './ThemeToggle'
-import LanguageSwitcher from './LanguageSwitcher'
-import { useTranslation } from '../i18n/I18nContext'
+import ThemeToggle from '../common/ThemeToggle'
+import LanguageSwitcher from '../common/LanguageSwitcher'
+import { useTranslation } from '../../i18n/I18nContext'
 
 export function AppSidebar() {
   const { t } = useTranslation()

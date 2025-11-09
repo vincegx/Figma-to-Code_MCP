@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { MoreVertical, ExternalLink, Trash2, Eye, Loader2, Package, FileImage, Zap, Layers } from 'lucide-react'
-import { useTranslation } from '../i18n/I18nContext'
+import { useTranslation } from '../../../i18n/I18nContext'
 
 interface Test {
   testId: string

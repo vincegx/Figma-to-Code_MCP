@@ -1,4 +1,4 @@
-import { useTheme } from '../contexts/ThemeContext'
+import { useTheme } from '../../contexts/ThemeContext'
 import { Button } from '@/components/ui/button'
 
 export default function ThemeToggle() {

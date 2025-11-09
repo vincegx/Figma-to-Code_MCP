@@ -5,7 +5,7 @@ import MainLayout from './components/layout/MainLayout'
 import DashboardPage from './components/pages/DashboardPage'
 import AnalyzePage from './components/pages/AnalyzePage'
 import TestsPage from './components/pages/TestsPage'
-import TestDetail from './components/TestDetail'
+import TestDetailPage from './components/pages/TestDetailPage'
 
 function App() {
   return (
@@ -50,7 +50,7 @@ function TestDetailWrapper() {
     return <Navigate to="/tests" replace />
   }
 
-  return <TestDetail testId={testId} onBack={() => navigate('/tests')} />
+  return <TestDetailPage testId={testId} onBack={() => navigate('/tests')} />
 }
 
 // Preview mode component - renders ONLY the generated component

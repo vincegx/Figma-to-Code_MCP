@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { useTranslation } from '../i18n/I18nContext'
+import { useTranslation } from '../../../i18n/I18nContext'
 
 type ViewMode = 'grid' | 'list'
 type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'

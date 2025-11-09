@@ -11,7 +11,7 @@
 import { useState, useEffect, Suspense, ComponentType } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { useTranslation } from '../i18n/I18nContext'
+import { useTranslation } from '../../i18n/I18nContext'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'

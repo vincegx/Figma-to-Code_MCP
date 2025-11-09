@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { TestCard } from './test-card'
+import { TestCard } from './TestCard'
 
 interface Test {
   testId: string

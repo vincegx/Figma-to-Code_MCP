@@ -2,7 +2,7 @@
  * LanguageSwitcher - Composant pour changer de langue
  */
 
-import { useTranslation } from '../i18n/I18nContext'
+import { useTranslation } from '../../i18n/I18nContext'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 export default function LanguageSwitcher() {

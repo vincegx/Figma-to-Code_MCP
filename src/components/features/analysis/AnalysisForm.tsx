@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { LazyLog } from 'react-lazylog'
-import { useTranslation } from '../i18n/I18nContext'
+import { useTranslation } from '../../../i18n/I18nContext'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {

@@ -11,8 +11,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { useLocation, Link } from 'react-router-dom'
-import { useTranslation } from '../i18n/I18nContext'
-import { UsageBar } from './UsageBar'
+import { useTranslation } from '../../i18n/I18nContext'
+import { UsageBar } from '../features/stats/UsageBar'
 
 interface SiteHeaderProps {
   mcpConnected: boolean

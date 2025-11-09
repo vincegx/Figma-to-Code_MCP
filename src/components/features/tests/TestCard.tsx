@@ -3,7 +3,7 @@ import { ExternalLink, Trash2, Eye, ChevronRight, Loader2 } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { useTranslation } from '../i18n/I18nContext'
+import { useTranslation } from '../../../i18n/I18nContext'
 
 interface Test {
   testId: string

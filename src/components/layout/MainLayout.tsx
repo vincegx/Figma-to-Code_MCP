@@ -6,8 +6,8 @@
 import { useEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { SidebarProvider, SidebarInset, useSidebar } from "@/components/ui/sidebar"
-import { AppSidebar } from '../app-sidebar'
-import { SiteHeader } from '../site-header'
+import { AppSidebar } from './AppSidebar'
+import { SiteHeader } from './SiteHeader'
 import { useMcpConnection } from '../../hooks/useMcpConnection'
 
 function SidebarController() {
