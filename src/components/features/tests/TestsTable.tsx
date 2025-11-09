@@ -108,7 +108,7 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest }: TestsTableP
   }
 
   const handleOpenPreview = (testId: string) => {
-    window.location.href = `/preview?test=${testId}`
+    window.location.href = `/preview?test=${testId}&version=fixed`
   }
 
   const formatDate = (timestamp: string | number) => {

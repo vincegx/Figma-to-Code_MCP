@@ -173,8 +173,8 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-muted-foreground">{t('header.stats.images')}</p>
                 <p className="text-3xl font-bold tracking-tight">{kpis.totalImages.toLocaleString()}</p>
               </div>
-              <div className="rounded-lg bg-chart-4/20 p-3">
-                <Image className="h-6 w-6 text-chart-4" />
+              <div className="rounded-lg bg-primary/10 p-3">
+                <Image className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -187,8 +187,8 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-muted-foreground">{t('header.stats.total_fixes')}</p>
                 <p className="text-3xl font-bold tracking-tight">{kpis.totalFixes.toLocaleString()}</p>
               </div>
-              <div className="rounded-lg bg-chart-5/20 p-3">
-                <Zap className="h-6 w-6 text-chart-5" />
+              <div className="rounded-lg bg-primary/10 p-3">
+                <Zap className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -201,8 +201,8 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-muted-foreground">Avg Time</p>
                 <p className="text-3xl font-bold tracking-tight">{kpis.avgExecutionTime}s</p>
               </div>
-              <div className="rounded-lg bg-chart-2/20 p-3">
-                <Clock className="h-6 w-6 text-chart-2" />
+              <div className="rounded-lg bg-primary/10 p-3">
+                <Clock className="h-6 w-6 text-primary" />
               </div>
             </div>
           </CardContent>
@@ -251,13 +251,13 @@ export default function DashboardPage() {
       </Card>
 
       {/* Second Row - 3 Charts Aligned: Timeline + Top 10 + Breakdown */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* Tests Timeline */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Tests Timeline (Last 14 days)
+              Tests Timeline
             </CardTitle>
           </CardHeader>
           <CardContent>

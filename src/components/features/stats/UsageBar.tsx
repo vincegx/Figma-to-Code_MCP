@@ -137,7 +137,7 @@ export const UsageBar = memo(function UsageBar() {
       </PopoverTrigger>
 
       <PopoverContent className="w-96 p-4">
-        <div className="space-y-3">
+        <div className="space-y-6">
           {/* Total de tokens utilisés */}
           <div>
             <h4 className="text-sm font-semibold mb-2">
@@ -200,7 +200,7 @@ export const UsageBar = memo(function UsageBar() {
             <h4 className="text-sm font-semibold mb-2">
               {t('usage.tooltip.last_days')}
             </h4>
-            <div className="flex items-end justify-between gap-2 h-28">
+            <div className="flex items-end justify-between gap-2 h-46">
               {(() => {
                 const GRAPH_HEIGHT = 112; // h-28 = 112px
                 const DAILY_LIMIT = today.credits.dailyLimit; // 1,200,000

@@ -31,7 +31,7 @@ export const TestCard = memo(function TestCard({ test, onSelect }: TestCardProps
 
   const handleOpenPreview = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
-    window.location.href = `/preview?test=${test.testId}`
+    window.location.href = `/preview?test=${test.testId}&version=fixed`
   }, [test.testId])
 
   const handleDelete = useCallback(async (e: React.MouseEvent) => {

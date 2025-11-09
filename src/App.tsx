@@ -6,6 +6,8 @@ import DashboardPage from './components/pages/DashboardPage'
 import AnalyzePage from './components/pages/AnalyzePage'
 import TestsPage from './components/pages/TestsPage'
 import TestDetailPage from './components/pages/TestDetailPage'
+import { Switch } from './components/ui/switch'
+import { Label } from './components/ui/label'
 
 function App() {
   return (
@@ -168,14 +170,40 @@ function PreviewMode({ testId }: { testId: string }) {
                   </svg>
                   Home
                 </button>
+                <button
+                  onClick={() => window.location.href = `/tests/${testId}`}
+                  className="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  Detail
+                </button>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-mono px-2">
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground font-mono">
                   {testId}
                 </span>
-                <span className="text-xs px-2 py-1 rounded-md bg-primary/10 text-primary font-semibold">
-                  {version === 'clean' ? 'Clean' : 'Fixed'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="version-switch" className="text-xs text-muted-foreground cursor-pointer">
+                    {version === 'clean' ? 'Clean' : 'Fixed'}
+                  </Label>
+                  <Switch
+                    id="version-switch"
+                    checked={version === 'fixed'}
+                    onCheckedChange={(checked: boolean) => {
+                      const newVersion = checked ? 'fixed' : 'clean'
+                      const url = new URL(window.location.href)
+                      if (newVersion === 'fixed') {
+                        url.searchParams.set('version', 'fixed')
+                      } else {
+                        url.searchParams.delete('version')
+                      }
+                      window.location.href = url.toString()
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>

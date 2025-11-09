@@ -11,6 +11,7 @@ import { PaginationControls } from '../features/tests/PaginationControls'
 import TestsGrid from '../features/tests/TestsGrid'
 import TestsTable from '../features/tests/TestsTable'
 import { useTranslation } from '../../i18n/I18nContext'
+import { Inbox } from 'lucide-react'
 
 type ViewMode = 'grid' | 'list'
 type SortOption = 'date-desc' | 'date-asc' | 'name-asc' | 'name-desc'
@@ -99,7 +100,9 @@ export default function TestsPage() {
   if (tests.length === 0) {
     return (
       <div className="rounded-xl border-2 border-dashed p-12 text-center">
-        <div className="mb-4 text-6xl">📭</div>
+        <div className="mb-4 flex justify-center">
+          <Inbox className="h-16 w-16 text-muted-foreground/50" strokeWidth={1.5} />
+        </div>
         <h3 className="mb-2 text-xl font-semibold">
           {t('home.no_tests.title')}
         </h3>

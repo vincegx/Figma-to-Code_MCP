@@ -78,8 +78,13 @@ try {
   console.warn('⚠️  metadata.json not found')
 }
 
+// Use stats from metadata.json if available, otherwise try processingStatsJSON argument
 try {
-  processingStats = JSON.parse(processingStatsJSON)
+  if (metadataJson.stats) {
+    processingStats = metadataJson.stats
+  } else {
+    processingStats = JSON.parse(processingStatsJSON)
+  }
 } catch (e) {
   console.warn('⚠️  Invalid processing stats JSON')
 }
@@ -368,41 +373,124 @@ function generateHTML(data) {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Initialize theme immediately to prevent FOUC -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
+
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --primary: #6366f1;
-      --primary-dark: #4f46e5;
-      --bg-page: #fafafa;
-      --bg-card: #ffffff;
-      --border: #e5e7eb;
-      --text-primary: #111827;
-      --text-secondary: #6b7280;
+      /* Shadcn/ui Theme Variables (Light) */
+      --background: 0 0% 100%;
+      --foreground: 222.2 84% 4.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 222.2 84% 4.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 222.2 84% 4.9%;
+      --primary: 221.2 83.2% 53.3%;
+      --primary-foreground: 210 40% 98%;
+      --secondary: 210 40% 96.1%;
+      --secondary-foreground: 222.2 47.4% 11.2%;
+      --muted: 210 40% 96.1%;
+      --muted-foreground: 215.4 16.3% 46.9%;
+      --accent: 210 40% 96.1%;
+      --accent-foreground: 222.2 47.4% 11.2%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 214.3 31.8% 91.4%;
+      --input: 214.3 31.8% 91.4%;
+      --ring: 221.2 83.2% 53.3%;
+      --radius: 0.5rem;
       --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
       --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     }
 
+    [data-theme="dark"] {
+      /* Shadcn/ui Theme Variables (Dark) */
+      --background: 222.2 84% 4.9%;
+      --foreground: 210 40% 98%;
+      --card: 222.2 84% 4.9%;
+      --card-foreground: 210 40% 98%;
+      --popover: 222.2 84% 4.9%;
+      --popover-foreground: 210 40% 98%;
+      --primary: 217.2 91.2% 59.8%;
+      --primary-foreground: 222.2 47.4% 11.2%;
+      --secondary: 217.2 32.6% 17.5%;
+      --secondary-foreground: 210 40% 98%;
+      --muted: 217.2 32.6% 17.5%;
+      --muted-foreground: 215 20.2% 65.1%;
+      --accent: 217.2 32.6% 17.5%;
+      --accent-foreground: 210 40% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 217.2 32.6% 17.5%;
+      --input: 217.2 32.6% 17.5%;
+      --ring: 224.3 76.3% 48%;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+    }
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-page);
-      color: var(--text-primary);
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
       line-height: 1.6;
       display: flex;
       min-height: 100vh;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
     /* Navigation Sidebar */
     .sidebar {
       width: 240px;
-      background: var(--bg-card);
-      border-right: 1px solid var(--border);
+      background: hsl(var(--card));
+      border-right: 1px solid hsl(var(--border));
       padding: 24px 16px;
       position: sticky;
       top: 0;
       height: 100vh;
       overflow-y: auto;
       flex-shrink: 0;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid hsl(var(--border));
+    }
+
+    .theme-toggle {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--background));
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: all 0.2s ease;
+    }
+
+    .theme-toggle:hover {
+      background: hsl(var(--accent));
+      border-color: hsl(var(--primary));
+      transform: scale(1.05);
+    }
+
+    .theme-toggle:active {
+      transform: scale(0.95);
     }
 
     .nav-title {
@@ -410,7 +498,7 @@ function generateHTML(data) {
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
       margin-bottom: 12px;
     }
 
@@ -424,7 +512,7 @@ function generateHTML(data) {
       align-items: center;
       gap: 8px;
       padding: 8px 12px;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
       text-decoration: none;
       border-radius: 6px;
       font-size: 14px;
@@ -433,13 +521,13 @@ function generateHTML(data) {
     }
 
     .nav-link:hover {
-      background: #f3f4f6;
-      color: var(--text-primary);
+      background: hsl(var(--accent));
+      color: hsl(var(--foreground));
     }
 
     .nav-link.active {
-      background: #eef2ff;
-      color: var(--primary);
+      background: hsl(var(--primary) / 0.1);
+      color: hsl(var(--primary));
       font-weight: 500;
     }
 
@@ -459,20 +547,20 @@ function generateHTML(data) {
     .section-header {
       margin-bottom: 32px;
       padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid hsl(var(--border));
     }
 
     .section-title {
       font-size: 28px;
       font-weight: 700;
-      color: var(--text-primary);
+      color: hsl(var(--foreground));
       margin-bottom: 8px;
       letter-spacing: -0.02em;
     }
 
     .section-description {
       font-size: 15px;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
     }
 
     h2 {
@@ -481,8 +569,8 @@ function generateHTML(data) {
       margin-bottom: 24px;
       margin-top: 48px;
       padding-top: 24px;
-      color: var(--text-primary);
-      border-top: 1px solid var(--border);
+      color: hsl(var(--foreground));
+      border-top: 1px solid hsl(var(--border));
     }
 
     h2:first-of-type {
@@ -496,7 +584,7 @@ function generateHTML(data) {
       font-weight: 600;
       margin-bottom: 16px;
       margin-top: 32px;
-      color: var(--text-primary);
+      color: hsl(var(--foreground));
     }
 
     /* Stats Grid */
@@ -523,7 +611,7 @@ function generateHTML(data) {
       gap: 12px;
       margin-bottom: 20px;
       padding-bottom: 12px;
-      border-bottom: 2px solid var(--border);
+      border-bottom: 2px solid hsl(var(--border));
     }
 
     .category-icon {
@@ -551,22 +639,24 @@ function generateHTML(data) {
     .category-title {
       font-size: 20px;
       font-weight: 700;
-      color: var(--text-primary);
+      color: hsl(var(--foreground));
       letter-spacing: -0.02em;
     }
 
     .category-subtitle {
       font-size: 13px;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
       margin-top: 2px;
     }
 
     .stat-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
       border-radius: 12px;
       padding: 20px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  background-color 0.3s ease,
+                  border-color 0.3s ease;
       position: relative;
       overflow: hidden;
     }
@@ -578,7 +668,7 @@ function generateHTML(data) {
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, var(--primary), #a855f7);
+      background: linear-gradient(90deg, hsl(var(--primary)), #a855f7);
       transform: scaleX(0);
       transform-origin: left;
       transition: transform 0.3s ease;
@@ -586,7 +676,7 @@ function generateHTML(data) {
 
     .stat-card:hover {
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-      border-color: var(--primary);
+      border-color: hsl(var(--primary));
       transform: translateY(-4px);
     }
 
@@ -621,7 +711,7 @@ function generateHTML(data) {
     .stat-value {
       font-size: 36px;
       font-weight: 800;
-      background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
+      background: linear-gradient(135deg, hsl(var(--primary)) 0%, #a855f7 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -631,7 +721,7 @@ function generateHTML(data) {
 
     .stat-label {
       font-size: 13px;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
       font-weight: 500;
       line-height: 1.4;
     }
@@ -667,8 +757,8 @@ function generateHTML(data) {
     }
 
     .color-swatch-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
       border-radius: 10px;
       overflow: hidden;
       transition: all 0.2s;
@@ -678,13 +768,13 @@ function generateHTML(data) {
     .color-swatch-card:hover {
       box-shadow: var(--shadow-md);
       transform: translateY(-2px);
-      border-color: var(--primary);
+      border-color: hsl(var(--primary));
     }
 
     .color-preview {
       height: 80px;
       position: relative;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid hsl(var(--border));
     }
 
     .color-details {
@@ -694,7 +784,7 @@ function generateHTML(data) {
     .color-name {
       font-size: 12px;
       font-weight: 600;
-      color: var(--text-primary);
+      color: hsl(var(--foreground));
       margin-bottom: 6px;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -704,8 +794,8 @@ function generateHTML(data) {
     .color-value {
       font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
       font-size: 11px;
-      color: var(--text-secondary);
-      background: var(--bg-page);
+      color: hsl(var(--muted-foreground));
+      background: hsl(var(--background));
       padding: 4px 8px;
       border-radius: 4px;
       display: inline-block;
@@ -725,15 +815,15 @@ function generateHTML(data) {
       align-items: center;
       gap: 10px;
       padding: 10px 14px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
       border-radius: 8px;
       transition: all 0.2s;
       cursor: pointer;
     }
 
     .color-chip:hover {
-      border-color: var(--primary);
+      border-color: hsl(var(--primary));
       box-shadow: var(--shadow-sm);
       transform: translateY(-1px);
     }
@@ -742,7 +832,7 @@ function generateHTML(data) {
       width: 32px;
       height: 32px;
       border-radius: 6px;
-      border: 1px solid var(--border);
+      border: 1px solid hsl(var(--border));
       flex-shrink: 0;
     }
 
@@ -750,7 +840,7 @@ function generateHTML(data) {
       font-family: 'SF Mono', Monaco, monospace;
       font-size: 12px;
       font-weight: 500;
-      color: var(--text-primary);
+      color: hsl(var(--foreground));
       text-transform: uppercase;
     }
 
@@ -762,8 +852,8 @@ function generateHTML(data) {
     }
 
     .spacing-item {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
       border-radius: 8px;
       padding: 12px 16px;
       display: flex;
@@ -774,13 +864,13 @@ function generateHTML(data) {
     }
 
     .spacing-item:hover {
-      border-color: var(--primary);
+      border-color: hsl(var(--primary));
       box-shadow: var(--shadow-sm);
       transform: translateY(-1px);
     }
 
     .spacing-visual {
-      background: var(--primary);
+      background: hsl(var(--primary));
       border-radius: 4px;
       height: 32px;
       display: flex;
@@ -801,14 +891,14 @@ function generateHTML(data) {
     .spacing-name {
       font-weight: 600;
       font-size: 12px;
-      color: var(--text-primary);
+      color: hsl(var(--foreground));
       margin-bottom: 2px;
     }
 
     .spacing-value {
       font-family: 'SF Mono', Monaco, monospace;
       font-size: 11px;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
     }
 
     /* Typography Scale */
@@ -818,8 +908,8 @@ function generateHTML(data) {
     }
 
     .type-sample {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
       border-radius: 12px;
       padding: 24px;
       transition: all 0.2s;
@@ -832,16 +922,16 @@ function generateHTML(data) {
     .type-label {
       font-size: 12px;
       font-weight: 600;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
       text-transform: uppercase;
       letter-spacing: 0.05em;
       margin-bottom: 12px;
     }
 
     .type-preview {
-      color: var(--text-primary);
+      color: hsl(var(--foreground));
       margin-bottom: 12px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid hsl(var(--border));
       padding-bottom: 16px;
     }
 
@@ -849,7 +939,7 @@ function generateHTML(data) {
       display: flex;
       gap: 16px;
       font-size: 13px;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
     }
 
     .type-spec {
@@ -862,7 +952,7 @@ function generateHTML(data) {
 
     .processing-value {
       font-weight: 700;
-      color: #48bb78;
+      color: hsl(var(--primary));
     }
 
     /* Component Tree */
@@ -880,21 +970,21 @@ function generateHTML(data) {
     .component-tree li {
       padding: 8px 12px;
       margin: 4px 0;
-      background: #f7fafc;
+      background: hsl(var(--accent));
       border-radius: 6px;
-      border-left: 3px solid #667eea;
+      border-left: 3px solid hsl(var(--primary));
     }
 
     .size-badge {
       font-size: 12px;
-      color: #718096;
+      color: hsl(var(--muted-foreground));
       margin-left: 8px;
     }
 
     /* Warnings */
     .warning-card {
-      background: #fef5e7;
-      border: 1px solid #f39c12;
+      background: hsl(var(--destructive) / 0.1);
+      border: 1px solid hsl(var(--destructive) / 0.5);
       border-radius: 8px;
       padding: 16px;
       margin-bottom: 12px;
@@ -915,17 +1005,17 @@ function generateHTML(data) {
     th, td {
       padding: 12px;
       text-align: left;
-      border-bottom: 1px solid #e2e8f0;
+      border-bottom: 1px solid hsl(var(--border));
     }
 
     th {
-      background: #f7fafc;
+      background: hsl(var(--muted) / 0.5);
       font-weight: 600;
-      color: #2d3748;
+      color: hsl(var(--foreground));
     }
 
     tr:hover {
-      background: #f7fafc;
+      background: hsl(var(--accent));
     }
 
     /* Badge */
@@ -938,13 +1028,13 @@ function generateHTML(data) {
     }
 
     .badge-success {
-      background: #c6f6d5;
-      color: #22543d;
+      background: hsl(var(--primary) / 0.1);
+      color: hsl(var(--primary));
     }
 
     .badge-warning {
-      background: #fef5e7;
-      color: #d69e2e;
+      background: hsl(var(--destructive) / 0.1);
+      color: hsl(var(--destructive));
     }
 
     /* Toast notification */
@@ -952,8 +1042,8 @@ function generateHTML(data) {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: #48bb78;
-      color: white;
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
       padding: 16px 24px;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
@@ -970,24 +1060,24 @@ function generateHTML(data) {
 
     /* File Browser */
     .file-browser {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
       border-radius: 12px;
       margin-top: 24px;
       position: relative;
     }
 
     .file-browser-header {
-      background: #f7fafc;
+      background: hsl(var(--muted) / 0.5);
       padding: 12px 20px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid hsl(var(--border));
       border-radius: 12px 12px 0 0;
       display: grid;
       grid-template-columns: 40px 1fr 120px 100px;
       gap: 16px;
       font-size: 12px;
       font-weight: 600;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -998,7 +1088,7 @@ function generateHTML(data) {
       grid-template-columns: 40px 1fr 120px 100px;
       gap: 16px;
       padding: 12px 20px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid hsl(var(--border));
       align-items: center;
       transition: background 0.15s;
     }
@@ -1009,7 +1099,7 @@ function generateHTML(data) {
     }
 
     .file-row:hover {
-      background: #f7fafc;
+      background: hsl(var(--accent));
     }
 
     .file-icon {
@@ -1023,19 +1113,19 @@ function generateHTML(data) {
     }
 
     .file-icon.svg {
-      background: #e0e7ff;
-      color: #5b21b6;
+      background: hsl(var(--primary) / 0.1);
+      color: hsl(var(--primary));
     }
 
     .file-icon.png {
-      background: #dbeafe;
-      color: #1e40af;
+      background: hsl(var(--primary) / 0.15);
+      color: hsl(var(--primary));
     }
 
     .file-name {
       font-family: 'SF Mono', Monaco, monospace;
       font-size: 13px;
-      color: var(--text-primary);
+      color: hsl(var(--foreground));
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -1044,7 +1134,7 @@ function generateHTML(data) {
     .file-size {
       font-family: 'SF Mono', Monaco, monospace;
       font-size: 13px;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
       text-align: right;
     }
 
@@ -1056,7 +1146,7 @@ function generateHTML(data) {
 
     .btn-download {
       padding: 6px 12px;
-      background: var(--primary);
+      background: hsl(var(--primary));
       color: white;
       border: none;
       border-radius: 6px;
@@ -1070,7 +1160,7 @@ function generateHTML(data) {
     }
 
     .btn-download:hover {
-      background: var(--primary-dark);
+      background: hsl(var(--primary));
       transform: translateY(-1px);
       box-shadow: var(--shadow-sm);
     }
@@ -1078,8 +1168,8 @@ function generateHTML(data) {
     /* Image Preview Tooltip */
     .image-preview {
       position: fixed;
-      background: white;
-      border: 2px solid var(--border);
+      background: hsl(var(--popover));
+      border: 2px solid hsl(var(--border));
       border-radius: 8px;
       padding: 8px;
       box-shadow: 0 8px 16px rgba(0,0,0,0.15);
@@ -1114,7 +1204,7 @@ function generateHTML(data) {
 
     .image-preview-label {
       font-size: 11px;
-      color: var(--text-secondary);
+      color: hsl(var(--muted-foreground));
       margin-top: 6px;
       text-align: center;
       font-weight: 500;
@@ -1124,6 +1214,12 @@ function generateHTML(data) {
 <body>
   <!-- Sidebar Navigation -->
   <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="nav-title" style="margin-bottom: 0;">Report</div>
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle dark/light mode">
+        <span id="theme-icon">🌙</span>
+      </button>
+    </div>
     <div class="nav-title">Navigation</div>
     <ul class="nav-list">
       <li><a class="nav-link active" href="#overview" onclick="scrollToSection(event, 'overview')">📊 Overview</a></li>
@@ -1304,7 +1400,7 @@ function generateHTML(data) {
       </div>
 
       ${data.colors.length > 0 ? `
-        <h3 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px;">Extracted Colors</h3>
+        <h3 style="font-size: 14px; font-weight: 600; color: hsl(var(--muted-foreground)); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px;">Extracted Colors</h3>
         <div class="color-chips">
           ${data.colors.map((color) => {
             return `
@@ -1459,6 +1555,29 @@ function generateHTML(data) {
   <div id="toast" class="toast"></div>
 
   <script>
+    // Theme Management
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme')
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light'
+
+      document.documentElement.setAttribute('data-theme', newTheme)
+      localStorage.setItem('theme', newTheme)
+      updateThemeIcon(newTheme)
+    }
+
+    function updateThemeIcon(theme) {
+      const icon = document.getElementById('theme-icon')
+      if (icon) {
+        icon.textContent = theme === 'light' ? '🌙' : '☀️'
+      }
+    }
+
+    // Update icon on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'light'
+      updateThemeIcon(currentTheme)
+    })
+
     // Smooth scroll to section
     function scrollToSection(event, id) {
       event.preventDefault()

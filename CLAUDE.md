@@ -4,318 +4,424 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MCP Figma to Code is a Figma-to-React conversion tool that transforms Figma designs into pixel-perfect React + Tailwind CSS components with 100% visual fidelity. It uses the Model Context Protocol (MCP) to connect with Figma Desktop and applies advanced AST transformations to generate production-ready code.
+MCP Figma to Code - A tool that converts Figma designs into pixel-perfect React + Tailwind components using the Model Context Protocol (MCP). The system uses a systematic chunk-based pipeline with AST transformations to ensure visual fidelity between Figma designs and generated web components.
 
-## Key Technologies
-
-- **Frontend**: React 19, TypeScript, Tailwind CSS, Vite
-- **Processing**: Babel (AST transformations), Puppeteer (visual validation)
-- **Integration**: MCP Protocol (Figma Desktop server on port 3845)
-- **Infrastructure**: Docker, Node.js 20
+**Tech Stack:** React 19, TypeScript, Tailwind CSS, Vite, Express, Babel (AST), Puppeteer, Docker
 
 ## Development Commands
 
-### Starting the Application
-
+### Docker (Recommended)
 ```bash
-# Start with Docker (recommended)
+# Start development environment (builds and starts containers)
 docker-compose up --build
 
-# Start locally
+# Start without rebuild
+docker-compose up
+
+# Stop containers
+docker-compose down
+
+# View logs
+docker logs mcp-figma-v1
+
+# Execute commands in container
+docker exec mcp-figma-v1 <command>
+```
+
+### Local Development
+```bash
+# Install dependencies
 npm install
+
+# Start dev server (Vite + Express API)
 npm run dev
 
-# Dashboard accessible at http://localhost:5173
+# Start API server only
+npm run server
+
+# Build production bundle
+npm run build
+
+# Preview production build
+npm run preview
+
+# Lint code
+npm run lint
 ```
 
 ### Running Analysis
 
-The primary workflow is through the MCP CLI:
-
+**CLI (from host):**
 ```bash
-# From Docker container (without clean)
-docker exec mcp-figma-v1 node scripts/figma-cli.js "https://www.figma.com/design/FILE_ID?node-id=X-Y"
-
-# With --clean flag (generates both fixed and clean versions)
-docker exec mcp-figma-v1 node scripts/figma-cli.js "https://www.figma.com/design/FILE_ID?node-id=X-Y" --clean
-
-# Using the bash wrapper (checks Docker status)
 ./cli/figma-analyze "https://www.figma.com/design/FILE_ID?node-id=X-Y"
 ```
 
-**Note**: The dashboard (via `server.js`) automatically adds `--clean` flag, so all analyses from the UI generate both versions.
+**CLI (in Docker):**
+```bash
+docker exec mcp-figma-v1 node scripts/figma-cli.js "https://www.figma.com/design/FILE_ID?node-id=X-Y"
+```
 
-### Processing Pipeline Commands
+**With clean mode (generates both -fixed and -clean versions):**
+```bash
+docker exec mcp-figma-v1 node scripts/figma-cli.js "URL" --clean
+```
+
+**API (via dashboard):**
+- Navigate to http://localhost:5173
+- Paste Figma URL in the analysis form
+- Click "Lancer l'analyse"
+
+### Processing Commands
 
 ```bash
-# Run unified processor (AST transformations)
-node scripts/unified-processor.js <input.tsx> <output.tsx> [metadata.xml] [figmaUrl]
+# Process a single chunk through AST pipeline
+node scripts/unified-processor.js <input.tsx> <output-fixed.tsx> <metadata.xml>
 
-# Organize images from tmp/figma-assets to test folder
-node scripts/post-processing/organize-images.js <testDir> <assetsDir>
+# Organize images from tmp/figma-assets to test directory
+node scripts/post-processing/organize-images.js <testDir>
 
-# Fix SVG CSS variables
-node scripts/post-processing/fix-svg-vars.js <testDir>
+# Capture web screenshot for visual validation
+node scripts/post-processing/capture-screenshot.js <testDir> <vitePort>
 
-# Capture web screenshot for validation
-node scripts/post-processing/capture-screenshot.js <testDir> <port>
-
-# Generate reports
-node scripts/reporting/generate-metadata.js <testDir> <figmaUrl> <nodeIdHyphen>
+# Generate reports (metadata.json, analysis.md, report.html)
+node scripts/reporting/generate-metadata.js <testDir>
 node scripts/reporting/generate-analysis.js <testDir>
 node scripts/reporting/generate-report.js <testDir>
 ```
 
-### Linting and Building
+## Code Architecture
 
-```bash
-npm run lint
-npm run build
-npm run preview
-```
+### High-Level Pipeline
 
-## Architecture
+The system processes Figma designs through a 4-phase pipeline:
 
-### Pipeline Flow
+**Phase 1: Extraction (MCP)**
+- Connect to MCP Figma Desktop server (port 3845 on host)
+- Extract metadata.xml (node hierarchy)
+- Extract parent-wrapper.tsx (preserves background/padding)
+- Extract figma-screenshot.png (reference image)
+- Extract variables.json (design tokens)
+- Extract each child node as a chunk (1s delay between calls)
+- Save chunks to `chunks/` directory
 
-The conversion follows a 4-phase pipeline:
+**Phase 2: Processing (AST)**
+- Organize images from tmp/figma-assets → img/
+- Process each chunk through unified-processor:
+  - Parse React/JSX code into Abstract Syntax Tree
+  - Apply 11 transforms in priority order (10-100)
+  - Extract CSS for each chunk
+- Consolidate chunks into Component-fixed.tsx
+- Merge all chunk CSS into Component-fixed.css
+- If --clean flag: generate Component-clean.tsx/css (production version)
+- Fix CSS variables in SVG paths
 
-1. **PHASE 1: EXTRACTION** - Via MCP tools:
-   - `get_design_context` → React + Tailwind code
-   - `get_screenshot` → Figma PNG for validation
-   - `get_variable_defs` → Design tokens (colors, fonts)
-   - `get_metadata` → XML hierarchy
+**Phase 3: Validation (Visual)**
+- Launch Puppeteer with exact dimensions from metadata.xml
+- Navigate to preview URL (?preview=true&test={testId})
+- Wait for fonts and images to load
+- Capture web-render.png
 
-2. **PHASE 2: PROCESSING** - AST transformations:
-   - `organize-images.js` → Organize assets to `img/` with Figma names
-   - `unified-processor.js` → Apply 10 transforms in priority order
-   - `fix-svg-vars.js` → Convert CSS variables in SVG paths
-
-3. **PHASE 3: VALIDATION**:
-   - `capture-screenshot.js` → Web render via Puppeteer
-   - Visual comparison (Figma vs Web)
-
-4. **PHASE 4: OUTPUT** - Generate files:
-   - `Component-fixed.tsx/css` → Tailwind version with safelist dependencies
-   - `Component-clean.tsx/css` → Standalone version (if `--clean` flag)
-   - `metadata.json` → Dashboard metadata
-   - `analysis.md` → Technical report
-   - `report.html` → Visual fidelity report
-
-### Output File Types: Fixed vs Clean
-
-**Component-fixed.tsx/css** (Tailwind Version):
-- Uses Tailwind utility classes + arbitrary values
-- Includes debug attributes (`data-name`, `data-node-id`)
-- Requires `tailwind.config.js` with safelist
-- Inline font styles: `style={{ fontFamily: "Inter", fontWeight: 600 }}`
-- Generated by default
-
-**Component-clean.tsx/css** (Standalone Version):
-- Pure CSS classes (no arbitrary Tailwind values)
-- No debug attributes - production ready
-- Zero dependencies (no Tailwind needed)
-- Font styles extracted to CSS: `.font-inter-600 { font-family: "Inter"; font-weight: 600; }`
-- Arbitrary classes converted: `bg-[#f0d9b5]` → `.bg-custom-beige { background-color: #f0d9b5; }`
-- Generated only with `--clean` flag or via dashboard
-- Dashboard preview automatically uses clean version
-
-**Transform responsible**: `production-cleaner.js` (Priority 100, runs last, only when `context.cleanMode === true`)
-
-### AST Transform Pipeline
-
-Transforms run in a single pass through `scripts/pipeline.js` in priority order:
-
-1. **font-detection** (Priority 10) - Detect fonts, convert to inline styles
-2. **auto-layout** (Priority 20) - Fix Figma auto-layout classes
-3. **ast-cleaning** (Priority 30) - Remove invalid Tailwind classes
-4. **svg-icon-fixes** (Priority 40) - Fix SVG structure
-5. **svg-consolidation** (Priority 45) - Consolidate SVG elements
-6. **post-fixes** (Priority 50) - Gradient & shape fixes
-7. **position-fixes** (Priority 60) - Fix positioning issues
-8. **stroke-alignment** (Priority 70) - Fix stroke alignment
-9. **css-vars** (Priority 80) - Convert CSS variables to values
-10. **tailwind-optimizer** (Priority 90) - Optimize Tailwind classes
-11. **production-cleaner** (Priority 100) - **Clean mode only** - Remove debug attrs, extract fonts, convert arbitrary classes
-
-Each transform exports:
-- `meta` - Name and priority
-- `execute(ast, context)` - Transform function returning stats
-
-**Note**: Transform #11 (production-cleaner) only runs when `context.cleanMode === true` and **must run last** after all other transforms.
+**Phase 4: Output (Reports)**
+- Generate metadata.json (dashboard metadata)
+- Generate analysis.md (technical report with transform stats)
+- Generate report.html (visual comparison: Figma vs Web)
 
 ### Directory Structure
 
 ```
-src/
-├── components/           # Dashboard UI
-│   ├── HomePage.tsx      # Test list with analysis form
-│   ├── TestDetail.tsx    # 4-tab detail view (Preview, Code, Report, Technical)
-│   └── AnalysisForm.tsx  # Form to trigger analysis via API
-├── generated/tests/      # Generated test outputs (git-ignored)
-│   └── node-{nodeId}/
-│       ├── Component.tsx          # Original MCP output
-│       ├── Component-fixed.tsx    # Post-processed
-│       ├── Component-fixed.css    # Extracted styles
-│       ├── img/                   # Organized images
-│       ├── chunks/                # For large designs
-│       ├── chunks-fixed/          # Processed chunks
-│       ├── variables.json         # Design tokens
-│       ├── metadata.xml           # Figma hierarchy
-│       ├── metadata.json          # Dashboard metadata
-│       ├── analysis.md            # Technical report
-│       ├── report.html            # Visual report
-│       ├── figma-render.png       # Figma screenshot
-│       └── web-render.png         # Web screenshot
 scripts/
-├── figma-cli.js          # Main orchestrator (uses MCP SDK)
-├── pipeline.js           # Transform pipeline executor
-├── config.js             # Default configuration
-├── unified-processor.js  # CLI entry for processing
-├── transformations/      # Modular AST transforms
-├── post-processing/      # Image organization, screenshots
-├── reporting/            # Report generators
-└── utils/                # Chunking utilities
-cli/
-├── figma-analyze         # Bash wrapper for Docker
-├── figma-validate        # Validation script
-└── config/
-    └── figma-params.json # MCP tool parameters
+├── figma-cli.js              # Main orchestrator (MCP SDK, phases 1-4)
+├── pipeline.js               # Transform pipeline executor (loads and runs transforms)
+├── unified-processor.js      # AST processor (individual chunks + consolidation)
+├── config.js                 # Transform configuration (enable/disable)
+├── transformations/          # AST transforms (priority 10-100)
+│   ├── font-detection.js     # Priority 10: Convert font-['Font:Style'] to inline
+│   ├── auto-layout.js        # Priority 20: Fix Figma auto-layout classes
+│   ├── ast-cleaning.js       # Priority 30: Remove invalid Tailwind classes
+│   ├── svg-icon-fixes.js     # Priority 40: Fix SVG structure/attributes
+│   ├── svg-consolidation.js  # Priority 45: Consolidate nested SVGs
+│   ├── post-fixes.js         # Priority 50: Gradient & shape fixes
+│   ├── position-fixes.js     # Priority 60: Fix positioning issues
+│   ├── stroke-alignment.js   # Priority 70: Fix stroke alignment
+│   ├── css-vars.js           # Priority 80: Convert CSS vars to values
+│   ├── tailwind-optimizer.js # Priority 90: Optimize arbitrary → standard
+│   └── production-cleaner.js # Priority 100: Clean mode (remove debug attrs)
+├── utils/
+│   ├── chunking.js           # Chunk extraction & assembly logic
+│   └── usage-tracker.js      # API usage monitoring (30-day history)
+├── post-processing/
+│   ├── organize-images.js    # Rename image hashes to Figma layer names
+│   ├── fix-svg-vars.js       # Fix CSS vars in SVG path data
+│   └── capture-screenshot.js # Puppeteer screenshot capture
+└── reporting/
+    ├── generate-metadata.js  # Dashboard metadata (nodeId, stats, timestamp)
+    ├── generate-analysis.md  # Technical report (transforms, timings)
+    └── generate-report.html  # Visual fidelity report (side-by-side)
+
+src/
+├── components/
+│   ├── features/
+│   │   ├── analysis/         # AnalysisForm (trigger analyses via API)
+│   │   ├── stats/            # UsageBar (real-time API usage widget)
+│   │   └── tests/            # TestCard, TestsGrid, TestsTable, PaginationControls
+│   ├── pages/
+│   │   ├── DashboardPage.tsx # Main dashboard with MCP status
+│   │   ├── TestsPage.tsx     # Tests list (grid/list view, pagination, sorting)
+│   │   ├── TestDetailPage.tsx# 4-tab detail view (Preview, Code, Report, Technical)
+│   │   └── AnalyzePage.tsx   # Analysis form page
+│   └── ui/                   # shadcn/ui components (Button, Card, Tabs, etc.)
+├── generated/tests/          # Output directory (git-ignored)
+│   └── node-{id}-{ts}/       # Each analysis creates a folder
+│       ├── Component.tsx              # Original assembled component
+│       ├── Component-fixed.tsx        # Post-processed (Tailwind version)
+│       ├── Component-clean.tsx        # Production version (no Tailwind)
+│       ├── Component-fixed.css        # Consolidated CSS (Tailwind)
+│       ├── Component-clean.css        # Production CSS (pure CSS)
+│       ├── parent-wrapper.tsx         # Parent wrapper
+│       ├── chunks/                    # Original chunks
+│       ├── chunks-fixed/              # Processed chunks (Tailwind)
+│       ├── chunks-clean/              # Production chunks (pure CSS)
+│       ├── img/                       # Organized images
+│       ├── metadata.xml               # Figma hierarchy
+│       ├── variables.json             # Design tokens
+│       ├── metadata.json              # Dashboard metadata
+│       ├── analysis.md                # Technical report
+│       ├── report.html                # Visual report
+│       ├── figma-render.png           # Figma screenshot
+│       └── web-render.png             # Web screenshot
+└── main.tsx                  # Entry point
+
+server.js                     # Express API server with SSE support
+docker-compose.yml            # Docker configuration (port 5173, MCP access)
+Dockerfile                    # Alpine Linux + Chromium + Node.js
 ```
 
-### MCP Integration
+### Key Architectural Concepts
 
-The `figma-cli.js` script connects to the Figma Desktop MCP server:
+**1. Systematic Chunk Mode**
+- ALL designs are processed in chunk mode (no switching)
+- Parent wrapper extracted first (preserves layout context)
+- Child nodes extracted from metadata.xml
+- Each chunk processed individually with full AST pipeline
+- Chunks assembled into parent component with imports
+- CSS from all chunks merged into single file
 
+**2. Single-Pass AST Pipeline**
+- Parse code once → AST
+- Sort transforms by priority (10 → 100)
+- Execute all transforms in one traversal (performance)
+- Generate optimized code from modified AST
+- Extract CSS during processing
+- All transforms implement: `{ meta: { name, priority }, execute(ast, context) }`
+
+**3. Dual Output Modes**
+- **Component-fixed.tsx/css**: Tailwind-based (requires safelist config)
+  - Uses Tailwind utilities (`flex`, `bg-white`)
+  - Uses arbitrary values (`bg-[#f0d9b5]`, `w-[480px]`)
+  - Includes debug attributes (`data-name`, `data-node-id`)
+  - Best for Tailwind projects
+
+- **Component-clean.tsx/css**: Production-ready (zero dependencies)
+  - Pure CSS classes (`.bg-custom-beige`, `.w-custom-480`)
+  - No debug attributes
+  - Works anywhere (copy/paste ready)
+  - Generated when --clean flag is used
+
+**4. MCP Integration**
+- Connects to Figma Desktop MCP server via HTTP transport
+- Host: `host.docker.internal:3845` (Docker) or `localhost:3845` (host)
+- Tools used:
+  - `get_metadata(nodeId)` → XML hierarchy
+  - `get_design_context(nodeId, forceCode: true)` → React/Tailwind code
+  - `get_screenshot(nodeId)` → PNG image
+  - `get_variable_defs(nodeId)` → Design tokens
+- 1 second delay between `get_design_context` calls (rate limiting)
+
+**5. CSS Consolidation Strategy**
+- Each chunk generates separate CSS during processing
+- All chunk CSS files merged into Component-{fixed|clean}.css
+- Deduplicate :root variables using Map
+- Use first chunk's Google Fonts import
+- Deduplicate Figma utility classes
+- Remove CSS imports from individual chunks
+
+**6. Usage Tracking**
+- Tracks all MCP tool calls in data/figma-usage.json
+- Stores token counts from MCP responses (actual measurements)
+- 30-day retention with auto-cleanup
+- Calculates % of daily limit (1,200,000 tokens for Professional plan)
+- Provides status levels: SAFE, GOOD, WARNING, CRITICAL, DANGER
+- Accessible via GET /api/usage endpoint
+
+## Working with the Codebase
+
+### Adding a New Transform
+
+1. Create file in `scripts/transformations/your-transform.js`
+2. Implement the interface:
+   ```javascript
+   export const meta = {
+     name: 'your-transform',
+     priority: 55  // Choose appropriate priority (10-100)
+   }
+
+   export function execute(ast, context) {
+     // Modify AST in place using Babel traverse
+     // Return stats: { itemsProcessed, executionTime, ... }
+   }
+   ```
+3. Import in `scripts/pipeline.js` and add to `ALL_TRANSFORMS`
+4. Test with: `node scripts/unified-processor.js <input> <output> <metadata>`
+5. Configure in `scripts/config.js` (enable/disable)
+
+### Modifying the Processing Pipeline
+
+**Entry point:** `scripts/figma-cli.js` (main orchestrator)
+- Phase 1 (lines ~200-400): MCP extraction
+- Phase 2 (lines ~400-600): AST processing loop
+- Phase 3 (lines ~600-700): Visual validation
+- Phase 4 (lines ~700-800): Report generation
+
+**AST processing:** `scripts/unified-processor.js`
+- Detects chunking mode (presence of chunks/ directory)
+- In chunk mode: processes each chunk, then consolidates
+- In single mode: processes one file
+- Always generates reports
+
+**Transform pipeline:** `scripts/pipeline.js`
+- `runPipeline(sourceCode, contextData, config)` → { code, css, stats }
+- Loads transforms, sorts by priority, executes in order
+- Shares context between transforms (stats, analysis data)
+
+### Working with the Dashboard
+
+**Frontend stack:**
+- React 19 + TypeScript + Vite
+- shadcn/ui components (Radix UI + Tailwind)
+- React Router (client-side routing)
+- Server-Sent Events (real-time logs)
+
+**Key components:**
+- `AnalysisForm.tsx`: POST /api/analyze → jobId → SSE /api/analyze/logs/:jobId
+- `TestsPage.tsx`: Lists all tests with pagination/sorting
+- `TestDetailPage.tsx`: 4 tabs (Preview, Code, Report, Technical)
+- `UsageBar.tsx`: GET /api/usage every 30s
+
+**API endpoints:**
+- POST /api/analyze → Start analysis (returns jobId)
+- GET /api/analyze/logs/:jobId → SSE stream of logs
+- GET /api/analyze/status/:jobId → Job status
+- GET /api/usage → Usage statistics
+- GET /api/mcp/health → MCP server health check
+- DELETE /api/tests/:testId → Delete test
+- GET /api/download/:testId → Download test as ZIP
+
+### Docker Environment
+
+**Container name:** `mcp-figma-v1`
+**Base image:** Alpine Linux
+**Installed:** Node.js 20, Chromium (for Puppeteer)
+
+**Port mapping:**
+- Host 5173 → Container 5173 (Vite dev server + API)
+
+**Volume mounts:**
+- `./src:/app/src` (hot reload)
+- `./scripts:/app/scripts` (hot reload)
+- `./server.js:/app/server.js` (hot reload)
+- `./src/generated:/app/src/generated` (shared outputs)
+- `./tmp:/app/tmp` (MCP assets)
+- `./data:/app/data` (usage tracking)
+
+**MCP access:**
+- `extra_hosts: host.docker.internal:host-gateway`
+- MCP server runs on host at port 3845
+- Container accesses via `http://host.docker.internal:3845/mcp`
+
+**Environment variables:**
+- `PROJECT_ROOT`: Absolute path on host (for MCP asset writes)
+- `PUPPETEER_EXECUTABLE_PATH`: /usr/bin/chromium
+- `MCP_SERVER_PORT`: 3845
+
+### Common Patterns
+
+**Reading test metadata:**
 ```javascript
-// Connection to MCP server on host
-const client = new Client({
-  name: 'figma-to-code-cli',
-  version: '1.0.0'
-}, {
-  capabilities: {}
-});
+const testDir = 'src/generated/tests/node-9-2654-1735689600'
+const metadata = JSON.parse(fs.readFileSync(`${testDir}/metadata.json`, 'utf8'))
+// metadata: { nodeId, nodeName, timestamp, stats: { totalNodes, imagesCount, ... } }
+```
+
+**Running transforms:**
+```javascript
+import { runPipeline } from './pipeline.js'
+
+const sourceCode = fs.readFileSync('Component.tsx', 'utf8')
+const result = await runPipeline(sourceCode, { testDir, metadataPath }, config)
+// result: { code, css, stats, analysis }
+
+fs.writeFileSync('Component-fixed.tsx', result.code)
+fs.writeFileSync('Component-fixed.css', result.css)
+```
+
+**Connecting to MCP:**
+```javascript
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
 const transport = new StreamableHTTPClientTransport({
   url: 'http://host.docker.internal:3845/mcp'
-});
+})
+
+const client = new Client({ name: 'figma-cli', version: '1.0.0' }, { capabilities: {} })
+await client.connect(transport)
+
+const result = await client.callTool({
+  name: 'get_design_context',
+  arguments: { nodeId: '9:2654', forceCode: true }
+})
 ```
 
-**Important**: The MCP Figma Desktop server must be running on port 3845 on the host machine. Docker container accesses it via `host.docker.internal`.
+**Tracking MCP usage:**
+```javascript
+import { UsageTracker } from './utils/usage-tracker.js'
 
-### Chunking System
-
-For large designs (>25k tokens), the system automatically chunks:
-
-1. Detects size from metadata XML
-2. Extracts child nodes if needed
-3. Processes each chunk with `unified-processor.js`
-4. Consolidates chunks into parent component
-5. Merges CSS from all chunks
-
-Files are organized as:
-- `chunks/` - Original chunk TSX files
-- `chunks-fixed/` - Processed chunks
-- Parent component imports and renders chunks
-
-### Web Screenshot Capture
-
-`capture-screenshot.js` uses Puppeteer to:
-1. Launch Chromium with specific viewport dimensions
-2. Navigate to preview URL with `?preview=true&test={testId}`
-3. Load component-specific CSS
-4. Wait for fonts and images
-5. Capture PNG with matching dimensions
-
-### Assets Management
-
-- **MCP writes to**: `tmp/figma-assets/` (shared between host and Docker)
-- **Images organized to**: `src/generated/tests/node-{id}/img/`
-- **Naming**: Files renamed using Figma layer names from metadata XML
-
-## Important Patterns
-
-### When Processing Components
-
-1. Always check if chunking mode is active (presence of `chunks/` directory)
-2. Use metadata XML for layer names when organizing images
-3. Extract CSS to separate file with Google Fonts imports
-4. Preserve design tokens as CSS variables in `:root`
-5. Fix CSS variables in SVG paths (they don't work in `d` attribute)
-
-### When Adding Transforms
-
-1. Create new transform in `scripts/transformations/`
-2. Export `meta` (name, priority) and `execute` function
-3. Import and add to `ALL_TRANSFORMS` in `pipeline.js`
-4. Lower priority number = runs earlier
-5. Return stats object with counters
-
-### When Working with Generated Components
-
-- Import component: `./generated/tests/{testId}/Component-fixed.tsx`
-- Import CSS: `./generated/tests/{testId}/Component-fixed.css`
-- Images referenced as: `./img/{figma-layer-name}.png`
-- Dashboard loads components dynamically with Vite's dynamic imports
-
-### Docker Considerations
-
-- Docker container name: `mcp-figma-v1`
-- Volumes mounted for hot reload: `src/`, `scripts/`, `cli/`
-- Shared volumes: `src/generated/`, `tmp/`
-- Chromium path: `/usr/bin/chromium`
-- Node modules in named volume for performance
-
-## Testing Strategy
-
-Test files are managed in the dashboard at `http://localhost:5173`:
-
-1. **Preview Tab** - Live component with responsive testing
-2. **Code Tab** - Syntax-highlighted source code
-3. **Report Tab** - HTML visual fidelity report
-4. **Technical Tab** - Markdown analysis of transformations
-
-To run a new test:
-```bash
-./cli/figma-analyze "https://www.figma.com/design/FILE?node-id=X-Y"
+const tracker = new UsageTracker()
+await tracker.trackCall('get_design_context', { tokens: 1234 }) // Use actual token count from response
+const usage = tracker.getUsage() // { today: { ... }, historical: [...], status: { ... } }
 ```
 
-The dashboard automatically detects new test folders in `src/generated/tests/`.
+## Important Notes
 
-## Common Issues
+### MCP Server Requirements
+- Figma Desktop app must be running
+- MCP server must be accessible on port 3845
+- From Docker: `host.docker.internal:3845`
+- From host: `localhost:3845`
+- Verify connection: `curl http://localhost:3845/mcp` (even 400 error means server responds)
 
-### MCP Connection Failures
-- Ensure Figma Desktop app is running
-- Verify MCP server on port 3845: `curl http://localhost:3845/health`
-- Check Docker can reach host: `docker exec mcp-figma-v1 curl http://host.docker.internal:3845/health`
+### Rate Limiting
+- 1 second delay between `get_design_context` calls (enforced in figma-cli.js)
+- Figma API has account-level rate limits (Professional plan: 1,200,000 tokens/day)
+- Usage tracking provides estimates based on actual token measurements
 
-### Component Won't Render
-- Check for syntax errors: `npm run lint`
-- Verify CSS file exists: `ls src/generated/tests/node-{id}/Component-fixed.css`
-- Check browser console for import errors
-- Ensure images are in `img/` folder with correct names
+### File Paths
+- All test outputs go to `src/generated/tests/node-{id}-{timestamp}/`
+- Images organized with Figma layer names (not hashes)
+- Chunk files use component names from metadata.xml
+- CSS files always use -fixed or -clean suffix to match component
 
-### Fonts Not Loading
-- Check `variables.json` has font definitions
-- Verify Google Fonts import in CSS file
-- Test font URL: `https://fonts.googleapis.com/css2?family={FontName}:wght@{weights}&display=swap`
+### Testing
+- Always test transforms with real Figma designs
+- Use both simple and complex designs
+- Verify visual fidelity in report.html
+- Check both -fixed (Tailwind) and -clean (production) outputs
+- Monitor usage tracking to avoid hitting API limits
 
-### Large Files Timeout
-- Chunking should be automatic
-- Check metadata XML exists
-- Verify child nodes detected in logs
-- Manually check: `node scripts/utils/chunking.js <metadata.xml>`
-
-## API Endpoints
-
-The Express server (`server.js`) provides:
-
-- `POST /api/analyze` - Start Figma analysis job
-  - Body: `{ "figmaUrl": "https://..." }`
-  - Returns: `{ "jobId": "job-..." }`
-
-- `GET /api/analyze/:jobId` - Get job status and logs (SSE)
-  - Streams real-time logs from figma-cli.js
-  - Events: `{ type: 'log', message: '...' }`, `{ type: 'complete', result: {...} }`
-
-Dashboard uses these endpoints in `AnalysisForm.tsx` for real-time feedback.
+### Troubleshooting
+- **MCP connection failed**: Check Figma Desktop is running, verify port 3845
+- **Images not appearing**: Run `organize-images.js`, check metadata.xml has layer names
+- **Fonts not loading**: Check variables.json, verify Google Fonts import in CSS
+- **Chunks not consolidating**: Check chunks/ directory exists, verify metadata.xml structure
+- **Screenshot failed**: Check Puppeteer/Chromium installed, verify preview URL accessible
+- **Usage tracking issues**: Check data/figma-usage.json exists and is valid JSON

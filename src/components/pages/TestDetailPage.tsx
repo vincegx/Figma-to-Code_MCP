@@ -108,11 +108,11 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
     try {
       setLoading(true)
 
-      const metadataModule = await import(`../generated/tests/${testId}/metadata.json`)
+      const metadataModule = await import(`../../generated/tests/${testId}/metadata.json`)
       let metadata = metadataModule.default
 
       try {
-        const xmlModule = await import(`../generated/tests/${testId}/metadata.xml?raw`)
+        const xmlModule = await import(`../../generated/tests/${testId}/metadata.xml?raw`)
         const xmlContent = xmlModule.default
         const frameMatch = xmlContent.match(/<frame[^>]+name="([^"]+)"/)
         if (frameMatch) {
@@ -124,7 +124,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
 
       setMetadata(metadata)
 
-      const analysisModule = await import(`../generated/tests/${testId}/analysis.md?raw`)
+      const analysisModule = await import(`../../generated/tests/${testId}/analysis.md?raw`)
       setAnalysis(analysisModule.default)
 
       setLoading(false)
@@ -207,7 +207,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
               <div className="hidden sm:flex items-center gap-2">
                 <Button variant="default" size="sm" asChild>
                   <a
-                    href={`/preview?test=${testId}`}
+                    href={`/preview?test=${testId}&version=fixed`}
                     className="[&]:dark:text-white [&>svg]:dark:text-white"
                     style={{ color: 'white' }}
                   >
@@ -247,7 +247,7 @@ export default function TestDetail({ testId, onBack }: TestDetailProps) {
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>
                       <a
-                        href={`/preview?test=${testId}`}
+                        href={`/preview?test=${testId}&version=fixed`}
                         className="flex items-center"
                       >
                         <Eye className="mr-2 h-4 w-4" />
@@ -480,15 +480,15 @@ function PreviewTab({ testId, dimensions }: PreviewTabProps) {
 
       let module: any
       try {
-        module = await import(`../generated/tests/${testId}/Component-clean.tsx`)
+        module = await import(`../../generated/tests/${testId}/Component-clean.tsx`)
       } catch (e) {
         try {
-          module = await import(`../generated/tests/${testId}/Component-clean.jsx`)
+          module = await import(`../../generated/tests/${testId}/Component-clean.jsx`)
         } catch (e2) {
           try {
-            module = await import(`../generated/tests/${testId}/Component.tsx`)
+            module = await import(`../../generated/tests/${testId}/Component.tsx`)
           } catch (e3) {
-            module = await import(`../generated/tests/${testId}/Component.jsx`)
+            module = await import(`../../generated/tests/${testId}/Component.jsx`)
           }
         }
       }
@@ -670,21 +670,21 @@ function CodeTab({ testId }: CodeTabProps) {
 
       // Load Original files
       try {
-        const originalModule = await import(`../generated/tests/${testId}/Component.tsx?raw`)
+        const originalModule = await import(`../../generated/tests/${testId}/Component.tsx?raw`)
         cache.original.push({ name: 'Component.tsx', content: originalModule.default, type: 'tsx', icon: '📄' })
       } catch (e) {
         console.warn('No original Component.tsx')
       }
 
       try {
-        const metadataModule = await import(`../generated/tests/${testId}/metadata.xml?raw`)
+        const metadataModule = await import(`../../generated/tests/${testId}/metadata.xml?raw`)
         cache.original.push({ name: 'metadata.xml', content: metadataModule.default, type: 'tsx', icon: '📋' })
       } catch (e) {
         console.warn('No metadata.xml')
       }
 
       try {
-        const variablesModule = await import(`../generated/tests/${testId}/variables.json?raw`)
+        const variablesModule = await import(`../../generated/tests/${testId}/variables.json?raw`)
         cache.original.push({ name: 'variables.json', content: variablesModule.default, type: 'tsx', icon: '🎨' })
       } catch (e) {
         console.warn('No variables.json')
@@ -692,14 +692,14 @@ function CodeTab({ testId }: CodeTabProps) {
 
       // Load Fixed files
       try {
-        const fixedModule = await import(`../generated/tests/${testId}/Component-fixed.tsx?raw`)
+        const fixedModule = await import(`../../generated/tests/${testId}/Component-fixed.tsx?raw`)
         cache.fixed.push({ name: 'Component-fixed.tsx', content: fixedModule.default, type: 'tsx', icon: '⚛️' })
       } catch (e) {
         console.warn('No Component-fixed.tsx')
       }
 
       try {
-        const cssModule = await import(`../generated/tests/${testId}/Component-fixed.css?raw`)
+        const cssModule = await import(`../../generated/tests/${testId}/Component-fixed.css?raw`)
         cache.fixed.push({ name: 'Component-fixed.css', content: cssModule.default, type: 'css', icon: '🎨' })
       } catch (e) {
         console.warn('No Component-fixed.css')
@@ -719,14 +719,14 @@ function CodeTab({ testId }: CodeTabProps) {
       const chunkNames = ['ImageText', 'Header', 'Footer', 'Hero', 'Card', 'Button', 'Navigation', 'Sidebar']
       for (const chunkName of chunkNames) {
         try {
-          const tsxModule = await import(`../generated/tests/${testId}/chunks-fixed/${chunkName}.tsx?raw`)
+          const tsxModule = await import(`../../generated/tests/${testId}/chunks-fixed/${chunkName}.tsx?raw`)
           cache.fixed.push({ name: `chunks/${chunkName}.tsx`, content: tsxModule.default, type: 'tsx', icon: '🧩' })
         } catch (e) {
           // Chunk doesn't exist
         }
 
         try {
-          const cssModule = await import(`../generated/tests/${testId}/chunks-fixed/${chunkName}.css?raw`)
+          const cssModule = await import(`../../generated/tests/${testId}/chunks-fixed/${chunkName}.css?raw`)
           cache.fixed.push({ name: `chunks/${chunkName}.css`, content: cssModule.default, type: 'css', icon: '🎨' })
         } catch (e) {
           // CSS doesn't exist
@@ -735,14 +735,14 @@ function CodeTab({ testId }: CodeTabProps) {
 
       // Load Clean files
       try {
-        const cleanModule = await import(`../generated/tests/${testId}/Component-clean.tsx?raw`)
+        const cleanModule = await import(`../../generated/tests/${testId}/Component-clean.tsx?raw`)
         cache.clean.push({ name: 'Component-clean.tsx', content: cleanModule.default, type: 'tsx', icon: '✨' })
       } catch (e) {
         console.warn('No Component-clean.tsx')
       }
 
       try {
-        const cssModule = await import(`../generated/tests/${testId}/Component-clean.css?raw`)
+        const cssModule = await import(`../../generated/tests/${testId}/Component-clean.css?raw`)
         cache.clean.push({ name: 'Component-clean.css', content: cssModule.default, type: 'css', icon: '🎨' })
       } catch (e) {
         console.warn('No Component-clean.css')
