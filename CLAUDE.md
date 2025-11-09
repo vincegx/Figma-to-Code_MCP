@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-MCP Figma to Code - A tool that converts Figma designs into pixel-perfect React + Tailwind components using the Model Context Protocol (MCP). The system uses a systematic chunk-based pipeline with AST transformations to ensure visual fidelity between Figma designs and generated web components.
+MCP Figma to Code - A tool that converts Figma designs into pixel-perfect React + Tailwind components using the Model Context Protocol (MCP). The system uses an adaptive processing pipeline (Simple or Chunk mode) with AST transformations to ensure visual fidelity between Figma designs and generated web components.
 
 **Tech Stack:** React 19, TypeScript, Tailwind CSS, Vite, Express, Babel (AST), Puppeteer, Docker
 
@@ -198,13 +198,17 @@ Dockerfile                    # Alpine Linux + Chromium + Node.js
 
 ### Key Architectural Concepts
 
-**1. Systematic Chunk Mode**
-- ALL designs are processed in chunk mode (no switching)
-- Parent wrapper extracted first (preserves layout context)
-- Child nodes extracted from metadata.xml
-- Each chunk processed individually with full AST pipeline
-- Chunks assembled into parent component with imports
-- CSS from all chunks merged into single file
+**1. Adaptive Processing Modes**
+- **Simple Mode** - For small, valid designs (4 MCP calls total)
+  - Direct processing of full component code
+  - No chunking required
+- **Chunk Mode** - For large/complex designs (5+N MCP calls)
+  - Parent wrapper extracted first (preserves layout context)
+  - Child nodes extracted from metadata.xml
+  - Each chunk processed individually with full AST pipeline
+  - Chunks assembled into parent component with imports
+  - CSS from all chunks merged into single file
+- Mode automatically selected based on code validity and size
 
 **2. Single-Pass AST Pipeline**
 - Parse code once → AST
@@ -283,10 +287,10 @@ Dockerfile                    # Alpine Linux + Chromium + Node.js
 - Phase 4 (lines ~700-800): Report generation
 
 **AST processing:** `scripts/unified-processor.js`
-- Detects chunking mode (presence of chunks/ directory)
-- In chunk mode: processes each chunk, then consolidates
-- In single mode: processes one file
-- Always generates reports
+- Detects processing mode:
+  - **Simple mode**: chunks/ directory absent → process Component.tsx directly
+  - **Chunk mode**: chunks/ directory present → process each chunk, then consolidate
+- Always generates reports regardless of mode
 
 **Transform pipeline:** `scripts/pipeline.js`
 - `runPipeline(sourceCode, contextData, config)` → { code, css, stats }
@@ -422,6 +426,6 @@ const usage = tracker.getUsage() // { today: { ... }, historical: [...], status:
 - **MCP connection failed**: Check Figma Desktop is running, verify port 3845
 - **Images not appearing**: Run `organize-images.js`, check metadata.xml has layer names
 - **Fonts not loading**: Check variables.json, verify Google Fonts import in CSS
-- **Chunks not consolidating**: Check chunks/ directory exists, verify metadata.xml structure
+- **Chunks not consolidating**: Only applies in Chunk Mode; check if design triggered chunking (large/complex), verify chunks/ directory exists and metadata.xml structure
 - **Screenshot failed**: Check Puppeteer/Chromium installed, verify preview URL accessible
 - **Usage tracking issues**: Check data/figma-usage.json exists and is valid JSON

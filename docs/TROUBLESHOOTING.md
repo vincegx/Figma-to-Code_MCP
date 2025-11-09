@@ -290,6 +290,8 @@ const timeout = 60000  // 60 seconds
 
 **Error:** `Failed to extract chunk: Header`
 
+**Note:** Chunking only activates when design is large/complex. Small designs use Simple Mode (no chunks).
+
 ```bash
 # Check MCP server logs in Figma Console
 
@@ -303,6 +305,9 @@ const timeout = 60000  // 60 seconds
 
 # 3. Nested components too deep
 # Fix: Flatten component instances
+
+# 4. Design might work in Simple Mode
+# If design is small, it won't use chunks at all
 ```
 
 ---

@@ -19,11 +19,11 @@
 
 ## Overview
 
-MCP Figma to Code uses a **systematic chunk-based pipeline** with AST transformations to convert Figma designs into production-ready React components.
+MCP Figma to Code uses an **adaptive processing pipeline** with AST transformations to convert Figma designs into production-ready React components.
 
 ### Design Principles
 
-1. **Consistency** - All designs processed through same pipeline (chunk mode)
+1. **Adaptive Processing** - Automatic mode selection (Simple or Chunk) based on design complexity
 2. **Performance** - Single-pass AST traversal, parallel processing where possible
 3. **Visual Fidelity** - Automated validation ensures pixel-perfect output
 4. **Modularity** - Transforms are independent, composable modules
@@ -182,16 +182,26 @@ The conversion pipeline consists of 4 sequential phases:
 
 **Purpose:** Extract design data from Figma via MCP protocol
 
-**Steps:**
-1. Connect to MCP server (`http://host.docker.internal:3845/mcp`)
-2. Parse Figma URL to extract `nodeId`
-3. Call `get_metadata(nodeId)` → Save `metadata.xml`
-4. Parse XML to extract child nodes
-5. Call `get_design_context(nodeId)` for parent → Save `parent-wrapper.tsx`
-6. Call `get_screenshot(nodeId)` → Save `figma-render.png`
-7. Call `get_variable_defs(nodeId)` → Save `variables.json`
-8. For each child node:
-   - Call `get_design_context(childId)` → Save `chunks/{name}.tsx`
+**Two Modes (Automatically Selected):**
+
+#### Simple Mode (4 MCP calls)
+Used when design is small and code is valid:
+1. Connect to MCP server
+2. `get_metadata(nodeId)` → metadata.xml
+3. `get_design_context(nodeId)` → Component.tsx (full code)
+4. `get_screenshot(nodeId)` → figma-render.png
+5. `get_variable_defs(nodeId)` → variables.json
+
+#### Chunk Mode (5+N MCP calls)
+Used when design is large or code invalid:
+1. Connect to MCP server
+2. `get_metadata(nodeId)` → metadata.xml
+3. Parse XML to extract child nodes
+4. `get_design_context(nodeId)` → parent-wrapper.tsx
+5. `get_screenshot(nodeId)` → figma-render.png
+6. `get_variable_defs(nodeId)` → variables.json
+7. For each child node (N):
+   - `get_design_context(childId)` → chunks/{name}.tsx
    - Wait 1 second (rate limiting)
 
 **Output:**

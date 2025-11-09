@@ -228,8 +228,10 @@ Phase 4: OUTPUT (Reports)
 
 ### Key Concepts
 
-**Systematic Chunk Mode:**
-ALL designs are processed in chunk mode for consistency. Parent wrapper preserves layout context, children extracted from metadata.xml.
+**Adaptive Processing:**
+Two modes automatically selected based on design complexity:
+- **Simple Mode** - Direct processing for small, valid designs (4 MCP calls)
+- **Chunk Mode** - Split processing for large/complex designs (5+N MCP calls)
 
 **Single-Pass AST:**
 Transforms sorted by priority (10→100), all execute in one traversal for performance.
