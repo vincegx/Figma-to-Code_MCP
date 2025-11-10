@@ -515,6 +515,256 @@ app.get('/api/tests', async (req, res) => {
 })
 
 /**
+ * GET /api/responsive-tests
+ * Récupère la liste de tous les tests responsive avec leurs métadonnées
+ */
+app.get('/api/responsive-tests', async (req, res) => {
+  try {
+    const responsiveDir = path.join(__dirname, 'src', 'generated', 'responsive-screens')
+
+    // Vérifier que le dossier existe
+    if (!fs.existsSync(responsiveDir)) {
+      return res.json([])
+    }
+
+    // Lire tous les dossiers de tests responsive
+    const testFolders = fs.readdirSync(responsiveDir)
+      .filter(name => name.startsWith('responsive-merger-'))
+
+    // Charger les métadonnées pour chaque test
+    const tests = testFolders.map(mergeId => {
+      try {
+        const testPath = path.join(responsiveDir, mergeId)
+        const metadataPath = path.join(testPath, 'responsive-metadata.json')
+
+        // Lire responsive-metadata.json
+        if (fs.existsSync(metadataPath)) {
+          const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'))
+          return metadata
+        }
+
+        return null
+      } catch (error) {
+        console.error(`Error loading responsive test ${mergeId}:`, error)
+        return null
+      }
+    }).filter(test => test !== null)
+
+    // Trier par timestamp décroissant (plus récent en premier)
+    tests.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+    res.json(tests)
+  } catch (error) {
+    console.error('Error reading responsive tests:', error)
+    res.status(500).json({ error: 'Failed to read responsive tests' })
+  }
+})
+
+/**
+ * POST /api/responsive-tests/merge
+ * Lance un nouveau merge responsive
+ */
+app.post('/api/responsive-tests/merge', async (req, res) => {
+  const { desktop, tablet, mobile } = req.body
+
+  // Validation
+  if (!desktop || !tablet || !mobile) {
+    return res.status(400).json({ error: 'Desktop, tablet et mobile requis' })
+  }
+
+  if (!desktop.size || !desktop.testId || !tablet.size || !tablet.testId || !mobile.size || !mobile.testId) {
+    return res.status(400).json({ error: 'Chaque breakpoint doit avoir size et testId' })
+  }
+
+  // Valider que les tests existent
+  const testsDir = path.join(__dirname, 'src', 'generated', 'tests')
+  const desktopPath = path.join(testsDir, desktop.testId)
+  const tabletPath = path.join(testsDir, tablet.testId)
+  const mobilePath = path.join(testsDir, mobile.testId)
+
+  if (!fs.existsSync(desktopPath) || !fs.existsSync(tabletPath) || !fs.existsSync(mobilePath)) {
+    return res.status(400).json({ error: 'Un ou plusieurs tests n\'existent pas' })
+  }
+
+  // Generate unique job ID
+  const jobId = `merge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  const mergeId = `responsive-merger-${Date.now()}`
+
+  // Create job metadata
+  const job = {
+    id: jobId,
+    mergeId,
+    breakpoints: { desktop, tablet, mobile },
+    status: 'running',
+    startTime: Date.now(),
+    logs: [],
+    clients: []
+  }
+
+  activeJobs.set(jobId, job)
+
+  // Start the merge process
+  const mergerPath = path.join(__dirname, 'scripts', 'responsive-merger.js')
+  const child = spawn('node', [
+    mergerPath,
+    '--desktop', desktop.size, desktop.testId,
+    '--tablet', tablet.size, tablet.testId,
+    '--mobile', mobile.size, mobile.testId
+  ], {
+    cwd: __dirname,
+    env: {
+      ...process.env,
+      FORCE_COLOR: '1'
+    }
+  })
+
+  job.process = child
+
+  // Capture stdout
+  child.stdout.on('data', (data) => {
+    const log = data.toString()
+    job.logs.push(log)
+
+    // Broadcast to all connected clients
+    job.clients.forEach(client => {
+      client.write(`data: ${JSON.stringify({ type: 'log', message: log })}\n\n`)
+    })
+  })
+
+  // Capture stderr
+  child.stderr.on('data', (data) => {
+    const log = data.toString()
+    job.logs.push(log)
+
+    // Broadcast to all connected clients
+    job.clients.forEach(client => {
+      client.write(`data: ${JSON.stringify({ type: 'log', message: log })}\n\n`)
+    })
+  })
+
+  // Handle process exit
+  child.on('close', (code) => {
+    job.status = code === 0 ? 'completed' : 'failed'
+    job.endTime = Date.now()
+    job.exitCode = code
+
+    const finalMessage = code === 0
+      ? '\n✓ Merge responsive terminé avec succès\n'
+      : `\n✗ Merge responsive échoué (code: ${code})\n`
+
+    job.logs.push(finalMessage)
+
+    // Broadcast completion to all clients
+    job.clients.forEach(client => {
+      client.write(`data: ${JSON.stringify({ type: 'done', message: finalMessage, success: code === 0, mergeId })}\n\n`)
+    })
+  })
+
+  // Handle process errors
+  child.on('error', (error) => {
+    job.status = 'failed'
+    job.error = error.message
+    job.endTime = Date.now()
+
+    const errorMessage = `\n✗ Erreur: ${error.message}\n`
+    job.logs.push(errorMessage)
+
+    // Broadcast error to all clients
+    job.clients.forEach(client => {
+      client.write(`data: ${JSON.stringify({ type: 'error', message: errorMessage })}\n\n`)
+    })
+  })
+
+  res.json({
+    jobId,
+    mergeId,
+    status: 'started',
+    message: 'Merge responsive lancé avec succès'
+  })
+})
+
+/**
+ * GET /api/responsive-tests/merge/logs/:jobId
+ * Stream les logs d'un merge responsive via Server-Sent Events (SSE)
+ */
+app.get('/api/responsive-tests/merge/logs/:jobId', (req, res) => {
+  const { jobId } = req.params
+  const job = activeJobs.get(jobId)
+
+  if (!job) {
+    return res.status(404).json({ error: 'Job non trouvé' })
+  }
+
+  // Configure SSE
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  // Send existing logs
+  job.logs.forEach(log => {
+    res.write(`data: ${JSON.stringify({ type: 'log', message: log })}\n\n`)
+  })
+
+  // Add client to broadcast list
+  job.clients.push(res)
+
+  // Send initial status if job already completed
+  if (job.status === 'completed') {
+    res.write(`data: ${JSON.stringify({ type: 'done', success: true, mergeId: job.mergeId })}\n\n`)
+  } else if (job.status === 'failed') {
+    res.write(`data: ${JSON.stringify({ type: 'done', success: false })}\n\n`)
+  }
+
+  // Handle client disconnect
+  req.on('close', () => {
+    const index = job.clients.indexOf(res)
+    if (index !== -1) {
+      job.clients.splice(index, 1)
+    }
+
+    // Clean up job if no clients and completed
+    if (job.clients.length === 0 && (job.status === 'completed' || job.status === 'failed')) {
+      setTimeout(() => {
+        activeJobs.delete(jobId)
+      }, 60000)
+    }
+  })
+})
+
+/**
+ * DELETE /api/responsive-tests/:mergeId
+ * Supprime un test responsive et son dossier
+ */
+app.delete('/api/responsive-tests/:mergeId', async (req, res) => {
+  const { mergeId } = req.params
+
+  if (!mergeId || !mergeId.startsWith('responsive-merger-')) {
+    return res.status(400).json({ error: 'Merge ID invalide' })
+  }
+
+  try {
+    const { rm } = await import('fs/promises')
+    const testPath = path.join(__dirname, 'src', 'generated', 'responsive-screens', mergeId)
+
+    // Supprimer le dossier et tout son contenu
+    await rm(testPath, { recursive: true, force: true })
+
+    res.json({
+      success: true,
+      message: 'Test responsive supprimé avec succès',
+      mergeId
+    })
+  } catch (error) {
+    console.error('Erreur lors de la suppression:', error)
+    res.status(500).json({
+      error: 'Erreur lors de la suppression du test responsive',
+      message: error.message
+    })
+  }
+})
+
+/**
  * GET /api/download/:testId
  * Télécharge un test complet en archive ZIP
  */

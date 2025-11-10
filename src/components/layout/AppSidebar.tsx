@@ -8,7 +8,7 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar"
 import { NavLink } from "react-router-dom"
-import { LayoutDashboard, Sparkles, FileText, Settings } from "lucide-react"
+import { LayoutDashboard, Sparkles, FileText, MonitorSmartphone, Settings } from "lucide-react"
 import ThemeToggle from '../common/ThemeToggle'
 import LanguageSwitcher from '../common/LanguageSwitcher'
 import { useTranslation } from '../../i18n/I18nContext'
@@ -20,6 +20,7 @@ export function AppSidebar() {
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/analyze', icon: Sparkles, label: t('analysis.title') },
     { to: '/tests', icon: FileText, label: 'Tests' },
+    { to: '/responsive-tests', icon: MonitorSmartphone, label: 'Tests Responsive' },
   ]
 
   return (
