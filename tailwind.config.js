@@ -6,6 +6,13 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
+    screens: {
+      'sm': '420px',   // Mobile breakpoint
+      'md': '960px',   // Tablet breakpoint
+      'lg': '1440px',  // Desktop breakpoint
+      'max-lg': {'max': '1439px'},  // Tablet + Mobile (≤1439px)
+      'max-md': {'max': '939px'},   // Mobile only (≤939px)
+    },
     extend: {
       colors: {
         // Shadcn colors mapped to CSS variables

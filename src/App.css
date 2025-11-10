@@ -27,3 +27,63 @@
 .test-zone::-webkit-scrollbar-thumb:hover {
   background: #a3a3a3;
 }
+
+/* Responsive viewport slider styling */
+input[type="range"].slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+  transition: background 0.3s ease;
+}
+
+input[type="range"].slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider::-webkit-slider-thumb:hover {
+  width: 20px;
+  height: 20px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  border-color: #2563eb;
+}
+
+input[type="range"].slider::-webkit-slider-thumb:active {
+  width: 16px;
+  height: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+input[type="range"].slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+input[type="range"].slider::-moz-range-thumb:hover {
+  width: 20px;
+  height: 20px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  border-color: #2563eb;
+}
+
+input[type="range"].slider::-moz-range-thumb:active {
+  width: 16px;
+  height: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}

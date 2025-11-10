@@ -38,7 +38,14 @@ function App() {
 function PreviewModeWrapper() {
   const [searchParams] = useSearchParams()
   const testId = searchParams.get('test')
+  const responsiveMergeId = searchParams.get('responsive')
 
+  // Check for responsive merge preview
+  if (responsiveMergeId) {
+    return <ResponsivePreviewMode mergeId={responsiveMergeId} />
+  }
+
+  // Check for regular test preview
   if (!testId) {
     return <Navigate to="/" replace />
   }
@@ -251,6 +258,229 @@ function PreviewMode({ testId }: { testId: string }) {
       <div style={{
         width: displayMode === 'figma' ? `${dimensions.width}px` : '100%',
         ...(displayMode === 'figma' && { minHeight: `${dimensions.height}px` })
+      }}>
+        <Component />
+      </div>
+    </div>
+  )
+}
+
+// Responsive Preview Mode component - renders merged responsive components
+function ResponsivePreviewMode({ mergeId }: { mergeId: string }) {
+  const [Component, setComponent] = useState<React.ComponentType | null>(null)
+  const [metadata, setMetadata] = useState<any>(null)
+  const [viewportWidth, setViewportWidth] = useState(1440)
+  const [mode, setMode] = useState<'responsive' | 'full'>('responsive')
+  const [showNavbar, setShowNavbar] = useState(false)
+  const [activeBreakpoint, setActiveBreakpoint] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
+
+  useEffect(() => {
+    // Load metadata
+    fetch(`/src/generated/responsive-screens/${mergeId}/responsive-metadata.json`)
+      .then(res => res.json())
+      .then(data => {
+        setMetadata(data)
+        setViewportWidth(data.breakpoints.desktop.width)
+      })
+      .catch(err => {
+        console.error('Failed to load responsive metadata:', err)
+      })
+
+    // Load CSS
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = `/src/generated/responsive-screens/${mergeId}/Page.css`
+    link.id = `responsive-css-${mergeId}`
+    document.head.appendChild(link)
+
+    // Dynamic import
+    import(`./generated/responsive-screens/${mergeId}/Page.tsx`)
+      .then(module => setComponent(() => module.default))
+      .catch(err => {
+        console.error('Failed to load responsive component:', err)
+      })
+
+    // Cleanup
+    return () => {
+      document.getElementById(`responsive-css-${mergeId}`)?.remove()
+    }
+  }, [mergeId])
+
+  // Update active breakpoint based on viewport width
+  useEffect(() => {
+    if (!metadata) return
+
+    const breakpoints = metadata.breakpoints
+    if (viewportWidth <= breakpoints.mobile.width) {
+      setActiveBreakpoint('mobile')
+    } else if (viewportWidth <= breakpoints.tablet.width) {
+      setActiveBreakpoint('tablet')
+    } else {
+      setActiveBreakpoint('desktop')
+    }
+  }, [viewportWidth, metadata])
+
+  // Auto-hide navbar after 5 seconds when visible
+  useEffect(() => {
+    if (showNavbar) {
+      const timer = setTimeout(() => setShowNavbar(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [showNavbar])
+
+  if (!Component || !metadata) {
+    return <div>Loading...</div>
+  }
+
+  const { desktop, tablet, mobile } = metadata.breakpoints
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'start',
+      backgroundImage: `
+        linear-gradient(45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(-45deg, #f0f0f0 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f0f0f0 75%),
+        linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)
+      `,
+      backgroundSize: '20px 20px',
+      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+      backgroundColor: '#ffffff'
+    }}>
+      {/* Hover area to show navbar */}
+      <div
+        className="fixed top-0 left-0 right-0 h-16 z-50"
+        onMouseEnter={() => setShowNavbar(true)}
+      >
+        {/* Navbar - hidden by default, shows on hover */}
+        <div className={`
+          absolute top-0 left-0 right-0
+          transition-all duration-300 ease-in-out
+          ${showNavbar ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}
+        `}>
+          <div className="backdrop-blur-md bg-background/80 border-b border-border shadow-lg">
+            <div className="container mx-auto px-4 py-3">
+              {/* Top row: Navigation buttons and ID */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.history.back()}
+                    className="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <path d="m12 19-7-7 7-7"/>
+                      <path d="M19 12H5"/>
+                    </svg>
+                    Back
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/'}
+                    className="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                      <polyline points="9 22 9 12 15 12 15 22"/>
+                    </svg>
+                    Home
+                  </button>
+                </div>
+
+                <div className="absolute left-1/2 -translate-x-1/2">
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {mergeId}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="mode-switch" className="text-xs text-muted-foreground cursor-pointer">
+                    {mode === 'responsive' ? '📱 Responsive' : '🖥️ Full Width'}
+                  </Label>
+                  <Switch
+                    id="mode-switch"
+                    checked={mode === 'full'}
+                    onCheckedChange={(checked: boolean) => {
+                      setMode(checked ? 'full' : 'responsive')
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Bottom row: Breakpoint controls */}
+              <div className="flex items-center justify-between">
+                {/* Preset breakpoint buttons */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground mr-2">Presets:</span>
+                  <button
+                    onClick={() => setViewportWidth(desktop.width)}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      activeBreakpoint === 'desktop'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-background hover:bg-accent border border-border'
+                    }`}
+                  >
+                    💻 Desktop ({desktop.width}px)
+                  </button>
+                  <button
+                    onClick={() => setViewportWidth(tablet.width)}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      activeBreakpoint === 'tablet'
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-background hover:bg-accent border border-border'
+                    }`}
+                  >
+                    📱 Tablet ({tablet.width}px)
+                  </button>
+                  <button
+                    onClick={() => setViewportWidth(mobile.width)}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                      activeBreakpoint === 'mobile'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-background hover:bg-accent border border-border'
+                    }`}
+                  >
+                    📱 Mobile ({mobile.width}px)
+                  </button>
+                </div>
+
+                {/* Viewport slider */}
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">320px</span>
+                  <input
+                    type="range"
+                    min="320"
+                    max="1920"
+                    value={viewportWidth}
+                    onChange={(e) => setViewportWidth(parseInt(e.target.value))}
+                    className="w-48 h-2 bg-background rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right,
+                        #10b981 0%,
+                        #10b981 ${((mobile.width - 320) / (1920 - 320)) * 100}%,
+                        #f97316 ${((mobile.width - 320) / (1920 - 320)) * 100}%,
+                        #f97316 ${((tablet.width - 320) / (1920 - 320)) * 100}%,
+                        #3b82f6 ${((tablet.width - 320) / (1920 - 320)) * 100}%,
+                        #3b82f6 100%
+                      )`
+                    }}
+                  />
+                  <span className="text-xs text-muted-foreground">1920px</span>
+                  <span className="text-xs font-mono font-bold min-w-[60px] text-right">
+                    {viewportWidth}px
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{
+        width: mode === 'responsive' ? `${viewportWidth}px` : '100%',
+        transition: 'width 0.3s ease-in-out',
+        minHeight: '100vh'
       }}>
         <Component />
       </div>
