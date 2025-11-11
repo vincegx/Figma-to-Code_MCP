@@ -192,6 +192,36 @@
       "daily_limit_estimated": "Daily limit estimated at ~4M tokens (text + images included)"
     }
   },
+  "responsive": {
+    "page": {
+      "title": "Responsive Tests",
+      "description": "Merge 3 tests (Desktop, Tablet, Mobile) to create a responsive component with automatic media queries. The system detects CSS class differences and generates optimized breakpoints.",
+      "badge_desktop_first": "Desktop-First",
+      "badge_media_queries": "Media Queries",
+      "badge_breakpoints": "3 Breakpoints",
+      "new_merge": "New Merge",
+      "loading": "Loading responsive tests...",
+      "no_tests_title": "No responsive tests",
+      "no_tests_message": "Create your first responsive test by merging 3 existing tests",
+      "create_merge": "Create merge"
+    },
+    "card": {
+      "title": "Responsive Merge",
+      "delete": "Delete",
+      "open_preview": "Open preview",
+      "edit_puck": "Edit with Puck",
+      "view_preview": "View preview",
+      "components": "components",
+      "successful": "successful",
+      "errors": "errors",
+      "delete_confirm_title": "Delete responsive test",
+      "delete_confirm_description": "Are you sure you want to delete this responsive test? This action is irreversible.",
+      "delete_confirm_button": "Delete",
+      "delete_cancel_button": "Cancel",
+      "delete_error_title": "Error",
+      "delete_error_description": "Unable to delete responsive test"
+    }
+  },
   "settings": {
     "title": "Settings",
     "subtitle": "Configure your Figma to Code tool",

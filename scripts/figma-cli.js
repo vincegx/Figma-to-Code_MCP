@@ -767,11 +767,15 @@ class FigmaCLI {
       console.log(`${colors.bright}${colors.green}│  ✅ TEST GÉNÉRÉ AVEC SUCCÈS${' '.repeat(30)}│${colors.reset}`);
       console.log(`${colors.bright}${colors.green}└${'─'.repeat(60)}┘${colors.reset}\n`);
 
+      const testId = `node-${this.nodeIdHyphen}-${this.timestamp}`;
       console.log(`${colors.cyan}📁${colors.reset} ${colors.dim}Test directory:${colors.reset} ${this.testDir}`);
       console.log(`${colors.cyan}⏱️${colors.reset}  ${colors.dim}Durée:${colors.reset} ${colors.bright}${duration}s${colors.reset}`);
       console.log(`${colors.cyan}📊${colors.reset} ${colors.dim}Dashboard:${colors.reset} ${colors.blue}http://localhost:${this.config.docker.vitePort}${colors.reset}`);
       console.log(`\n${colors.dim}Pour validation Claude (optionnel):${colors.reset}`);
-      console.log(`  ${colors.gray}./cli/figma-validate node-${this.nodeIdHyphen}-${this.timestamp}${colors.reset}\n`);
+      console.log(`  ${colors.gray}./cli/figma-validate ${testId}${colors.reset}\n`);
+
+      // Output testId for server parsing (machine-readable format)
+      console.log(`TEST_ID: ${testId}`);
 
     } catch (error) {
       log.error(`ERREUR lors de la génération: ${error.message}`);

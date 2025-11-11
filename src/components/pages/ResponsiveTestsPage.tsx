@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo, useCallback, startTransition } from 'react'
 import { useResponsiveTests } from '../../hooks/useResponsiveTests'
+import { useTranslation } from '../../i18n/I18nContext'
 import { PaginationControls } from '../features/tests/PaginationControls'
 import ResponsiveTestsGrid from '../features/responsive-tests/ResponsiveTestsGrid'
 import ResponsiveTestsTable from '../features/responsive-tests/ResponsiveTestsTable'
@@ -26,12 +27,28 @@ type ViewMode = 'grid' | 'list'
 type SortOption = 'date-desc' | 'date-asc'
 
 export default function ResponsiveTestsPage() {
+  const { t } = useTranslation()
   const { tests, loading, reload } = useResponsiveTests()
+  const [settingsLoaded, setSettingsLoaded] = useState<boolean>(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [sortOption, setSortOption] = useState<SortOption>('date-desc')
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [itemsPerPage, setItemsPerPage] = useState<number>(12)
+
+  // Load settings on mount
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(settings => {
+        if (settings.ui) {
+          setViewMode(settings.ui.responsiveDefaultView || 'grid')
+          setItemsPerPage(settings.ui.responsiveItemsPerPage || 12)
+        }
+      })
+      .catch(err => console.error('Failed to load settings:', err))
+      .finally(() => setSettingsLoaded(true))
+  }, [])
 
   const sortedTests = useMemo(() => {
     const sorted = [...tests]
@@ -83,12 +100,12 @@ export default function ResponsiveTestsPage() {
     setCurrentPage(1)
   }, [sortOption, itemsPerPage])
 
-  if (loading) {
+  if (loading || !settingsLoaded) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p className="text-muted-foreground">Chargement des tests responsive...</p>
+          <p className="text-muted-foreground">{t('responsive.page.loading')}</p>
         </div>
       </div>
     )
@@ -104,21 +121,20 @@ export default function ResponsiveTestsPage() {
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
                 <MonitorSmartphone className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Tests Responsive</h2>
+                <h2 className="text-lg font-semibold">{t('responsive.page.title')}</h2>
               </div>
               <p className="text-sm text-muted-foreground">
-                Fusionnez 3 tests (Desktop, Tablet, Mobile) pour créer un composant responsive avec media queries automatiques.
-                Le système détecte les différences de classes CSS et génère les breakpoints optimisés.
+                {t('responsive.page.description')}
               </p>
               <div className="flex items-center gap-2 pt-2">
                 <Badge variant="secondary" className="text-xs">
-                  Desktop-First
+                  {t('responsive.page.badge_desktop_first')}
                 </Badge>
                 <Badge variant="secondary" className="text-xs">
-                  Media Queries
+                  {t('responsive.page.badge_media_queries')}
                 </Badge>
                 <Badge variant="secondary" className="text-xs">
-                  3 Breakpoints
+                  {t('responsive.page.badge_breakpoints')}
                 </Badge>
               </div>
             </div>
@@ -126,7 +142,7 @@ export default function ResponsiveTestsPage() {
             {/* Right: Action Button */}
             <Button onClick={() => setDialogOpen(true)} className="gap-2 flex-shrink-0">
               <Plus className="h-4 w-4" />
-              Nouveau Merge
+              {t('responsive.page.new_merge')}
             </Button>
           </div>
         </CardContent>
@@ -138,14 +154,14 @@ export default function ResponsiveTestsPage() {
             <Inbox className="h-16 w-16 text-muted-foreground/50" strokeWidth={1.5} />
           </div>
           <h3 className="mb-2 text-xl font-semibold">
-            Aucun test responsive
+            {t('responsive.page.no_tests_title')}
           </h3>
           <p className="text-muted-foreground mb-4">
-            Créez votre premier test responsive en fusionnant 3 tests existants
+            {t('responsive.page.no_tests_message')}
           </p>
           <Button onClick={() => setDialogOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" />
-            Créer un merge
+            {t('responsive.page.create_merge')}
           </Button>
         </div>
       ) : (
@@ -168,7 +184,7 @@ export default function ResponsiveTestsPage() {
               </ToggleGroup>
 
               <Badge variant="secondary">
-                {tests.length} test{tests.length > 1 ? 's' : ''}
+                {tests.length} {tests.length > 1 ? t('common.tests_plural') : t('common.tests')}
               </Badge>
             </div>
 
@@ -177,15 +193,15 @@ export default function ResponsiveTestsPage() {
               {/* Sort Selector */}
               <div className="flex items-center gap-2">
                 <Label htmlFor="sort" className="text-sm font-medium whitespace-nowrap">
-                  Trier par
+                  {t('home.sort_by')}
                 </Label>
                 <Select value={sortOption} onValueChange={(value) => handleSortOptionChange(value as SortOption)}>
                   <SelectTrigger id="sort" className="w-[180px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="date-desc">Plus récent</SelectItem>
-                    <SelectItem value="date-asc">Plus ancien</SelectItem>
+                    <SelectItem value="date-desc">{t('home.sort_options.date_desc')}</SelectItem>
+                    <SelectItem value="date-asc">{t('home.sort_options.date_asc')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -193,7 +209,7 @@ export default function ResponsiveTestsPage() {
               {/* Items Per Page Selector */}
               <div className="flex items-center gap-2">
                 <Label htmlFor="per-page" className="text-sm font-medium whitespace-nowrap">
-                  Par page
+                  {t('home.per_page')}
                 </Label>
                 <Select value={String(itemsPerPage)} onValueChange={(value: string) => handleItemsPerPageChange(Number(value))}>
                   <SelectTrigger id="per-page" className="w-[80px]">

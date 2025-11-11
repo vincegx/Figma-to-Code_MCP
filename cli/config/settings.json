@@ -25,7 +25,9 @@
   },
   "ui": {
     "defaultView": "list",
-    "itemsPerPage": 6
+    "itemsPerPage": 6,
+    "responsiveDefaultView": "list",
+    "responsiveItemsPerPage": 12
   },
   "screenshots": {
     "format": "png",

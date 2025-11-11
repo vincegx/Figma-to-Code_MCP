@@ -497,6 +497,53 @@ function extractRootLayoutProps(pageCode) {
 }
 
 /**
+ * Detect if a value is a number (pure number, money, percentage, etc.)
+ */
+function isNumericValue(value) {
+  if (typeof value === 'number') return true;
+  if (typeof value !== 'string') return false;
+
+  // Remove currency symbols, commas, percentages
+  const cleaned = value.replace(/[$,€£¥%\s]/g, '');
+
+  // Check if what remains is a valid number
+  return !isNaN(cleaned) && cleaned !== '';
+}
+
+/**
+ * Detect optimal field type based on prop name and value
+ */
+function detectFieldType(propName, defaultValue, category) {
+  // Images → object with url/mode/alt
+  if (category === 'image') {
+    return 'object';
+  }
+
+  // Visibility → radio
+  if (category === 'visibility') {
+    return 'radio';
+  }
+
+  // Text fields - detect number vs textarea vs text
+  if (category === 'text') {
+    // Check if it's a number
+    if (isNumericValue(defaultValue)) {
+      return 'number';
+    }
+
+    // Long text → textarea
+    if (defaultValue && defaultValue.length > 50) {
+      return 'textarea';
+    }
+
+    // Default to text
+    return 'text';
+  }
+
+  return 'text';
+}
+
+/**
  * Generate puck.config.tsx
  */
 function generatePuckConfig(components, extractedPropsMap, componentClassNames = {}, rootLayoutProps = {}) {
@@ -509,29 +556,52 @@ function generatePuckConfig(components, extractedPropsMap, componentClassNames =
 
     const fields = [];
 
-    // ClassName field (optional)
+    // ClassName field - always textarea for long CSS strings
     fields.push(`    className: {
-      type: 'text',
+      type: 'textarea',
       label: 'CSS Classes'
     }`);
 
-    // Text fields
+    // Text fields - auto-detect type (number, textarea, or text)
     props.texts.forEach(p => {
+      const fieldType = detectFieldType(p.propName, p.defaultValue, 'text');
+
       fields.push(`    ${p.propName}: {
-      type: 'text',
+      type: '${fieldType}',
       label: '${toLabel(p.propName)}'
     }`);
     });
 
-    // Image fields
+    // Image fields - use object with url/mode/alt
     props.images.forEach(p => {
       fields.push(`    ${p.propName}: {
-      type: 'text',
-      label: '${toLabel(p.propName)} URL'
+      type: 'object',
+      objectFields: {
+        url: {
+          type: 'text',
+          label: 'Image URL'
+        },
+        mode: {
+          type: 'select',
+          label: 'Display Mode',
+          options: [
+            { label: 'Cover', value: 'cover' },
+            { label: 'Contain', value: 'contain' },
+            { label: 'Fill', value: 'fill' },
+            { label: 'Scale Down', value: 'scale-down' },
+            { label: 'None', value: 'none' }
+          ]
+        },
+        alt: {
+          type: 'text',
+          label: 'Alt Text'
+        }
+      },
+      label: '${toLabel(p.propName)}'
     }`);
     });
 
-    // Visibility fields
+    // Visibility fields - radio buttons
     props.visibility.forEach(p => {
       fields.push(`    ${p.propName}: {
       type: 'radio',
@@ -550,8 +620,28 @@ function generatePuckConfig(components, extractedPropsMap, componentClassNames =
       defaultProps.push(`className: ${JSON.stringify(componentClassNames[name])}`);
     }
 
-    props.texts.forEach(p => defaultProps.push(`${p.propName}: ${JSON.stringify(p.defaultValue)}`));
-    props.images.forEach(p => defaultProps.push(`${p.propName}: ${JSON.stringify(p.defaultValue)}`));
+    // Text fields - handle numbers vs strings
+    props.texts.forEach(p => {
+      const fieldType = detectFieldType(p.propName, p.defaultValue, 'text');
+      if (fieldType === 'number') {
+        // Parse as number, removing currency/formatting
+        const numValue = parseFloat(p.defaultValue.replace(/[$,€£¥%\s]/g, ''));
+        defaultProps.push(`${p.propName}: ${numValue}`);
+      } else {
+        defaultProps.push(`${p.propName}: ${JSON.stringify(p.defaultValue)}`);
+      }
+    });
+
+    // Image fields - now objects with url/mode/alt
+    props.images.forEach(p => {
+      defaultProps.push(`${p.propName}: {
+        url: ${JSON.stringify(p.defaultValue)},
+        mode: 'cover',
+        alt: ''
+      }`);
+    });
+
+    // Visibility fields
     props.visibility.forEach(p => defaultProps.push(`${p.propName}: ${p.defaultValue}`));
 
     return `  ${name}: {
@@ -567,8 +657,14 @@ ${fields.join(',\n')}
       const transformedProps = { ...props };
 
       ${props.images.map(p => `
-      if (transformedProps.${p.propName} && !transformedProps.${p.propName}.startsWith('http') && !transformedProps.${p.propName}.startsWith('/api/')) {
-        transformedProps.${p.propName} = \`/api/responsive-tests/\${mergeId}/images/\${transformedProps.${p.propName}}\`;
+      // Transform image object to URL string for component
+      if (transformedProps.${p.propName} && typeof transformedProps.${p.propName} === 'object') {
+        const imgUrl = transformedProps.${p.propName}.url;
+        if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('/api/')) {
+          transformedProps.${p.propName} = \`/api/responsive-tests/\${mergeId}/images/\${imgUrl}\`;
+        } else {
+          transformedProps.${p.propName} = imgUrl;
+        }
       }`).join('')}
 
       return <${name} {...transformedProps} />;
@@ -809,14 +905,24 @@ export async function generatePuckComponents({ sourceDir, outputDir, imagesDir, 
       defaultProps.className = componentClassNames[componentName];
     }
 
-    // Add text props with default values
+    // Add text props with default values - parse numbers
     props.texts.forEach(p => {
-      defaultProps[p.propName] = p.defaultValue;
+      const fieldType = detectFieldType(p.propName, p.defaultValue, 'text');
+      if (fieldType === 'number') {
+        // Parse as number, removing currency/formatting
+        defaultProps[p.propName] = parseFloat(p.defaultValue.replace(/[$,€£¥%\s]/g, ''));
+      } else {
+        defaultProps[p.propName] = p.defaultValue;
+      }
     });
 
-    // Add image props with default values
+    // Add image props as objects with url/mode/alt
     props.images.forEach(p => {
-      defaultProps[p.propName] = p.defaultValue;
+      defaultProps[p.propName] = {
+        url: p.defaultValue,
+        mode: 'cover',
+        alt: ''
+      };
     });
 
     // Add visibility props with default values

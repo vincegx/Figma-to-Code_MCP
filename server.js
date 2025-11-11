@@ -24,6 +24,15 @@ app.use(express.json())
 const activeJobs = new Map()
 
 /**
+ * Strip ANSI color codes from text
+ * Removes escape sequences like [1m, [32m, [0m, etc.
+ */
+function stripAnsi(text) {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b\[[0-9;]*m/g, '')
+}
+
+/**
  * POST /api/analyze
  * Lance une analyse Figma
  */
@@ -49,7 +58,8 @@ app.post('/api/analyze', async (req, res) => {
     status: 'running',
     startTime: Date.now(),
     logs: [],
-    clients: []
+    clients: [],
+    testId: null // Will be extracted from logs
   }
 
   activeJobs.set(jobId, job)
@@ -69,22 +79,31 @@ app.post('/api/analyze', async (req, res) => {
   // Capture stdout
   child.stdout.on('data', (data) => {
     const log = data.toString()
-    job.logs.push(log)
+    const cleanLog = stripAnsi(log)
+    job.logs.push(cleanLog)
+
+    // Extract testId from logs (format: "TEST_ID: node-XXX-XXX")
+    const testIdMatch = cleanLog.match(/TEST_ID:\s*(node-[^\s\n]+)/)
+    if (testIdMatch) {
+      job.testId = testIdMatch[1].trim()
+      console.log('✓ Test ID extracted:', job.testId) // Debug log
+    }
 
     // Broadcast to all connected clients
     job.clients.forEach(client => {
-      client.write(`data: ${JSON.stringify({ type: 'log', message: log })}\n\n`)
+      client.write(`data: ${JSON.stringify({ type: 'log', message: cleanLog })}\n\n`)
     })
   })
 
   // Capture stderr
   child.stderr.on('data', (data) => {
     const log = data.toString()
-    job.logs.push(log)
+    const cleanLog = stripAnsi(log)
+    job.logs.push(cleanLog)
 
     // Broadcast to all connected clients
     job.clients.forEach(client => {
-      client.write(`data: ${JSON.stringify({ type: 'log', message: log })}\n\n`)
+      client.write(`data: ${JSON.stringify({ type: 'log', message: cleanLog })}\n\n`)
     })
   })
 
@@ -102,7 +121,7 @@ app.post('/api/analyze', async (req, res) => {
 
     // Broadcast completion to all clients
     job.clients.forEach(client => {
-      client.write(`data: ${JSON.stringify({ type: 'done', message: finalMessage, success: code === 0 })}\n\n`)
+      client.write(`data: ${JSON.stringify({ type: 'done', message: finalMessage, success: code === 0, testId: job.testId })}\n\n`)
     })
 
     // Don't close connections, let clients handle it
@@ -158,7 +177,7 @@ app.get('/api/analyze/logs/:jobId', (req, res) => {
 
   // Send initial status if job already completed
   if (job.status === 'completed') {
-    res.write(`data: ${JSON.stringify({ type: 'done', success: true })}\n\n`)
+    res.write(`data: ${JSON.stringify({ type: 'done', success: true, testId: job.testId })}\n\n`)
   } else if (job.status === 'failed') {
     res.write(`data: ${JSON.stringify({ type: 'done', success: false })}\n\n`)
   }
@@ -623,22 +642,24 @@ app.post('/api/responsive-tests/merge', async (req, res) => {
   // Capture stdout
   child.stdout.on('data', (data) => {
     const log = data.toString()
-    job.logs.push(log)
+    const cleanLog = stripAnsi(log)
+    job.logs.push(cleanLog)
 
     // Broadcast to all connected clients
     job.clients.forEach(client => {
-      client.write(`data: ${JSON.stringify({ type: 'log', message: log })}\n\n`)
+      client.write(`data: ${JSON.stringify({ type: 'log', message: cleanLog })}\n\n`)
     })
   })
 
   // Capture stderr
   child.stderr.on('data', (data) => {
     const log = data.toString()
-    job.logs.push(log)
+    const cleanLog = stripAnsi(log)
+    job.logs.push(cleanLog)
 
     // Broadcast to all connected clients
     job.clients.forEach(client => {
-      client.write(`data: ${JSON.stringify({ type: 'log', message: log })}\n\n`)
+      client.write(`data: ${JSON.stringify({ type: 'log', message: cleanLog })}\n\n`)
     })
   })
 
@@ -1056,7 +1077,9 @@ app.post('/api/settings/reset', (req, res) => {
       },
       "ui": {
         "defaultView": "grid",
-        "itemsPerPage": 12
+        "itemsPerPage": 12,
+        "responsiveDefaultView": "grid",
+        "responsiveItemsPerPage": 12
       },
       "screenshots": {
         "format": "png",

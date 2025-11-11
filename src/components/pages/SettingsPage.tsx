@@ -10,9 +10,11 @@ import { Slider } from '@/components/ui/slider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Settings, Palette, Save, RotateCcw, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Settings, Palette, Save, RotateCcw, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react'
 import { useTranslation } from '../../i18n/I18nContext'
 import { useConfirm } from '../../hooks/useConfirm'
+import AnalysisForm from '../features/analysis/AnalysisForm'
+import { useTests } from '../../hooks/useTests'
 
 type Settings = {
   mcp: {
@@ -42,6 +44,8 @@ type Settings = {
   ui: {
     defaultView: 'grid' | 'list'
     itemsPerPage: number
+    responsiveDefaultView: 'grid' | 'list'
+    responsiveItemsPerPage: number
   }
   screenshots: {
     format: 'png' | 'jpg'
@@ -61,6 +65,7 @@ type Settings = {
 export default function SettingsPage() {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
+  const { reload: reloadTests } = useTests()
   const [settings, setSettings] = useState<Settings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -211,16 +216,25 @@ export default function SettingsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="interface" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="interface">
             <Palette className="h-4 w-4 mr-2" />
             {t('settings.tabs.ui')}
+          </TabsTrigger>
+          <TabsTrigger value="analysis">
+            <Sparkles className="h-4 w-4 mr-2" />
+            Analyse Figma
           </TabsTrigger>
           <TabsTrigger value="advanced">
             <Settings className="h-4 w-4 mr-2" />
             {t('settings.tabs.advanced')}
           </TabsTrigger>
         </TabsList>
+
+        {/* Analysis Tab */}
+        <TabsContent value="analysis" className="space-y-4">
+          <AnalysisForm onAnalysisComplete={reloadTests} />
+        </TabsContent>
 
         {/* Interface Tab */}
         <TabsContent value="interface" className="space-y-4">
@@ -231,39 +245,93 @@ export default function SettingsPage() {
                 {t('settings.ui.description')}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="defaultView">{t('settings.ui.default_view')}</Label>
-                <Select
-                  value={settings.ui.defaultView}
-                  onValueChange={(value) => updateSetting(['ui', 'defaultView'], value)}
-                >
-                  <SelectTrigger id="defaultView">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="grid">{t('settings.ui.view_grid')}</SelectItem>
-                    <SelectItem value="list">{t('settings.ui.view_list')}</SelectItem>
-                  </SelectContent>
-                </Select>
+            <CardContent className="space-y-6">
+              {/* Tests Page Settings */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold">Page des Tests Figma</h3>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="defaultView">{t('settings.ui.default_view')}</Label>
+                  <Select
+                    value={settings.ui.defaultView}
+                    onValueChange={(value) => updateSetting(['ui', 'defaultView'], value)}
+                  >
+                    <SelectTrigger id="defaultView">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="grid">{t('settings.ui.view_grid')}</SelectItem>
+                      <SelectItem value="list">{t('settings.ui.view_list')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="itemsPerPage">{t('settings.ui.items_per_page')}</Label>
+                  <Select
+                    value={settings.ui.itemsPerPage.toString()}
+                    onValueChange={(value) => updateSetting(['ui', 'itemsPerPage'], parseInt(value))}
+                  >
+                    <SelectTrigger id="itemsPerPage">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="6">6</SelectItem>
+                      <SelectItem value="12">12</SelectItem>
+                      <SelectItem value="24">24</SelectItem>
+                      <SelectItem value="48">48</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="itemsPerPage">{t('settings.ui.items_per_page')}</Label>
-                <Select
-                  value={settings.ui.itemsPerPage.toString()}
-                  onValueChange={(value) => updateSetting(['ui', 'itemsPerPage'], parseInt(value))}
-                >
-                  <SelectTrigger id="itemsPerPage">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="6">6</SelectItem>
-                    <SelectItem value="12">12</SelectItem>
-                    <SelectItem value="24">24</SelectItem>
-                    <SelectItem value="48">48</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Separator />
+
+              {/* Responsive Tests Page Settings */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold">Page des Tests Responsive</h3>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="responsiveDefaultView">Vue par défaut (Responsive)</Label>
+                  <Select
+                    value={settings.ui.responsiveDefaultView}
+                    onValueChange={(value) => updateSetting(['ui', 'responsiveDefaultView'], value)}
+                  >
+                    <SelectTrigger id="responsiveDefaultView">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="grid">Grille</SelectItem>
+                      <SelectItem value="list">Liste</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="responsiveItemsPerPage">Éléments par page (Responsive)</Label>
+                  <Select
+                    value={settings.ui.responsiveItemsPerPage.toString()}
+                    onValueChange={(value) => updateSetting(['ui', 'responsiveItemsPerPage'], parseInt(value))}
+                  >
+                    <SelectTrigger id="responsiveItemsPerPage">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="4">4</SelectItem>
+                      <SelectItem value="8">8</SelectItem>
+                      <SelectItem value="12">12</SelectItem>
+                      <SelectItem value="16">16</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="24">24</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>

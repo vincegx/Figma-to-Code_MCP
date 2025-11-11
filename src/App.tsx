@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate, useSearchParams, useParams, use
 import './App.css'
 import MainLayout from './components/layout/MainLayout'
 import DashboardPage from './components/pages/DashboardPage'
-import AnalyzePage from './components/pages/AnalyzePage'
 import TestsPage from './components/pages/TestsPage'
 import TestDetailPage from './components/pages/TestDetailPage'
 import ResponsiveTestsPage from './components/pages/ResponsiveTestsPage'
@@ -30,7 +29,6 @@ function App() {
         {/* Main app routes with layout */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/analyze" element={<AnalyzePage />} />
           <Route path="/tests" element={<TestsPage />} />
           <Route path="/tests/:testId" element={<TestDetailWrapper />} />
           <Route path="/responsive-tests" element={<ResponsiveTestsPage />} />

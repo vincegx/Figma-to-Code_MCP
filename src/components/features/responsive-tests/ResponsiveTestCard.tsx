@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback, memo } from 'react'
-import { ExternalLink, Trash2, Eye, ChevronRight, Loader2, Monitor, Tablet, Smartphone, Edit } from 'lucide-react'
+import { Trash2, ChevronRight, Loader2, Monitor, Tablet, Smartphone, Edit } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useConfirm } from '../../../hooks/useConfirm'
 import { useAlert } from '../../../hooks/useAlert'
+import { useTranslation } from '../../../i18n/I18nContext'
 import type { ResponsiveTest } from '../../../hooks/useResponsiveTests'
 
 interface ResponsiveTestCardProps {
@@ -14,6 +15,7 @@ interface ResponsiveTestCardProps {
 }
 
 export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRefresh }: ResponsiveTestCardProps) {
+  const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
   const { alert, AlertDialogComponent } = useAlert()
   const navigate = useNavigate()
@@ -33,10 +35,10 @@ export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRef
     e.stopPropagation()
 
     const confirmed = await confirm({
-      title: 'Supprimer le test responsive',
-      description: 'Êtes-vous sûr de vouloir supprimer ce test responsive ? Cette action est irréversible.',
-      confirmText: 'Supprimer',
-      cancelText: 'Annuler',
+      title: t('responsive.card.delete_confirm_title'),
+      description: t('responsive.card.delete_confirm_description'),
+      confirmText: t('responsive.card.delete_confirm_button'),
+      cancelText: t('responsive.card.delete_cancel_button'),
       variant: 'destructive'
     })
 
@@ -53,21 +55,21 @@ export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRef
         }
       } else {
         alert({
-          title: 'Erreur',
-          description: 'Impossible de supprimer le test responsive',
+          title: t('responsive.card.delete_error_title'),
+          description: t('responsive.card.delete_error_description'),
           variant: 'destructive'
         })
         setIsDeleting(false)
       }
     } catch (error) {
       alert({
-        title: 'Erreur',
-        description: 'Impossible de supprimer le test responsive',
+        title: t('responsive.card.delete_error_title'),
+        description: t('responsive.card.delete_error_description'),
         variant: 'destructive'
       })
       setIsDeleting(false)
     }
-  }, [test.mergeId, confirm, alert, onRefresh])
+  }, [test.mergeId, confirm, alert, onRefresh, t])
 
   // Thumbnails paths for 3 breakpoints
   const desktopThumbnail = useMemo(
@@ -171,23 +173,14 @@ export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRef
           </div>
 
           {/* Hover Overlay with Actions */}
-          <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/40 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-8 w-8 p-0"
-              onClick={handleOpenPreview}
-              title="Ouvrir le preview"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
+          <div className="absolute inset-x-0 top-0 flex items-start justify-end gap-2 bg-gradient-to-b from-black/40 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <Button
               size="sm"
               variant="destructive"
               className="h-8 w-8 p-0"
               onClick={handleDelete}
               disabled={isDeleting}
-              title="Supprimer"
+              title={t('responsive.card.delete')}
             >
               {isDeleting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -204,16 +197,16 @@ export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRef
           {test.mergeStats && (
             <div className="mb-3 flex flex-wrap gap-1.5">
               <Badge variant="secondary" className="text-[10px]">
-                {test.components?.length || 0} composants
+                {test.components?.length || 0} {t('responsive.card.components')}
               </Badge>
               {test.mergeStats.successCount > 0 && (
                 <Badge variant="default" className="text-[10px] bg-green-500">
-                  ✓ {test.mergeStats.successCount} réussis
+                  ✓ {test.mergeStats.successCount} {t('responsive.card.successful')}
                 </Badge>
               )}
               {test.mergeStats.errorCount > 0 && (
                 <Badge variant="destructive" className="text-[10px]">
-                  ✗ {test.mergeStats.errorCount} erreurs
+                  ✗ {test.mergeStats.errorCount} {t('responsive.card.errors')}
                 </Badge>
               )}
             </div>
@@ -222,7 +215,7 @@ export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRef
           {/* Title + Date/ID */}
           <div className="mb-4 flex items-start justify-between gap-3">
             <h3 className="truncate text-base font-semibold flex-1 min-w-0">
-              Responsive Merge
+              {t('responsive.card.title')}
             </h3>
             <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
               <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -240,14 +233,6 @@ export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRef
               variant="outline"
               size="sm"
               className="gap-2"
-              onClick={handleOpenPreview}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
               onClick={handleOpenPuck}
             >
               <Edit className="h-4 w-4" />
@@ -258,7 +243,7 @@ export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRef
               className="flex-1 gap-2"
               onClick={handleOpenPreview}
             >
-              <span>Voir le preview</span>
+              <span>{t('responsive.card.view_preview')}</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

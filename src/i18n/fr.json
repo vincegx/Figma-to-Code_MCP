@@ -192,6 +192,36 @@
       "daily_limit_estimated": "Limite quotidienne estimée à ~4M tokens (texte + images inclus)"
     }
   },
+  "responsive": {
+    "page": {
+      "title": "Tests Responsive",
+      "description": "Fusionnez 3 tests (Desktop, Tablet, Mobile) pour créer un composant responsive avec media queries automatiques. Le système détecte les différences de classes CSS et génère les breakpoints optimisés.",
+      "badge_desktop_first": "Desktop-First",
+      "badge_media_queries": "Media Queries",
+      "badge_breakpoints": "3 Breakpoints",
+      "new_merge": "Nouveau Merge",
+      "loading": "Chargement des tests responsive...",
+      "no_tests_title": "Aucun test responsive",
+      "no_tests_message": "Créez votre premier test responsive en fusionnant 3 tests existants",
+      "create_merge": "Créer un merge"
+    },
+    "card": {
+      "title": "Responsive Merge",
+      "delete": "Supprimer",
+      "open_preview": "Ouvrir le preview",
+      "edit_puck": "Éditer avec Puck",
+      "view_preview": "Voir le preview",
+      "components": "composants",
+      "successful": "réussis",
+      "errors": "erreurs",
+      "delete_confirm_title": "Supprimer le test responsive",
+      "delete_confirm_description": "Êtes-vous sûr de vouloir supprimer ce test responsive ? Cette action est irréversible.",
+      "delete_confirm_button": "Supprimer",
+      "delete_cancel_button": "Annuler",
+      "delete_error_title": "Erreur",
+      "delete_error_description": "Impossible de supprimer le test responsive"
+    }
+  },
   "settings": {
     "title": "Paramètres",
     "subtitle": "Configurez votre outil Figma to Code",

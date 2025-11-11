@@ -32,13 +32,6 @@ export const SiteHeader = memo(function SiteHeader({ mcpConnected, mcpChecking }
       return [{ label: 'Dashboard', href: '/', isLast: true }]
     }
 
-    // Analyze
-    if (path === '/analyze') {
-      return [
-        { label: 'Dashboard', href: '/', isLast: false },
-        { label: t('analysis.title'), href: '/analyze', isLast: true }
-      ]
-    }
 
     // Tests list
     if (path === '/tests') {
