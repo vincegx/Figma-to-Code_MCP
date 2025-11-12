@@ -95,6 +95,7 @@ export function ControlsBar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="4">4</SelectItem>
+              <SelectItem value="6">6</SelectItem>
               <SelectItem value="8">8</SelectItem>
               <SelectItem value="12">12</SelectItem>
               <SelectItem value="16">16</SelectItem>
