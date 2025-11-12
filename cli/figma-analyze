@@ -27,31 +27,31 @@ EOF
 echo -e "${NC}"
 
 echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  MCP Figma to Code V1${NC} - Générateur de composants React avec fidélité visuelle 100%"
+echo -e "${BOLD}  MCP Figma to Code V1${NC} - React component generator with 100% visual fidelity"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo -e "  ${CYAN}📦 Fonctionnalités :${NC}"
-echo -e "     • Extraction MCP parallèle (design, screenshot, variables, metadata)"
-echo -e "     • Pipeline AST avec 9 transformations (fonts, layout, SVG, CSS vars...)"
-echo -e "     • Chunking automatique pour designs complexes (>25k tokens)"
-echo -e "     • Validation visuelle (Figma vs Web render)"
-echo -e "     • Génération React + Tailwind + CSS prêt pour production"
+echo -e "  ${CYAN}📦 Features:${NC}"
+echo -e "     • Parallel MCP extraction (design, screenshot, variables, metadata)"
+echo -e "     • AST pipeline with 9 transformations (fonts, layout, SVG, CSS vars...)"
+echo -e "     • Automatic chunking for complex designs (>25k tokens)"
+echo -e "     • Visual validation (Figma vs Web render)"
+echo -e "     • Production-ready React + Tailwind + CSS generation"
 echo ""
-echo -e "  ${YELLOW}⚡ Performance :${NC}"
-echo -e "     • Design simple : ~10-15s"
-echo -e "     • Design complexe : ~25-40s"
-echo -e "     • Write tool optimisé (84% plus rapide)"
+echo -e "  ${YELLOW}⚡ Performance:${NC}"
+echo -e "     • Simple design: ~10-15s"
+echo -e "     • Complex design: ~25-40s"
+echo -e "     • Optimized write tool (84% faster)"
 echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
 # Check arguments
 if [ -z "$1" ]; then
-  echo -e "${RED}❌ URL Figma manquante${NC}"
+  echo -e "${RED}❌ Missing Figma URL${NC}"
   echo ""
   echo "Usage: ./figma-analyze \"https://www.figma.com/design/FILE_ID?node-id=X-Y\""
   echo ""
-  echo "Exemple:"
+  echo "Example:"
   echo "  ./figma-analyze \"https://www.figma.com/design/abc123?node-id=9-2654\""
   exit 1
 fi
@@ -60,13 +60,13 @@ FIGMA_URL="$1"
 
 # Check Docker container is running
 if ! docker ps | grep -q mcp-figma-v1; then
-  echo -e "${YELLOW}⚠️  Container Docker non lancé${NC}"
+  echo -e "${YELLOW}⚠️  Docker container not running${NC}"
   echo ""
-  echo "Lancement du container..."
+  echo "Starting container..."
   docker-compose up -d
 
   # Wait for container to be ready
-  echo "Attente du démarrage (10s)..."
+  echo "Waiting for startup (10s)..."
   sleep 10
 fi
 
@@ -74,7 +74,7 @@ fi
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Run figma-cli.js in Docker
-echo -e "${GREEN}🚀 Lancement de figma-analyze dans Docker...${NC}"
+echo -e "${GREEN}🚀 Starting figma-analyze in Docker...${NC}"
 echo ""
 
 docker exec -e "PROJECT_ROOT=$PROJECT_ROOT" mcp-figma-v1 node scripts/figma-cli.js "$FIGMA_URL"
@@ -82,8 +82,8 @@ docker exec -e "PROJECT_ROOT=$PROJECT_ROOT" mcp-figma-v1 node scripts/figma-cli.
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
-  echo -e "${GREEN}✅ Analyse terminée avec succès${NC}"
+  echo -e "${GREEN}✅ Analysis completed successfully${NC}"
 else
-  echo -e "${RED}❌ Erreur lors de l'analyse (code: $exit_code)${NC}"
+  echo -e "${RED}❌ Analysis error (code: $exit_code)${NC}"
   exit $exit_code
 fi

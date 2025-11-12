@@ -27,17 +27,17 @@ EOF
 echo -e "${NC}"
 
 echo -e "${BOLD}${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  Responsive Merger${NC} - Fusion de 3 breakpoints en composants responsives"
+echo -e "${BOLD}  Responsive Merger${NC} - Merge 3 breakpoints into responsive components"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo -e "  ${CYAN}📦 Fonctionnalités :${NC}"
-echo -e "     • Merge 3 tests Figma (Desktop, Tablet, Mobile) en composants responsives"
-echo -e "     • Génère media queries CSS automatiques (@media)"
-echo -e "     • Préserve la structure parent/containers des designs Figma"
-echo -e "     • Copie et organise les images pour les subcomposants"
-echo -e "     • 100% CSS-only (pas de logic swap de composants)"
+echo -e "  ${CYAN}📦 Features:${NC}"
+echo -e "     • Merge 3 Figma exports (Desktop, Tablet, Mobile) into responsive components"
+echo -e "     • Generate automatic CSS media queries (@media)"
+echo -e "     • Preserve parent/container structure from Figma designs"
+echo -e "     • Copy and organize images for subcomponents"
+echo -e "     • 100% CSS-only (no component swapping logic)"
 echo ""
-echo -e "  ${YELLOW}⚡ Stratégie :${NC}"
+echo -e "  ${YELLOW}⚡ Strategy:${NC}"
 echo -e "     • Desktop = Base styles (no media query)"
 echo -e "     • Tablet  = Overrides @media (max-width: XXXpx)"
 echo -e "     • Mobile  = Overrides @media (max-width: XXXpx)"
@@ -47,17 +47,17 @@ echo ""
 
 # Check arguments
 if [ "$#" -ne 6 ]; then
-  echo -e "${RED}❌ Arguments manquants${NC}"
+  echo -e "${RED}❌ Missing arguments${NC}"
   echo ""
   echo "Usage: ./figma-merge <desktop-width> <desktop-test-id> <tablet-width> <tablet-test-id> <mobile-width> <mobile-test-id>"
   echo ""
-  echo "Exemple:"
+  echo "Example:"
   echo "  ./figma-merge 1440px node-6055-2436-1762733564 960px node-6055-2654-1762712319 420px node-6055-2872-1762733537"
   echo ""
   echo "Arguments:"
-  echo "  --desktop <width> <test-id>  : Desktop breakpoint (ex: 1440px node-6055-2436-...)"
-  echo "  --tablet  <width> <test-id>  : Tablet breakpoint (ex: 960px node-6055-2654-...)"
-  echo "  --mobile  <width> <test-id>  : Mobile breakpoint (ex: 420px node-6055-2872-...)"
+  echo "  --desktop <width> <test-id>  : Desktop breakpoint (e.g., 1440px node-6055-2436-...)"
+  echo "  --tablet  <width> <test-id>  : Tablet breakpoint (e.g., 960px node-6055-2654-...)"
+  echo "  --mobile  <width> <test-id>  : Mobile breakpoint (e.g., 420px node-6055-2872-...)"
   exit 1
 fi
 
@@ -70,13 +70,13 @@ MOBILE_ID="$6"
 
 # Check Docker container is running
 if ! docker ps | grep -q mcp-figma-v1; then
-  echo -e "${YELLOW}⚠️  Container Docker non lancé${NC}"
+  echo -e "${YELLOW}⚠️  Docker container not running${NC}"
   echo ""
-  echo "Lancement du container..."
+  echo "Starting container..."
   docker-compose up -d
 
   # Wait for container to be ready
-  echo "Attente du démarrage (10s)..."
+  echo "Waiting for startup (10s)..."
   sleep 10
 fi
 
@@ -84,32 +84,32 @@ fi
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Step 1: Split components for all 3 tests
-echo -e "${CYAN}🔪 Étape 1/4: Splitting Desktop components...${NC}"
+echo -e "${CYAN}🔪 Step 1/4: Splitting Desktop components...${NC}"
 docker exec mcp-figma-v1 node scripts/post-processing/component-splitter.js "/app/src/generated/export_figma/$DESKTOP_ID"
 if [ $? -ne 0 ]; then
-  echo -e "${RED}❌ Erreur lors du split Desktop${NC}"
+  echo -e "${RED}❌ Desktop split error${NC}"
   exit 1
 fi
 
 echo ""
-echo -e "${CYAN}🔪 Étape 2/4: Splitting Tablet components...${NC}"
+echo -e "${CYAN}🔪 Step 2/4: Splitting Tablet components...${NC}"
 docker exec mcp-figma-v1 node scripts/post-processing/component-splitter.js "/app/src/generated/export_figma/$TABLET_ID"
 if [ $? -ne 0 ]; then
-  echo -e "${RED}❌ Erreur lors du split Tablet${NC}"
+  echo -e "${RED}❌ Tablet split error${NC}"
   exit 1
 fi
 
 echo ""
-echo -e "${CYAN}🔪 Étape 3/4: Splitting Mobile components...${NC}"
+echo -e "${CYAN}🔪 Step 3/4: Splitting Mobile components...${NC}"
 docker exec mcp-figma-v1 node scripts/post-processing/component-splitter.js "/app/src/generated/export_figma/$MOBILE_ID"
 if [ $? -ne 0 ]; then
-  echo -e "${RED}❌ Erreur lors du split Mobile${NC}"
+  echo -e "${RED}❌ Mobile split error${NC}"
   exit 1
 fi
 
 # Step 2: Run responsive-merger.js in Docker
 echo ""
-echo -e "${GREEN}🚀 Étape 4/4: Lancement du Responsive Merger dans Docker...${NC}"
+echo -e "${GREEN}🚀 Step 4/4: Starting Responsive Merger in Docker...${NC}"
 echo ""
 
 docker exec -e "PROJECT_ROOT=$PROJECT_ROOT" mcp-figma-v1 node scripts/responsive-merger.js \
@@ -120,8 +120,8 @@ docker exec -e "PROJECT_ROOT=$PROJECT_ROOT" mcp-figma-v1 node scripts/responsive
 exit_code=$?
 
 if [ $exit_code -eq 0 ]; then
-  echo -e "${GREEN}✅ Merge terminé avec succès${NC}"
+  echo -e "${GREEN}✅ Merge completed successfully${NC}"
 else
-  echo -e "${RED}❌ Erreur lors du merge (code: $exit_code)${NC}"
+  echo -e "${RED}❌ Merge error (code: $exit_code)${NC}"
   exit $exit_code
 fi
