@@ -3,6 +3,7 @@ import { ExternalLink, Trash2, Eye, ChevronRight, Loader2 } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useTranslation } from '../../../i18n/I18nContext'
 import { useConfirm } from '../../../hooks/useConfirm'
 import { useAlert } from '../../../hooks/useAlert'
@@ -26,9 +27,11 @@ interface TestCardProps {
   test: Test
   onSelect: () => void
   onRefresh?: () => void
+  isSelected?: boolean
+  onToggleSelection?: () => void
 }
 
-export const TestCard = memo(function TestCard({ test, onSelect, onRefresh }: TestCardProps) {
+export const TestCard = memo(function TestCard({ test, onSelect, onRefresh, isSelected, onToggleSelection }: TestCardProps) {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
   const { alert, AlertDialogComponent } = useAlert()
@@ -115,6 +118,7 @@ export const TestCard = memo(function TestCard({ test, onSelect, onRefresh }: Te
         className="group cursor-pointer overflow-hidden transition-shadow duration-200 hover:shadow-lg"
         onClick={onSelect}
         style={{ contain: 'layout style paint' }}
+        data-state={isSelected ? "selected" : undefined}
       >
         {/* Thumbnail */}
       <div className="relative h-52 w-full overflow-hidden bg-muted">
@@ -134,8 +138,19 @@ export const TestCard = memo(function TestCard({ test, onSelect, onRefresh }: Te
           🎨
         </div>
 
+        {/* Checkbox - Always visible */}
+        {onToggleSelection && (
+          <div className="absolute top-3 left-3 z-10" onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={onToggleSelection}
+              className="h-5 w-5 bg-background border-2 shadow-sm"
+            />
+          </div>
+        )}
+
         {/* Hover Overlay with Actions */}
-        <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 bg-gradient-to-b from-black/40 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        <div className="absolute inset-x-0 top-0 flex items-start justify-end gap-2 bg-gradient-to-b from-black/40 to-transparent p-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
           <Button
             size="sm"
             variant="secondary"

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useConfirm } from '../../../hooks/useConfirm'
 import { useAlert } from '../../../hooks/useAlert'
 import { useTranslation } from '../../../i18n/I18nContext'
@@ -12,9 +13,11 @@ import type { ResponsiveTest } from '../../../hooks/useResponsiveTests'
 interface ResponsiveTestCardProps {
   test: ResponsiveTest
   onRefresh?: () => void
+  isSelected?: boolean
+  onToggleSelection?: () => void
 }
 
-export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRefresh }: ResponsiveTestCardProps) {
+export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRefresh, isSelected, onToggleSelection }: ResponsiveTestCardProps) {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
   const { alert, AlertDialogComponent } = useAlert()
@@ -109,9 +112,21 @@ export const ResponsiveTestCard = memo(function ResponsiveTestCard({ test, onRef
         className="group cursor-pointer overflow-hidden transition-shadow duration-200 hover:shadow-lg"
         onClick={handleOpenPreview}
         style={{ contain: 'layout style paint' }}
+        data-state={isSelected ? "selected" : undefined}
       >
         {/* 3 Thumbnails Side by Side */}
         <div className="relative h-52 w-full flex overflow-hidden bg-muted">
+          {/* Checkbox - Always visible */}
+          {onToggleSelection && (
+            <div className="absolute top-3 left-3 z-10" onClick={(e) => e.stopPropagation()}>
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={onToggleSelection}
+                className="h-5 w-5 bg-background border-2 shadow-sm"
+              />
+            </div>
+          )}
+
           {/* Desktop */}
           <div className="relative flex-1 h-full overflow-hidden border-r border-border/50">
             <img

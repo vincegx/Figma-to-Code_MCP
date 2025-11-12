@@ -17,10 +17,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { SelectionBar } from "@/components/ui/SelectionBar"
 import { MoreVertical, ExternalLink, Trash2, Eye, Loader2, Package, FileImage, Zap, Layers } from 'lucide-react'
 import { useTranslation } from '../../../i18n/I18nContext'
 import { useConfirm } from '../../../hooks/useConfirm'
 import { useAlert } from '../../../hooks/useAlert'
+import { useSelection } from '../../../hooks/useSelection'
 
 interface Test {
   testId: string
@@ -47,27 +49,11 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest, onRefresh }: 
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
   const { alert, AlertDialogComponent } = useAlert()
-  const [selectedTests, setSelectedTests] = useState<Set<string>>(new Set())
   const [deletingTests, setDeletingTests] = useState<Set<string>>(new Set())
   const [isDeletingMultiple, setIsDeletingMultiple] = useState(false)
 
-  const toggleTestSelection = (testId: string) => {
-    const newSelection = new Set(selectedTests)
-    if (newSelection.has(testId)) {
-      newSelection.delete(testId)
-    } else {
-      newSelection.add(testId)
-    }
-    setSelectedTests(newSelection)
-  }
-
-  const toggleAllTests = () => {
-    if (selectedTests.size === tests.length && tests.length > 0) {
-      setSelectedTests(new Set())
-    } else {
-      setSelectedTests(new Set(tests.map(t => t.testId)))
-    }
-  }
+  // Use selection hook
+  const selection = useSelection(tests, (test) => test.testId)
 
   const handleDelete = async (testId: string) => {
     const confirmed = await confirm({
@@ -117,11 +103,11 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest, onRefresh }: 
   }
 
   const handleDeleteSelected = async () => {
-    if (selectedTests.size === 0) return
+    if (selection.selectedCount === 0) return
 
     const confirmed = await confirm({
       title: t('home.table.delete_selected'),
-      description: t('home.table.delete_selected_confirm', { count: selectedTests.size.toString() }),
+      description: t('home.table.delete_selected_confirm', { count: selection.selectedCount.toString() }),
       confirmText: t('home.table.delete_selected'),
       cancelText: t('common.close'),
       variant: 'destructive'
@@ -131,10 +117,12 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest, onRefresh }: 
 
     setIsDeletingMultiple(true)
     try {
-      const deletePromises = Array.from(selectedTests).map(testId =>
+      const deletePromises = Array.from(selection.selectedIds).map(testId =>
         fetch(`/api/tests/${testId}`, { method: 'DELETE' })
       )
       await Promise.all(deletePromises)
+      selection.clearSelection()
+      setIsDeletingMultiple(false)
       // Call refresh callback instead of window.location.reload()
       if (onRefresh) {
         onRefresh()
@@ -182,31 +170,11 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest, onRefresh }: 
 
       <div className="space-y-4">
         {/* Selection Bar */}
-      {selectedTests.size > 0 && (
-        <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-2">
-          <span className="text-sm text-muted-foreground">
-            {selectedTests.size} {t('home.table.selected')}
-          </span>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleDeleteSelected}
-            disabled={isDeletingMultiple}
-          >
-            {isDeletingMultiple ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t('home.table.deleting')}
-              </>
-            ) : (
-              <>
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('home.table.delete_selected')}
-              </>
-            )}
-          </Button>
-        </div>
-      )}
+        <SelectionBar
+          selectedCount={selection.selectedCount}
+          onDelete={handleDeleteSelected}
+          isDeleting={isDeletingMultiple}
+        />
 
       {/* Table */}
       <div className="rounded-lg border">
@@ -215,8 +183,8 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest, onRefresh }: 
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedTests.size === tests.length && tests.length > 0}
-                  onCheckedChange={toggleAllTests}
+                  checked={selection.isAllSelected}
+                  onCheckedChange={selection.toggleAll}
                   aria-label={t('home.table.select_all')}
                 />
               </TableHead>
@@ -239,7 +207,7 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest, onRefresh }: 
               tests.map((test) => {
                 const thumbnailPath = `/src/generated/tests/${test.testId}/img/figma-screenshot.png`
                 const isDeleting = deletingTests.has(test.testId)
-                const isSelected = selectedTests.has(test.testId)
+                const isSelected = selection.isSelected(test.testId)
 
                 return (
                   <TableRow
@@ -251,7 +219,7 @@ const TestsTable = memo(function TestsTable({ tests, onSelectTest, onRefresh }: 
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={isSelected}
-                        onCheckedChange={() => toggleTestSelection(test.testId)}
+                        onCheckedChange={() => selection.toggleSelection(test.testId)}
                         aria-label={t('home.table.select_row')}
                       />
                     </TableCell>
