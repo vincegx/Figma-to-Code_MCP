@@ -47,7 +47,7 @@ export function PreviewNavbar({
               {/* Left: Navigation buttons */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.history.back()}
+                  onClick={() => detailUrl ? window.location.href = detailUrl : window.history.back()}
                   className="inline-flex items-center justify-center h-9 px-4 rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">

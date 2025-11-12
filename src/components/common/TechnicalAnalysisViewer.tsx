@@ -1,6 +1,6 @@
 /**
  * TechnicalAnalysisViewer - Composant réutilisable pour afficher l'analyse technique
- * Utilisé par TestDetailPage et ResponsiveTestDetailPage
+ * Utilisé par ExportFigmaDetailPage et ResponsiveMergeDetailPage
  */
 
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'

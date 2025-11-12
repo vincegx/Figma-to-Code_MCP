@@ -9,6 +9,8 @@
     "ok": "OK",
     "exports": "export",
     "exports_plural": "exports",
+    "merges": "merge",
+    "merges_plural": "merges",
     "nodes": "nodes",
     "sections": "sections",
     "images": "images",
@@ -29,6 +31,12 @@
     }
   },
   "home": {
+    "title": "Figma Analyses",
+    "description": "Convert your Figma designs into pixel-perfect React + Tailwind CSS components. The system uses an AST pipeline with 11 transformations to ensure maximum visual fidelity.",
+    "badge_react": "React 19",
+    "badge_tailwind": "Tailwind CSS",
+    "badge_ast": "AST Pipeline",
+    "new_analysis": "New Analysis",
     "loading_exports": "Loading exports...",
     "view": "View:",
     "sort_by": "Sort by:",
@@ -119,7 +127,7 @@
     "preview": {
       "banner_title": "Figma component render",
       "banner_text": "This component was automatically generated from Figma via MCP. Use DevTools (F12) to inspect Tailwind classes.",
-      "responsive_test": "Responsive Test",
+      "responsive_test": "Responsive Merge",
       "native": "Native",
       "presets": {
         "native": "🎯 Native",
@@ -194,16 +202,39 @@
   },
   "responsive": {
     "page": {
-      "title": "Responsive Tests",
-      "description": "Merge 3 tests (Desktop, Tablet, Mobile) to create a responsive component with automatic media queries. The system detects CSS class differences and generates optimized breakpoints.",
+      "title": "Responsive Merges",
+      "description": "Merge 3 exports (Desktop, Tablet, Mobile) to create a responsive component with automatic media queries. The system detects CSS class differences and generates optimized breakpoints.",
       "badge_desktop_first": "Desktop-First",
       "badge_media_queries": "Media Queries",
       "badge_breakpoints": "3 Breakpoints",
       "new_merge": "New Merge",
-      "loading": "Loading responsive tests...",
-      "no_merges_title": "No responsive tests",
-      "no_merges_message": "Create your first responsive test by merging 3 existing tests",
+      "loading": "Loading responsive merges...",
+      "no_merges_title": "No responsive merges",
+      "no_merges_message": "Create your first responsive merge by merging 3 existing exports",
       "create_merge": "Create merge"
+    },
+    "dialog": {
+      "title_form": "New Responsive Merge",
+      "title_progress": "Merge in progress...",
+      "title_success": "Merge completed!",
+      "desc_form": "Select the 3 exports to merge to create a responsive component",
+      "desc_progress": "The merge process is in progress, please wait",
+      "desc_success": "Your responsive component has been created successfully",
+      "desktop": "Desktop",
+      "tablet": "Tablet",
+      "mobile": "Mobile",
+      "size_label": "Size (px)",
+      "export_label": "Export",
+      "placeholder_loading": "Loading...",
+      "placeholder_select": "Select an export",
+      "button_cancel": "Cancel",
+      "button_launch": "Launch merge",
+      "button_close": "Close",
+      "validation_error": "Please select all 3 exports",
+      "merge_in_progress": "Merge in progress...",
+      "merge_failed": "❌ Merge failed",
+      "connection_lost": "❌ Connection lost",
+      "merge_success": "Merge completed successfully!"
     },
     "card": {
       "title": "Responsive Merge",
@@ -214,13 +245,38 @@
       "components": "components",
       "successful": "successful",
       "errors": "errors",
-      "delete_confirm_title": "Delete responsive test",
-      "delete_confirm_description": "Are you sure you want to delete this responsive test? This action is irreversible.",
+      "delete_confirm_title": "Delete responsive merge",
+      "delete_confirm_description": "Are you sure you want to delete this responsive merge? This action is irreversible.",
       "delete_confirm_button": "Delete",
       "delete_cancel_button": "Cancel",
       "delete_error_title": "Error",
-      "delete_error_description": "Unable to delete responsive test"
+      "delete_error_description": "Unable to delete responsive merge"
     }
+  },
+  "dashboard": {
+    "kpi": {
+      "total_tests": "Total Tests",
+      "avg_time": "Avg Time"
+    },
+    "charts": {
+      "transformation_activity": "Transformation Activity Over Time (Last 14 days)",
+      "tests_timeline": "Tests Timeline",
+      "top_tests": "Top 10 Tests by Nodes",
+      "transformation_breakdown": "Transformation Breakdown",
+      "recent_tests": "Recent Tests"
+    },
+    "chart_labels": {
+      "fonts": "Fonts",
+      "classes": "Classes",
+      "variables": "Variables",
+      "assets": "Assets",
+      "cleanup": "Cleanup"
+    },
+    "empty_states": {
+      "no_data": "No data available",
+      "no_exports": "No exports found"
+    },
+    "untitled": "Untitled"
   },
   "settings": {
     "title": "Settings",

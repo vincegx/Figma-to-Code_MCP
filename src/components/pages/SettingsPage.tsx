@@ -65,7 +65,7 @@ type Settings = {
 export default function SettingsPage() {
   const { t } = useTranslation()
   const { confirm, ConfirmDialog } = useConfirm()
-  const { reload: reloadTests } = useTests()
+  const { reload: reloadTests } = useExports()
   const [settings, setSettings] = useState<Settings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -290,11 +290,11 @@ export default function SettingsPage() {
 
               <Separator />
 
-              {/* Responsive Tests Page Settings */}
+              {/* Responsive Merges Page Settings */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Settings className="h-4 w-4 text-primary" />
-                  <h3 className="font-semibold">Page des Tests Responsive</h3>
+                  <h3 className="font-semibold">Page des Responsive Merges</h3>
                 </div>
 
                 <div className="space-y-2">

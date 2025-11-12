@@ -265,6 +265,7 @@ function ResponsivePreviewMode({ mergeId }: { mergeId: string }) {
         id={mergeId}
         mode={mode}
         onModeChange={setMode}
+        detailUrl={`/responsive-merges/${mergeId}`}
         showNavbar={showNavbar}
         onShowNavbar={setShowNavbar}
         viewportWidth={viewportWidth}

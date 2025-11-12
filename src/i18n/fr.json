@@ -9,6 +9,8 @@
     "ok": "OK",
     "exports": "export",
     "exports_plural": "exports",
+    "merges": "merge",
+    "merges_plural": "merges",
     "nodes": "nodes",
     "sections": "sections",
     "images": "images",
@@ -29,6 +31,12 @@
     }
   },
   "home": {
+    "title": "Analyses Figma",
+    "description": "Convertissez vos designs Figma en composants React + Tailwind CSS pixel-perfect. Le système utilise un pipeline AST avec 11 transformations pour assurer la fidélité visuelle maximale.",
+    "badge_react": "React 19",
+    "badge_tailwind": "Tailwind CSS",
+    "badge_ast": "AST Pipeline",
+    "new_analysis": "Nouvelle Analyse",
     "loading_exports": "Chargement des exports...",
     "view": "Vue :",
     "sort_by": "Trier par :",
@@ -119,7 +127,7 @@
     "preview": {
       "banner_title": "Rendu du composant Figma",
       "banner_text": "Ce composant a été généré automatiquement depuis Figma via MCP. Utilise les DevTools (F12) pour inspecter les classes Tailwind.",
-      "responsive_test": "Test Responsive",
+      "responsive_test": "Responsive Merge",
       "native": "Native",
       "presets": {
         "native": "🎯 Native",
@@ -194,16 +202,39 @@
   },
   "responsive": {
     "page": {
-      "title": "Tests Responsive",
-      "description": "Fusionnez 3 tests (Desktop, Tablet, Mobile) pour créer un composant responsive avec media queries automatiques. Le système détecte les différences de classes CSS et génère les breakpoints optimisés.",
+      "title": "Responsive Merges",
+      "description": "Fusionnez 3 exports (Desktop, Tablet, Mobile) pour créer un composant responsive avec media queries automatiques. Le système détecte les différences de classes CSS et génère les breakpoints optimisés.",
       "badge_desktop_first": "Desktop-First",
       "badge_media_queries": "Media Queries",
       "badge_breakpoints": "3 Breakpoints",
       "new_merge": "Nouveau Merge",
-      "loading": "Chargement des tests responsive...",
-      "no_merges_title": "Aucun test responsive",
-      "no_merges_message": "Créez votre premier test responsive en fusionnant 3 tests existants",
+      "loading": "Chargement des merges responsive...",
+      "no_merges_title": "Aucun responsive merge",
+      "no_merges_message": "Créez votre premier merge responsive en fusionnant 3 exports existants",
       "create_merge": "Créer un merge"
+    },
+    "dialog": {
+      "title_form": "Nouveau Merge Responsive",
+      "title_progress": "Merge en cours...",
+      "title_success": "Merge terminé !",
+      "desc_form": "Sélectionnez les 3 exports à fusionner pour créer un composant responsive",
+      "desc_progress": "Le processus de merge est en cours, veuillez patienter",
+      "desc_success": "Votre composant responsive a été créé avec succès",
+      "desktop": "Desktop",
+      "tablet": "Tablet",
+      "mobile": "Mobile",
+      "size_label": "Taille (px)",
+      "export_label": "Export",
+      "placeholder_loading": "Chargement...",
+      "placeholder_select": "Sélectionnez un export",
+      "button_cancel": "Annuler",
+      "button_launch": "Lancer le merge",
+      "button_close": "Fermer",
+      "validation_error": "Veuillez sélectionner les 3 exports",
+      "merge_in_progress": "Merge en cours...",
+      "merge_failed": "❌ Le merge a échoué",
+      "connection_lost": "❌ Connexion perdue",
+      "merge_success": "Merge terminé avec succès !"
     },
     "card": {
       "title": "Responsive Merge",
@@ -214,13 +245,38 @@
       "components": "composants",
       "successful": "réussis",
       "errors": "erreurs",
-      "delete_confirm_title": "Supprimer le test responsive",
-      "delete_confirm_description": "Êtes-vous sûr de vouloir supprimer ce test responsive ? Cette action est irréversible.",
+      "delete_confirm_title": "Supprimer le responsive merge",
+      "delete_confirm_description": "Êtes-vous sûr de vouloir supprimer ce responsive merge ? Cette action est irréversible.",
       "delete_confirm_button": "Supprimer",
       "delete_cancel_button": "Annuler",
       "delete_error_title": "Erreur",
-      "delete_error_description": "Impossible de supprimer le test responsive"
+      "delete_error_description": "Impossible de supprimer le responsive merge"
     }
+  },
+  "dashboard": {
+    "kpi": {
+      "total_tests": "Total Tests",
+      "avg_time": "Temps Moyen"
+    },
+    "charts": {
+      "transformation_activity": "Activité de Transformation (14 derniers jours)",
+      "tests_timeline": "Timeline des Tests",
+      "top_tests": "Top 10 Tests par Nodes",
+      "transformation_breakdown": "Répartition des Transformations",
+      "recent_tests": "Tests Récents"
+    },
+    "chart_labels": {
+      "fonts": "Polices",
+      "classes": "Classes",
+      "variables": "Variables",
+      "assets": "Assets",
+      "cleanup": "Nettoyage"
+    },
+    "empty_states": {
+      "no_data": "Aucune donnée disponible",
+      "no_exports": "Aucun export trouvé"
+    },
+    "untitled": "Sans titre"
   },
   "settings": {
     "title": "Paramètres",

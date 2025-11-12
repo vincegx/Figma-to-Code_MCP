@@ -1,6 +1,6 @@
 /**
  * ReportViewer - Composant réutilisable pour afficher un rapport HTML
- * Utilisé par TestDetailPage et ResponsiveTestDetailPage
+ * Utilisé par ExportFigmaDetailPage et ResponsiveMergeDetailPage
  */
 
 import { Card } from '@/components/ui/card'

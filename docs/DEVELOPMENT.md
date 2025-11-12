@@ -924,7 +924,7 @@ export default function MyComponent({ title, count = 0, onUpdate }: MyComponentP
 // Order: External → Internal → Relative
 import { useState, useEffect } from 'react'  // External
 import { Button } from '@/components/ui/button'  // Internal (alias)
-import { useTests } from '../../hooks/useTests'  // Relative
+import { useExportFigmas } from '../../hooks/useExportFigmas'  // Relative
 import './MyComponent.css'  // Styles last
 ```
 

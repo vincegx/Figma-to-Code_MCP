@@ -65,7 +65,7 @@ function getDefaultSettings() {
       }
     },
     directories: {
-      testsOutput: 'src/generated/tests',
+      testsOutput: 'src/generated/export_figma',
       tmpAssets: 'tmp/figma-assets'
     },
     apiLimits: {

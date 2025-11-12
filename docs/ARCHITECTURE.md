@@ -87,15 +87,15 @@ mcp-figma-to-code/
 │   │   ├── pages/                   # Page components
 │   │   │   ├── DashboardPage.tsx    # KPIs & analytics
 │   │   │   ├── AnalyzePage.tsx      # Analysis form
-│   │   │   ├── TestsPage.tsx        # Tests grid/list
-│   │   │   └── TestDetailPage.tsx   # 4-tab detail view
+│   │   │   ├── ExportFigmasPage.tsx        # Tests grid/list
+│   │   │   └── ExportFigmaDetailPage.tsx   # 4-tab detail view
 │   │   ├── features/                # Feature-based components
 │   │   │   ├── analysis/
 │   │   │   │   └── AnalysisForm.tsx # Form + SSE logs
 │   │   │   ├── tests/
-│   │   │   │   ├── TestCard.tsx     # Grid item
-│   │   │   │   ├── TestsGrid.tsx    # Grid layout
-│   │   │   │   ├── TestsTable.tsx   # Table layout
+│   │   │   │   ├── ExportFigmaCard.tsx     # Grid item
+│   │   │   │   ├── ExportFigmasGrid.tsx    # Grid layout
+│   │   │   │   ├── ExportFigmasTable.tsx   # Table layout
 │   │   │   │   ├── ControlsBar.tsx  # View/sort controls
 │   │   │   │   └── PaginationControls.tsx
 │   │   │   └── stats/
@@ -104,7 +104,7 @@ mcp-figma-to-code/
 │   │       ├── ThemeToggle.tsx      # Dark/light theme
 │   │       └── LanguageSwitcher.tsx # i18n switcher
 │   ├── 📁 hooks/                    # React hooks
-│   │   ├── useTests.ts              # Tests data fetching
+│   │   ├── useExportFigmas.ts              # Tests data fetching
 │   │   ├── useMcpHealth.ts          # MCP health check
 │   │   └── useTheme.ts              # Theme management
 │   ├── 📁 i18n/                     # Internationalization
@@ -347,11 +347,11 @@ components/
    - Compose complex UIs from primitives
 
 2. **Container/Presentation Split**
-   - `TestsPage` (container) fetches data
-   - `TestsGrid` (presentation) renders UI
+   - `ExportFigmasPage` (container) fetches data
+   - `ExportFigmasGrid` (presentation) renders UI
 
 3. **Custom Hooks**
-   - `useTests()` - Test data fetching
+   - `useExportFigmas()` - Test data fetching
    - `useMcpHealth()` - Health check polling
    - `useTheme()` - Theme management
 
@@ -764,8 +764,8 @@ Generated HTML includes:
 **Implementation Details:**
 
 - **vite.config.js:** `watch.ignored` prevents HMR on non-code files
-- **useTests hook:** Fetches data via API, exposes `reload()` function
-- **Component tree:** Passes `onRefresh` callback from TestsPage → TestsGrid/TestsTable → TestCard
+- **useExportFigmas hook:** Fetches data via API, exposes `reload()` function
+- **Component tree:** Passes `onRefresh` callback from ExportFigmasPage → ExportFigmasGrid/ExportFigmasTable → ExportFigmaCard
 - **DELETE handler:** Calls `onRefresh()` instead of `window.location.reload()`
 
 **Benefits:**

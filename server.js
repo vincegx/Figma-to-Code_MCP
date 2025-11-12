@@ -591,15 +591,15 @@ app.post('/api/responsive-merges', async (req, res) => {
     return res.status(400).json({ error: 'Desktop, tablet et mobile requis' })
   }
 
-  if (!desktop.size || !desktop.testId || !tablet.size || !tablet.testId || !mobile.size || !mobile.testId) {
+  if (!desktop.size || !desktop.exportId || !tablet.size || !tablet.exportId || !mobile.size || !mobile.exportId) {
     return res.status(400).json({ error: 'Chaque breakpoint doit avoir size et exportId' })
   }
 
   // Valider que les exports existent
   const exportsDir = path.join(__dirname, 'src', 'generated', 'export_figma')
-  const desktopPath = path.join(exportsDir, desktop.testId)
-  const tabletPath = path.join(exportsDir, tablet.testId)
-  const mobilePath = path.join(exportsDir, mobile.testId)
+  const desktopPath = path.join(exportsDir, desktop.exportId)
+  const tabletPath = path.join(exportsDir, tablet.exportId)
+  const mobilePath = path.join(exportsDir, mobile.exportId)
 
   if (!fs.existsSync(desktopPath) || !fs.existsSync(tabletPath) || !fs.existsSync(mobilePath)) {
     return res.status(400).json({ error: 'Un ou plusieurs exports n\'existent pas' })
@@ -705,9 +705,9 @@ app.post('/api/responsive-merges', async (req, res) => {
       const mergerPath = path.join(__dirname, 'scripts', 'responsive-merger.js')
       const child = spawn('node', [
         mergerPath,
-        '--desktop', desktop.size, desktop.testId,
-        '--tablet', tablet.size, tablet.testId,
-        '--mobile', mobile.size, mobile.testId
+        '--desktop', desktop.size, desktop.exportId,
+        '--tablet', tablet.size, tablet.exportId,
+        '--mobile', mobile.size, mobile.exportId
       ], {
         cwd: __dirname,
         env: {
@@ -1266,7 +1266,7 @@ app.post('/api/settings/reset', (req, res) => {
         }
       },
       "directories": {
-        "testsOutput": "src/generated/tests",
+        "testsOutput": "src/generated/export_figma",
         "tmpAssets": "tmp/figma-assets"
       },
       "apiLimits": {

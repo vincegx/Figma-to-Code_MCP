@@ -19,7 +19,7 @@ export function AppSidebar() {
   const menuItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/export_figma', icon: FileText, label: 'Export Figma' },
-    { to: '/responsive-merges', icon: MonitorSmartphone, label: 'Tests Responsive' },
+    { to: '/responsive-merges', icon: MonitorSmartphone, label: 'Responsive Merges' },
   ]
 
   return (

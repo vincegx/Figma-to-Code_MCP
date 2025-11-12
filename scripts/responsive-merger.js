@@ -170,7 +170,7 @@ function parseArguments() {
 // ═══════════════════════════════════════════════════════════════
 
 function validateBreakpoint(testId, breakpointName, explicitWidth) {
-  const testDir = path.join(PROJECT_ROOT, 'src/generated/tests', testId);
+  const testDir = path.join(PROJECT_ROOT, 'src/generated/export_figma', testId);
 
   if (!fs.existsSync(testDir)) {
     log.error(`${breakpointName} test directory not found`);

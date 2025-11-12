@@ -111,9 +111,9 @@ export default function PuckRenderPage() {
             <p className="text-muted-foreground">{error}</p>
           </div>
           <Button asChild className="mt-4">
-            <Link to="/responsive-tests">
+            <Link to={`/responsive-merges/${mergeId}`}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Tests
+              Back to Details
             </Link>
           </Button>
         </div>
@@ -144,9 +144,9 @@ export default function PuckRenderPage() {
       <div className="sticky top-0 z-50 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           <Button variant="ghost" size="sm" asChild>
-            <Link to="/responsive-tests">
+            <Link to={`/responsive-merges/${mergeId}`}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Tests
+              Back to Details
             </Link>
           </Button>
           <div className="flex items-center gap-2">

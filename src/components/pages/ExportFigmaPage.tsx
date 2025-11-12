@@ -148,21 +148,20 @@ export default function ExportFigmaPage() {
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Analyses Figma</h2>
+                <h2 className="text-lg font-semibold">{t('home.title')}</h2>
               </div>
               <p className="text-sm text-muted-foreground">
-                Convertissez vos designs Figma en composants React + Tailwind CSS pixel-perfect.
-                Le système utilise un pipeline AST avec 11 transformations pour assurer la fidélité visuelle maximale.
+                {t('home.description')}
               </p>
               <div className="flex items-center gap-2 pt-2">
                 <Badge variant="secondary" className="text-xs">
-                  React 19
+                  {t('home.badge_react')}
                 </Badge>
                 <Badge variant="secondary" className="text-xs">
-                  Tailwind CSS
+                  {t('home.badge_tailwind')}
                 </Badge>
                 <Badge variant="secondary" className="text-xs">
-                  AST Pipeline
+                  {t('home.badge_ast')}
                 </Badge>
               </div>
             </div>
@@ -170,7 +169,7 @@ export default function ExportFigmaPage() {
             {/* Right: Action Button */}
             <Button onClick={() => setDialogOpen(true)} className="gap-2 flex-shrink-0">
               <Plus className="h-4 w-4" />
-              Nouvelle Analyse
+              {t('home.new_analysis')}
             </Button>
           </div>
         </CardContent>

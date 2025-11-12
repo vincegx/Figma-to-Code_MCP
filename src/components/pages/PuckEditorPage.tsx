@@ -158,9 +158,9 @@ export default function PuckEditorPage() {
             <h2 className="text-2xl font-bold text-destructive">Error Loading Editor</h2>
             <p className="text-muted-foreground">{error}</p>
           </div>
-          <Button onClick={() => navigate('/responsive-merges')} className="mt-4">
+          <Button onClick={() => navigate(`/responsive-merges/${mergeId}`)} className="mt-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Tests
+            Back to Details
           </Button>
         </div>
       </div>
@@ -206,7 +206,7 @@ export default function PuckEditorPage() {
                   View page
                 </Link>
                 <Link
-                  to="/responsive-tests"
+                  to={`/responsive-merges/${mergeId}`}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -231,7 +231,7 @@ export default function PuckEditorPage() {
                   }}
                 >
                   <ArrowLeft size={16} />
-                  Back to Tests
+                  Back to Details
                 </Link>
               </div>
             ),

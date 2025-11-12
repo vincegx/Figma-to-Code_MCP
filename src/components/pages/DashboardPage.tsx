@@ -56,11 +56,11 @@ export default function DashboardPage() {
       .sort((a, b) => (b.stats?.totalNodes || 0) - (a.stats?.totalNodes || 0))
       .slice(0, 10)
       .map(test => ({
-        name: (test.layerName || test.fileName || 'Untitled').substring(0, 20),
+        name: (test.layerName || test.fileName || t('dashboard.untitled')).substring(0, 20),
         nodes: test.stats?.totalNodes || 0,
         testId: test.testId
       }))
-  }, [exports])
+  }, [exports, t])
 
   // Transformation Activity Over Time (Stacked Area Chart)
   const transformationActivityData = useMemo(() => {
@@ -108,13 +108,13 @@ export default function DashboardPage() {
     }, { fonts: 0, classes: 0, variables: 0, assets: 0, cleanup: 0 })
 
     return [
-      { name: 'Fonts', value: totals.fonts, fill: 'hsl(var(--chart-1))' },
-      { name: 'Classes', value: totals.classes, fill: 'hsl(var(--chart-2))' },
-      { name: 'Variables', value: totals.variables, fill: 'hsl(var(--chart-3))' },
-      { name: 'Assets', value: totals.assets, fill: 'hsl(var(--chart-4))' },
-      { name: 'Cleanup', value: totals.cleanup, fill: 'hsl(var(--chart-5))' }
+      { name: t('dashboard.chart_labels.fonts'), value: totals.fonts, fill: 'hsl(var(--chart-1))' },
+      { name: t('dashboard.chart_labels.classes'), value: totals.classes, fill: 'hsl(var(--chart-2))' },
+      { name: t('dashboard.chart_labels.variables'), value: totals.variables, fill: 'hsl(var(--chart-3))' },
+      { name: t('dashboard.chart_labels.assets'), value: totals.assets, fill: 'hsl(var(--chart-4))' },
+      { name: t('dashboard.chart_labels.cleanup'), value: totals.cleanup, fill: 'hsl(var(--chart-5))' }
     ].filter(item => item.value > 0) // Only show non-zero categories
-  }, [exports])
+  }, [exports, t])
 
   // Recent tests
   const recentTests = useMemo(() => {
@@ -142,7 +142,7 @@ export default function DashboardPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Total Tests</p>
+                <p className="text-sm font-medium text-muted-foreground">{t('dashboard.kpi.total_tests')}</p>
                 <p className="text-3xl font-bold tracking-tight">{kpis.totalTests}</p>
               </div>
               <div className="rounded-lg bg-primary/10 p-3">
@@ -198,7 +198,7 @@ export default function DashboardPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Avg Time</p>
+                <p className="text-sm font-medium text-muted-foreground">{t('dashboard.kpi.avg_time')}</p>
                 <p className="text-3xl font-bold tracking-tight">{kpis.avgExecutionTime}s</p>
               </div>
               <div className="rounded-lg bg-primary/10 p-3">
@@ -214,17 +214,17 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            <p className="text-lg font-medium">Transformation Activity Over Time (Last 14 days)</p>
+            <p className="text-lg font-medium">{t('dashboard.charts.transformation_activity')}</p>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {transformationActivityData.length > 0 ? (
             <ChartContainer config={{
-              fonts: { label: "Fonts", color: "hsl(var(--chart-1))" },
-              classes: { label: "Classes", color: "hsl(var(--chart-2))" },
-              variables: { label: "Variables", color: "hsl(var(--chart-3))" },
-              assets: { label: "Assets", color: "hsl(var(--chart-4))" },
-              cleanup: { label: "Cleanup", color: "hsl(var(--chart-5))" }
+              fonts: { label: t('dashboard.chart_labels.fonts'), color: "hsl(var(--chart-1))" },
+              classes: { label: t('dashboard.chart_labels.classes'), color: "hsl(var(--chart-2))" },
+              variables: { label: t('dashboard.chart_labels.variables'), color: "hsl(var(--chart-3))" },
+              assets: { label: t('dashboard.chart_labels.assets'), color: "hsl(var(--chart-4))" },
+              cleanup: { label: t('dashboard.chart_labels.cleanup'), color: "hsl(var(--chart-5))" }
             }} className="h-[300px] w-full">
               <AreaChart data={transformationActivityData} width={undefined} height={undefined}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -244,7 +244,7 @@ export default function DashboardPage() {
             </ChartContainer>
           ) : (
             <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-              No data available
+              {t('dashboard.empty_states.no_data')}
             </div>
           )}
         </CardContent>
@@ -257,7 +257,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              <p className="text-lg font-medium">Tests Timeline</p>
+              <p className="text-lg font-medium">{t('dashboard.charts.tests_timeline')}</p>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -265,7 +265,7 @@ export default function DashboardPage() {
               <ChartContainer config={{
                 count: { label: "Tests", color: "hsl(var(--primary))" }
               }} className="h-[300px] w-full">
-                <LineChart data={timelineData} width={undefined} height={undefined}>
+                <LineChart data={timelineData} width={undefined} height={undefined} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
@@ -280,7 +280,7 @@ export default function DashboardPage() {
               </ChartContainer>
             ) : (
               <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                No data available
+                {t('dashboard.empty_states.no_data')}
               </div>
             )}
           </CardContent>
@@ -291,7 +291,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              <p className="text-lg font-medium">Top 10 Tests by Nodes</p>
+              <p className="text-lg font-medium">{t('dashboard.charts.top_tests')}</p>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -299,7 +299,7 @@ export default function DashboardPage() {
               <ChartContainer config={{
                 nodes: { label: "Nodes", color: "hsl(var(--chart-1))" }
               }} className="h-[300px] w-full">
-                <BarChart data={topTestsByNodes} layout="vertical" width={undefined} height={undefined}>
+                <BarChart data={topTestsByNodes} layout="vertical" width={undefined} height={undefined} margin={{ top: 5, right: 10, left: -15, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" tick={{ fontSize: 10 }} />
                   <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 9 }} />
@@ -310,7 +310,7 @@ export default function DashboardPage() {
               </ChartContainer>
             ) : (
               <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                No data available
+                {t('dashboard.empty_states.no_data')}
               </div>
             )}
           </CardContent>
@@ -321,17 +321,17 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <PieChartIcon className="h-5 w-5" />
-              <p className="text-lg font-medium">Transformation Breakdown</p>
+              <p className="text-lg font-medium">{t('dashboard.charts.transformation_breakdown')}</p>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {transformationBreakdownData.length > 0 ? (
               <ChartContainer config={{
-                fonts: { label: "Fonts", color: "hsl(var(--chart-1))" },
-                classes: { label: "Classes", color: "hsl(var(--chart-2))" },
-                variables: { label: "Variables", color: "hsl(var(--chart-3))" },
-                assets: { label: "Assets", color: "hsl(var(--chart-4))" },
-                cleanup: { label: "Cleanup", color: "hsl(var(--chart-5))" }
+                fonts: { label: t('dashboard.chart_labels.fonts'), color: "hsl(var(--chart-1))" },
+                classes: { label: t('dashboard.chart_labels.classes'), color: "hsl(var(--chart-2))" },
+                variables: { label: t('dashboard.chart_labels.variables'), color: "hsl(var(--chart-3))" },
+                assets: { label: t('dashboard.chart_labels.assets'), color: "hsl(var(--chart-4))" },
+                cleanup: { label: t('dashboard.chart_labels.cleanup'), color: "hsl(var(--chart-5))" }
               }} className="h-[300px] w-full">
                 <PieChart width={undefined} height={undefined}>
                   <ChartTooltip content={<ChartTooltipContent />} />
@@ -356,7 +356,7 @@ export default function DashboardPage() {
               </ChartContainer>
             ) : (
               <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                No data available
+                {t('dashboard.empty_states.no_data')}
               </div>
             )}
           </CardContent>
@@ -366,7 +366,7 @@ export default function DashboardPage() {
       {/* Recent Tests Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Tests</CardTitle>
+          <CardTitle>{t('dashboard.charts.recent_tests')}</CardTitle>
         </CardHeader>
         <CardContent>
           {recentTests.length > 0 ? (
@@ -374,14 +374,36 @@ export default function DashboardPage() {
               {recentTests.map((test) => (
                 <div
                   key={test.testId}
-                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent cursor-pointer transition-colors"
+                  className="flex items-center gap-4 rounded-lg border p-3 hover:bg-accent cursor-pointer transition-colors"
                   onClick={() => navigate(`/export_figma/${test.exportId}`)}
                 >
-                  <div className="flex-1">
-                    <p className="font-medium">{test.layerName || test.fileName || 'Untitled'}</p>
-                    <p className="text-xs text-muted-foreground">{test.testId}</p>
+                  {/* Thumbnail */}
+                  <div className="relative flex-shrink-0 w-14 h-14 rounded-md overflow-hidden bg-muted border">
+                    <img
+                      src={`/src/generated/export_figma/${test.exportId}/img/figma-screenshot.png`}
+                      alt={test.layerName || test.fileName || t('dashboard.untitled')}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to web-render.png if figma-screenshot.png fails
+                        const img = e.target as HTMLImageElement
+                        if (!img.src.includes('web-render.png')) {
+                          img.src = `/src/generated/export_figma/${test.exportId}/img/web-render.png`
+                        } else {
+                          // If both fail, hide the image
+                          img.style.display = 'none'
+                        }
+                      }}
+                    />
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+
+                  {/* Test Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{test.layerName || test.fileName || t('dashboard.untitled')}</p>
+                    <p className="text-xs text-muted-foreground truncate">{test.testId}</p>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground flex-shrink-0">
                     <div className="flex items-center gap-1">
                       <Package className="h-4 w-4" />
                       {test.stats?.totalNodes || 0}
@@ -400,7 +422,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="py-12 text-center text-muted-foreground">
-              No exports found
+              {t('dashboard.empty_states.no_exports')}
             </div>
           )}
         </CardContent>

@@ -664,7 +664,7 @@ docker exec mcp-figma-v1 node scripts/unified-processor.js \
 
 1. **Reduce Tests Per Page**
    ```typescript
-   // TestsPage.tsx
+   // ExportFigmasPage.tsx
    const [perPage, setPerPage] = useState(6)  // Lower value
    ```
 
@@ -816,7 +816,7 @@ When `watch.ignored` is configured, Vite doesn't detect file deletions in `src/g
 This is already fixed via callback-based refresh:
 
 ```typescript
-// TestCard.tsx - DELETE handler
+// ExportFigmaCard.tsx - DELETE handler
 if (onRefresh) {
   onRefresh()  // Calls API to fetch fresh list
 } else {
@@ -828,16 +828,16 @@ if (onRefresh) {
 
 1. **Verify the component chain passes onRefresh:**
    ```bash
-   # Check TestsPage passes reload to children
-   grep "onRefresh={reload}" src/components/pages/TestsPage.tsx
+   # Check ExportFigmasPage passes reload to children
+   grep "onRefresh={reload}" src/components/pages/ExportFigmasPage.tsx
 
-   # Check TestCard receives onRefresh prop
-   grep "onRefresh?" src/components/features/tests/TestCard.tsx
+   # Check ExportFigmaCard receives onRefresh prop
+   grep "onRefresh?" src/components/features/tests/ExportFigmaCard.tsx
    ```
 
-2. **Check useTests hook exposes reload:**
+2. **Check useExportFigmas hook exposes reload:**
    ```bash
-   grep "reload:" src/hooks/useTests.ts
+   grep "reload:" src/hooks/useExportFigmas.ts
    ```
 
 3. **Restart containers:**

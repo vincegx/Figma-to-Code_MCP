@@ -1,6 +1,6 @@
 /**
  * DetailPageHero - Hero section réutilisable pour les pages de détail
- * Utilisé par TestDetailPage et ResponsiveTestDetailPage
+ * Utilisé par ExportFigmaDetailPage et ResponsiveMergeDetailPage
  */
 
 import { ReactNode } from 'react'

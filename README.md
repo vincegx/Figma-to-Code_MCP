@@ -125,7 +125,7 @@ Both versions generated automatically via CLI `--clean` flag or dashboard.
 ---
 
 ![Dashboard Interface](docs/images/image05.png)
-*Detailled exported page with responsive test preview*
+*Detailled exported page with responsive merge preview*
 
 ---
 

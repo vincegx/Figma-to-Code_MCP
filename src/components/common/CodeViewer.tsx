@@ -1,6 +1,6 @@
 /**
  * CodeViewer - Composant réutilisable pour afficher et naviguer entre fichiers de code
- * Utilisé par TestDetailPage et ResponsiveTestDetailPage
+ * Utilisé par ExportFigmaDetailPage et ResponsiveMergeDetailPage
  */
 
 import { useState, useEffect } from 'react'
