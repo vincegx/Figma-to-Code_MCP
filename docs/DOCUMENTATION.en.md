@@ -49,7 +49,7 @@ Before starting, install:
 
 ```bash
 git clone https://github.com/vincegx/Figma-to-Code.git
-cd mcp-figma-v1
+cd Figma-to-Code
 ```
 
 #### Step 2: Enable MCP Server in Figma

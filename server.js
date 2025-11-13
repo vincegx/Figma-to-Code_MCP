@@ -14,6 +14,15 @@ import fs from 'fs'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// Initialize figma-usage.json from template if needed
+const usageFile = path.join(__dirname, 'data', 'figma-usage.json')
+const templateFile = path.join(__dirname, 'data', 'figma-usage.default.json')
+
+if (!fs.existsSync(usageFile) && fs.existsSync(templateFile)) {
+  fs.copyFileSync(templateFile, usageFile)
+  console.log('✅ Created figma-usage.json from template')
+}
+
 const app = express()
 const PORT = process.env.PORT || 5173
 

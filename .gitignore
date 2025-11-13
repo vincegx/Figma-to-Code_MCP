@@ -11,6 +11,7 @@ tmp/figma-assets/*
 # Usage tracking data (keep directory structure)
 data/*
 !data/.gitkeep
+!data/figma-usage.default.json
 
 # Claude Code local settings
 .claude/settings.local.json

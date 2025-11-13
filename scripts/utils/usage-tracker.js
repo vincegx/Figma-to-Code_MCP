@@ -64,7 +64,7 @@ export class UsageTracker {
     return {
       daily: {},
       limits: {
-        dailyCredits: DAILY_LIMIT,
+        dailyCredits: getApiLimits().dailyTokenLimit,
         planType: 'professional'
       }
     };
