@@ -48,7 +48,7 @@ Before starting, install:
 #### Step 1: Clone the project
 
 ```bash
-git clone https://github.com/your-repo/mcp-figma-v1.git
+git clone https://github.com/vincegx/Figma-to-Code.git
 cd mcp-figma-v1
 ```
 

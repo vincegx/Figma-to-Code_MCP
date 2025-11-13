@@ -138,7 +138,7 @@ const ResponsiveMergesTable = memo(function ResponsiveMergesTable({ merges, onRe
       <ConfirmDialog />
       <AlertDialogComponent />
 
-      <div className="space-y-4">
+      <div className="space-y-4 overflow-visible">
         {/* Selection Bar */}
         <SelectionBar
           selectedCount={selection.selectedCount}
@@ -148,7 +148,7 @@ const ResponsiveMergesTable = memo(function ResponsiveMergesTable({ merges, onRe
 
         {/* Table */}
         <div className="rounded-lg border bg-card overflow-visible">
-          <Table className="overflow-visible">
+          <Table containerClassName="overflow-visible" className="overflow-visible">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
