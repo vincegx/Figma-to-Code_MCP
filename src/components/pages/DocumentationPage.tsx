@@ -37,11 +37,11 @@ const CodeBlock = ({ children, className, inline }: any) => {
   }
 
   return (
-    <div className="relative group my-6">
+    <pre className="relative group my-6 rounded-lg bg-muted overflow-hidden">
       <button
         onClick={handleCopy}
         className="absolute right-2 top-2 px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20
-          text-xs font-medium transition-all flex items-center gap-1.5 opacity-0 group-hover:opacity-100"
+          text-xs font-medium transition-all flex items-center gap-1.5 opacity-0 group-hover:opacity-100 z-10"
         title={copied ? 'Copié!' : 'Copier le code'}
       >
         {copied ? (
@@ -56,10 +56,10 @@ const CodeBlock = ({ children, className, inline }: any) => {
           </>
         )}
       </button>
-      <code className={`${className} block rounded-lg bg-muted p-4 pr-16 text-sm font-mono overflow-x-auto`}>
+      <code className={`${className} block p-4 pr-16 text-sm font-mono overflow-x-auto`}>
         {children}
       </code>
-    </div>
+    </pre>
   )
 }
 
@@ -121,30 +121,63 @@ export default function DocumentationPage() {
     return extracted
   }, [markdown])
 
-  // Simple scroll spy with Intersection Observer
+  // Scroll spy with polling (works regardless of scroll container)
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id)
-          }
-        })
-      },
-      {
-        rootMargin: '-20% 0px -70% 0px'
-      }
-    )
+    if (!markdown) return
 
-    const timer = setTimeout(() => {
-      document.querySelectorAll('.markdown-content h2').forEach((h2) => {
-        observer.observe(h2)
+    let animationFrameId: number
+
+    const checkActiveSection = () => {
+      const h2Elements = document.querySelectorAll('.markdown-content h2')
+      if (h2Elements.length === 0) {
+        animationFrameId = requestAnimationFrame(checkActiveSection)
+        return
+      }
+
+      // Find the section that's closest to the top of the viewport
+      let currentSection = ''
+      let minDistance = Infinity
+
+      h2Elements.forEach((h2) => {
+        const rect = h2.getBoundingClientRect()
+        const distance = Math.abs(rect.top - 100)
+
+        // Only consider sections that are visible (above the fold, within reasonable range)
+        if (rect.top <= 300 && rect.top >= -200) {
+          if (distance < minDistance) {
+            minDistance = distance
+            currentSection = h2.id
+          }
+        }
       })
-    }, 100)
+
+      // Fallback: if no section in the sweet spot, find the first visible one
+      if (!currentSection) {
+        for (const h2 of Array.from(h2Elements)) {
+          const rect = h2.getBoundingClientRect()
+          if (rect.top >= 0 && rect.top <= window.innerHeight) {
+            currentSection = h2.id
+            break
+          }
+        }
+      }
+
+      if (currentSection) {
+        setActiveSection(currentSection)
+      }
+
+      // Continue checking
+      animationFrameId = requestAnimationFrame(checkActiveSection)
+    }
+
+    // Start checking
+    const timer = setTimeout(() => {
+      checkActiveSection()
+    }, 300)
 
     return () => {
       clearTimeout(timer)
-      observer.disconnect()
+      cancelAnimationFrame(animationFrameId)
     }
   }, [markdown])
 
@@ -175,14 +208,15 @@ export default function DocumentationPage() {
                   <a
                     key={heading.id}
                     href={`#${heading.id}`}
-                    className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-accent no-underline ${
+                    onClick={() => setActiveSection(heading.id)}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-all hover:bg-accent no-underline ${
                       activeSection === heading.id
-                        ? 'bg-accent font-medium text-accent-foreground'
-                        : 'text-muted-foreground'
+                        ? 'bg-accent font-bold text-accent-foreground border-primary'
+                        : 'text-muted-foreground border-transparent'
                     }`}
                   >
                     <ChevronRight className={`h-4 w-4 flex-shrink-0 transition-transform ${
-                      activeSection === heading.id ? 'rotate-90' : ''
+                      activeSection === heading.id ? 'rotate-90 text-primary' : ''
                     }`} />
                     <span className="truncate text-left">{heading.text}</span>
                   </a>
@@ -255,8 +289,20 @@ export default function DocumentationPage() {
                     </h3>
                   )
                 },
-                // Style paragraphs
+                // Style paragraphs - avoid wrapping block elements
                 p: ({ children, ...props }) => {
+                  // Check if children contain block-level elements (code blocks, divs, etc.)
+                  const hasBlockElement = Array.isArray(children) && children.some((child: any) =>
+                    child?.type === 'pre' ||
+                    child?.props?.className?.includes('group my-6') ||
+                    (typeof child === 'object' && child?.type?.name === 'CodeBlock')
+                  )
+
+                  // If block elements detected, return fragment to avoid nesting issues
+                  if (hasBlockElement) {
+                    return <>{children}</>
+                  }
+
                   return (
                     <p className="!text-base !leading-7 !mb-4" {...props}>
                       {children}

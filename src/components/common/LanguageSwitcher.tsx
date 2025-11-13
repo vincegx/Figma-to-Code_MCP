@@ -8,8 +8,18 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 export default function LanguageSwitcher() {
   const { language, setLanguage } = useTranslation()
 
+  const handleValueChange = (value: string) => {
+    if (value && (value === 'fr' || value === 'en')) {
+      setLanguage(value as 'fr' | 'en')
+    }
+  }
+
   return (
-    <ToggleGroup type="single" value={language} onValueChange={(value: string) => value && setLanguage(value as 'fr' | 'en')}>
+    <ToggleGroup
+      type="single"
+      value={language}
+      onValueChange={handleValueChange}
+    >
       <ToggleGroupItem value="fr" aria-label="Français">
         🇫🇷 FR
       </ToggleGroupItem>
