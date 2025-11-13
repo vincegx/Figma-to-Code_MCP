@@ -104,8 +104,17 @@ export async function splitComponent(testDir) {
 
     // Generate TSX
     const usedImages = extractUsedImages(section.jsx);
-    const chunkImports = filterImports(globalImports, usedImages);
-    const chunkCode = generateChunkCode(chunkName, section.jsx, chunkImports);
+
+    // Extract helper functions used in this section
+    const helperFunctions = extractHelperFunctions(section.jsx, cleanCode);
+
+    // Extract images from helper functions too
+    const helperImages = extractUsedImages(helperFunctions);
+    const allUsedImages = new Set([...usedImages, ...helperImages]);
+
+    const chunkImports = filterImports(globalImports, allUsedImages);
+
+    const chunkCode = generateChunkCode(chunkName, section.jsx, chunkImports, helperFunctions);
 
     fs.writeFileSync(
       path.join(componentsDir, `${chunkName}.tsx`),
@@ -299,6 +308,45 @@ function extractUsedImages(jsx) {
 }
 
 /**
+ * Extract helper functions used in JSX from source code
+ */
+function extractHelperFunctions(jsx, sourceCode) {
+  // Find all component calls in JSX: <ComponentName ...>
+  const componentRegex = /<([A-Z]\w+)[\s/>]/g;
+  const usedComponents = new Set();
+  let match;
+
+  while ((match = componentRegex.exec(jsx)) !== null) {
+    usedComponents.add(match[1]);
+  }
+
+  if (usedComponents.size === 0) {
+    return '';
+  }
+
+  // Parse source code to find function definitions
+  const ast = parse(sourceCode, {
+    sourceType: 'module',
+    plugins: ['jsx', 'typescript']
+  });
+
+  const helperFunctions = [];
+
+  traverse.default(ast, {
+    FunctionDeclaration(path) {
+      const functionName = path.node.id?.name;
+      if (functionName && usedComponents.has(functionName)) {
+        // Generate the function code
+        const functionCode = generate.default(path.node).code;
+        helperFunctions.push(functionCode);
+      }
+    }
+  });
+
+  return helperFunctions.join('\n\n');
+}
+
+/**
  * Filter imports to only include used images (Option B: relative imports)
  */
 function filterImports(globalImports, usedImages) {
@@ -311,23 +359,42 @@ function filterImports(globalImports, usedImages) {
 /**
  * Generate chunk TSX code
  */
-function generateChunkCode(chunkName, jsx, imageImports) {
+function generateChunkCode(chunkName, jsx, imageImports, helperFunctions = '') {
+  // Add comment before helpers if present
+  const helpersWithComment = helperFunctions
+    ? `\n// ========================================\n// Helper Components\n// ========================================\n\n${helperFunctions}\n\n`
+    : '';
+
   // For function components, jsx already contains full function declaration
   if (jsx.startsWith('function ') || jsx.startsWith('export function')) {
     // Extract function body and make it default export
     const funcCode = jsx.replace(/^function\s+/, 'export default function ');
 
-    return `import React from 'react';
+    return `/**
+ * ${chunkName} Component
+ * Generated from Figma design
+ */
+import React from 'react';
 import './${chunkName}.css';
-${imageImports ? imageImports + '\n' : ''}
+${imageImports ? imageImports + '\n' : ''}${helpersWithComment}// ========================================
+// Main Component
+// ========================================
+
 ${funcCode}
 `;
   }
 
   // For inline sections, wrap in function
-  return `import React from 'react';
+  return `/**
+ * ${chunkName} Component
+ * Generated from Figma design
+ */
+import React from 'react';
 import './${chunkName}.css';
-${imageImports ? imageImports + '\n' : ''}
+${imageImports ? imageImports + '\n' : ''}${helpersWithComment}// ========================================
+// Main Component
+// ========================================
+
 export default function ${chunkName}() {
   return ${jsx};
 }

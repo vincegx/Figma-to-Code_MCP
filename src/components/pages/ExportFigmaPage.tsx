@@ -135,16 +135,60 @@ export default function ExportFigmaPage() {
 
   if (exports.length === 0) {
     return (
-      <div className="rounded-xl border-2 border-dashed p-12 text-center">
-        <div className="mb-4 flex justify-center">
-          <Inbox className="h-16 w-16 text-muted-foreground/50" strokeWidth={1.5} />
+      <div className="space-y-6">
+        {/* Info Section */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between gap-6">
+              {/* Left: Description */}
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold">{t('home.title')}</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('home.description')}
+                </p>
+                <div className="flex items-center gap-2 pt-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {t('home.badge_react')}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {t('home.badge_tailwind')}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {t('home.badge_ast')}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Right: Action Button */}
+              <Button onClick={() => setDialogOpen(true)} className="gap-2 flex-shrink-0">
+                <Plus className="h-4 w-4" />
+                {t('home.new_analysis')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="rounded-xl border-2 border-dashed p-12 text-center">
+          <div className="mb-4 flex justify-center">
+            <Inbox className="h-16 w-16 text-muted-foreground/50" strokeWidth={1.5} />
+          </div>
+          <h3 className="mb-2 text-xl font-semibold">
+            {t('home.no_exports.title')}
+          </h3>
+          <p className="text-muted-foreground">
+            {t('home.no_exports.message')}
+          </p>
         </div>
-        <h3 className="mb-2 text-xl font-semibold">
-          {t('home.no_exports.title')}
-        </h3>
-        <p className="text-muted-foreground">
-          {t('home.no_exports.message')}
-        </p>
+
+        {/* Analysis Dialog */}
+        <AnalysisDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onAnalysisComplete={handleAnalysisComplete}
+        />
       </div>
     )
   }

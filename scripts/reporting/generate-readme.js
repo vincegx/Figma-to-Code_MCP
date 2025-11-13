@@ -14,7 +14,34 @@ export function generateReadme(distDir, metadata, config) {
 
 Generated from Figma on ${new Date(metadata.timestamp).toLocaleString()}
 
-## Quick Start
+## Docker Quick Start (Recommended)
+
+The fastest way to preview this component:
+
+\`\`\`bash
+# 1. Navigate to the dist/ folder
+cd dist/
+
+# 2. Start Docker container (installs dependencies and starts dev server)
+docker compose up
+
+# 3. Open in browser
+# http://localhost:3000
+\`\`\`
+
+The container includes:
+- ✅ React 19 + TypeScript
+- ✅ Vite dev server with hot reload
+- ✅ All dependencies pre-configured
+- ✅ Ready to customize and extend
+
+To stop: Press \`Ctrl+C\` or run \`docker compose down\`
+
+**Prerequisites**: Docker and Docker Compose installed on your system
+
+---
+
+## Manual Setup
 
 ### 1. Copy files to your project
 \`\`\`bash
@@ -168,6 +195,21 @@ vercel
 npm install netlify-cli -g
 netlify deploy
 \`\`\`
+
+## Troubleshooting
+
+### Port 3000 already in use
+If port 3000 is already taken, modify \`docker-compose.yml\`:
+\`\`\`yaml
+ports:
+  - "3001:3000"  # Use port 3001 on host instead
+\`\`\`
+
+### Images not loading
+Make sure the \`assets/\` folder is in the same directory as your components.
+
+### Fonts not rendering
+Check that \`tokens/variables.css\` is imported in your main CSS file.
 
 ## Support
 

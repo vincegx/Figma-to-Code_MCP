@@ -19,6 +19,7 @@ import * as strokeAlignment from './transformations/stroke-alignment.js'
 import * as cssVars from './transformations/css-vars.js'
 import * as tailwindOptimizer from './transformations/tailwind-optimizer.js'
 import * as productionCleaner from './transformations/production-cleaner.js'
+import * as extractProps from './transformations/extract-props.js'
 
 // Register all transforms
 const ALL_TRANSFORMS = [
@@ -32,7 +33,8 @@ const ALL_TRANSFORMS = [
   strokeAlignment,
   cssVars,
   tailwindOptimizer,
-  productionCleaner
+  productionCleaner,
+  extractProps
 ]
 
 /**
@@ -90,11 +92,20 @@ export async function runPipeline(sourceCode, contextData = {}, config = {}) {
   const result = generate.default(ast, {
     retainLines: false,
     compact: false,
-    comments: true
+    comments: true,
+    jsescOption: {
+      quotes: 'double'  // Force double quotes for consistency
+    }
   })
 
+  // Prepend TypeScript interface if props were extracted
+  let finalCode = result.code
+  if (context.propsExtraction && context.propsExtraction.interface) {
+    finalCode = context.propsExtraction.interface + finalCode
+  }
+
   return {
-    code: result.code,
+    code: finalCode,
     context,
     totalTime: Date.now() - startTime
   }

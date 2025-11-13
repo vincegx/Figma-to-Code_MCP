@@ -4,6 +4,7 @@ import { toPascalCase } from '../utils/chunking.js'
 import { parse } from '@babel/parser'
 import traverse from '@babel/traverse'
 import generate from '@babel/generator'
+import { runPipeline } from '../pipeline.js'
 
 /**
  * Extract parent component name from Component-clean.tsx
@@ -18,13 +19,207 @@ function getParentComponentNameFromSource(exportDir) {
   }
 
   const content = fs.readFileSync(cleanPath, 'utf8')
-  const match = content.match(/export default function (\w+)\(\)/)
+  // Updated regex to support function signatures with props after Phase 2
+  const match = content.match(/export default function (\w+)\(/)
 
   if (!match) {
     throw new Error('Could not extract component name from Component-clean.tsx')
   }
 
   return match[1]  // Returns actual function name (e.g., "Widget01Mobile")
+}
+
+/**
+ * Generate Docker configuration files for dist/ package
+ * @param {string} distDir - dist/ directory path
+ * @param {object} config - Configuration
+ */
+async function generateDockerConfig(distDir, config) {
+  const { componentName } = config
+
+  // 1. Generate package.json
+  const packageJson = {
+    name: componentName.toLowerCase().replace(/\s+/g, '-'),
+    version: '1.0.0',
+    type: 'module',
+    scripts: {
+      dev: 'vite',
+      build: 'vite build',
+      preview: 'vite preview'
+    },
+    dependencies: {
+      react: '^19.0.0',
+      'react-dom': '^19.0.0'
+    },
+    devDependencies: {
+      '@types/react': '^19.0.0',
+      '@types/react-dom': '^19.0.0',
+      '@vitejs/plugin-react': '^4.3.4',
+      typescript: '^5.6.3',
+      vite: '^6.0.1',
+      tailwindcss: '^3.4.1',
+      autoprefixer: '^10.4.17',
+      postcss: '^8.4.33'
+    }
+  }
+
+  fs.writeFileSync(
+    path.join(distDir, 'package.json'),
+    JSON.stringify(packageJson, null, 2)
+  )
+
+  // 2. Generate docker-compose.yml
+  const dockerCompose = `services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./components:/app/components
+      - ./assets:/app/assets
+      - ./tokens:/app/tokens
+      - ./src:/app/src
+      - ./Page.tsx:/app/Page.tsx
+      - ./Page.css:/app/Page.css
+      - ./index.html:/app/index.html
+      - ./vite.config.js:/app/vite.config.js
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./postcss.config.js:/app/postcss.config.js
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+`
+
+  fs.writeFileSync(path.join(distDir, 'docker-compose.yml'), dockerCompose)
+
+  // 3. Generate Dockerfile
+  const dockerfile = `FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy application files
+COPY . .
+
+# Expose port 3000
+EXPOSE 3000
+
+# Start development server
+CMD ["npm", "run", "dev"]
+`
+
+  fs.writeFileSync(path.join(distDir, 'Dockerfile'), dockerfile)
+
+  // 4. Generate vite.config.js
+  const viteConfig = `import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    host: '0.0.0.0',
+    port: 3000,
+    strictPort: true
+  }
+})
+`
+
+  fs.writeFileSync(path.join(distDir, 'vite.config.js'), viteConfig)
+
+  // 5. Generate index.html
+  const indexHtml = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${componentName}</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+`
+
+  fs.writeFileSync(path.join(distDir, 'index.html'), indexHtml)
+
+  // 6. Generate src/main.tsx
+  const mainTsx = `import React from 'react'
+import { createRoot } from 'react-dom/client'
+import Page from '../Page'
+import '../Page.css'
+
+const root = createRoot(document.getElementById('root')!)
+root.render(
+  <React.StrictMode>
+    <Page />
+  </React.StrictMode>
+)
+`
+
+  fs.writeFileSync(path.join(distDir, 'src/main.tsx'), mainTsx)
+
+  // 7. Generate .gitignore
+  const gitignore = `# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+`
+
+  fs.writeFileSync(path.join(distDir, '.gitignore'), gitignore)
+
+  // 8. Generate tailwind.config.js
+  const tailwindConfig = `/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./Page.tsx",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+`
+
+  fs.writeFileSync(path.join(distDir, 'tailwind.config.js'), tailwindConfig)
+
+  // 9. Generate postcss.config.js
+  const postcssConfig = `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}
+`
+
+  fs.writeFileSync(path.join(distDir, 'postcss.config.js'), postcssConfig)
+
+  console.log(`    ✓ Generated Docker configuration (9 files)`)
 }
 
 /**
@@ -46,7 +241,7 @@ export async function generateDist(exportDir, config) {
 
   // 2. Copy components/ → dist/components/ (subcomponents only)
   const sourceComponents = path.join(exportDir, 'components')
-  const extractedComponents = copyComponents(sourceComponents, distDir, config)
+  const extractedComponents = await copyComponents(sourceComponents, distDir, config)
 
   // 3. Generate or copy Page.tsx
   if (type === 'single') {
@@ -66,6 +261,9 @@ export async function generateDist(exportDir, config) {
   // 6. Generate README
   await generateReadmeWrapper(exportDir, distDir, config)
 
+  // 7. Generate Docker configuration
+  await generateDockerConfig(distDir, config)
+
   console.log(`  ✅ dist/ package created`)
 }
 
@@ -76,13 +274,13 @@ function createDistStructure(distDir) {
   }
 
   // Create fresh structure
-  const dirs = ['components', 'assets/img', 'tokens']
+  const dirs = ['components', 'assets/img', 'tokens', 'src']
   for (const dir of dirs) {
     fs.mkdirSync(path.join(distDir, dir), { recursive: true })
   }
 }
 
-function copyComponents(sourceDir, distDir, config) {
+async function copyComponents(sourceDir, distDir, config) {
   if (!fs.existsSync(sourceDir)) {
     throw new Error(`components/ directory not found at ${sourceDir}`)
   }
@@ -117,11 +315,35 @@ function copyComponents(sourceDir, distDir, config) {
 
     let content = fs.readFileSync(path.join(sourceDir, file), 'utf8')
 
-    // Fix import paths: ./img/ → ../assets/img/
-    content = content.replace(/from ['"]\.\/img\//g, 'from \'../assets/img/')
-    content = content.replace(/from ['"]\.\.\/img\//g, 'from \'../assets/img/')
+    // Extract props for .tsx files FIRST (Phase 2: Props Extraction)
+    // Apply to ALL types (single AND responsive) - props only in dist/, not in source components/
+    if (file.endsWith('.tsx')) {
+      const componentName = file.replace('.tsx', '')
+      const pipelineConfig = {
+        'extract-props': { enabled: true }
+      }
 
-    // TODO: Extract props if needed (Phase 5 - optional)
+      try {
+        const result = await runPipeline(content, { componentName }, pipelineConfig)
+        content = result.code
+
+        const stats = result.context.stats['extract-props']
+        if (stats && stats.propsExtracted > 0) {
+          console.log(`    ✅ ${file} - ${stats.propsExtracted} props extracted`)
+        }
+      } catch (error) {
+        console.log(`    ⚠️  ${file} - props extraction skipped: ${error.message}`)
+      }
+    }
+
+    // THEN fix import paths: ./img/ → ../assets/img/
+    // Use replacement function to preserve quote style
+    content = content.replace(/from (["'])(\.\/img\/)([^"']+)\1/g, (match, quote, path, file) => {
+      return `from ${quote}../assets/img/${file}${quote}`
+    })
+    content = content.replace(/from (["'])(\.\.\/img\/)([^"']+)\1/g, (match, quote, path, file) => {
+      return `from ${quote}../assets/img/${file}${quote}`
+    })
 
     fs.writeFileSync(path.join(distDir, 'components', file), content)
     copiedCount++
@@ -152,9 +374,14 @@ function generatePageFile(exportDir, distDir, config, extractedComponents) {
   const pageCode = transformToPageComponent(parentCode, parentComponentName, extractedComponents)
 
   // Fix import paths: ./img/ → ./assets/img/
-  const fixedPageCode = pageCode
-    .replace(/from ['"]\.\/img\//g, 'from \'./assets/img/')
-    .replace(/from ['"]\.\.\/img\//g, 'from \'./assets/img/')
+  // Use replacement function to preserve quote style
+  let fixedPageCode = pageCode
+    .replace(/from (["'])(\.\/img\/)([^"']+)\1/g, (match, quote, path, file) => {
+      return `from ${quote}./assets/img/${file}${quote}`
+    })
+    .replace(/from (["'])(\.\.\/img\/)([^"']+)\1/g, (match, quote, path, file) => {
+      return `from ${quote}./assets/img/${file}${quote}`
+    })
 
   // Save to dist root (not dist/components/)
   fs.writeFileSync(path.join(distDir, 'Page.tsx'), fixedPageCode)
@@ -168,8 +395,16 @@ function generatePageFile(exportDir, distDir, config, extractedComponents) {
       .map(name => `@import './components/${name}.css';`)
       .join('\n')
 
-    // Combine imports + parent CSS
-    const finalCss = componentImports + '\n\n' + cssContent
+    // Prepend Tailwind directives for Docker builds
+    const tailwindDirectives = `/* Tailwind CSS directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+`
+
+    // Combine Tailwind directives + component imports + parent CSS
+    const finalCss = tailwindDirectives + componentImports + '\n\n' + cssContent
 
     fs.writeFileSync(path.join(distDir, 'Page.css'), finalCss)
   }
@@ -196,12 +431,31 @@ function transformToPageComponent(sourceCode, parentName, extractedComponents) {
     dataNameMap.set(componentName.toLowerCase(), componentName)
   }
 
-  // Traverse and replace div[data-name] with component calls
+  // STEP 1: Remove function declarations that were extracted as components
+  traverse.default(ast, {
+    FunctionDeclaration(path) {
+      const functionName = path.node.id?.name
+      if (functionName && extractedComponents.includes(functionName)) {
+        path.remove()
+        console.log(`    🗑️  Removed duplicate function: ${functionName}`)
+      }
+    }
+  })
+
+  // STEP 2: Traverse and replace div[data-name] with component calls
   traverse.default(ast, {
     JSXElement(path) {
       const openingElement = path.node.openingElement
 
-      // Check if it's a div with data-name attribute
+      // Check if component is in extractedComponents (needs import)
+      if (openingElement.name.type === 'JSXIdentifier') {
+        const componentName = openingElement.name.name
+        if (extractedComponents.includes(componentName)) {
+          componentsToImport.add(componentName)
+        }
+      }
+
+      // Check if it's a div with data-name attribute (replace with component)
       if (openingElement.name.type === 'JSXIdentifier' && openingElement.name.name === 'div') {
         const dataNameAttr = openingElement.attributes.find(
           attr => attr.type === 'JSXAttribute' &&
@@ -239,26 +493,89 @@ function transformToPageComponent(sourceCode, parentName, extractedComponents) {
     }
   })
 
+  // STEP 3: NOW collect helpers used in the MODIFIED AST
+  const usedHelpers = new Set()
+  traverse.default(ast, {
+    FunctionDeclaration(path) {
+      const functionName = path.node.id?.name
+      if (functionName === 'Page' || functionName === parentName) {
+        // Find all JSX components used in this function
+        path.traverse({
+          JSXOpeningElement(innerPath) {
+            if (innerPath.node.name.type === 'JSXIdentifier') {
+              usedHelpers.add(innerPath.node.name.name)
+            }
+          }
+        })
+      }
+    }
+  })
+
+  // STEP 4: Remove unused helper functions
+  traverse.default(ast, {
+    FunctionDeclaration(path) {
+      const functionName = path.node.id?.name
+      if (!functionName) return
+
+      // Keep Page function
+      if (functionName === 'Page' || functionName === parentName) return
+
+      // Remove if not used in Page function
+      if (!usedHelpers.has(functionName)) {
+        path.remove()
+        console.log(`    🗑️  Removed unused helper: ${functionName}`)
+      }
+    }
+  })
+
+  // STEP 5: Remove ALL image imports (components handle their own images)
+  // Page.tsx only orchestrates components, images are in individual components
+  traverse.default(ast, {
+    ImportDeclaration(path) {
+      const source = path.node.source.value
+      // Remove image imports (belong to components now)
+      if (source.match(/\.(png|jpg|jpeg|svg|gif|webp)$/i)) {
+        const importName = path.node.specifiers[0]?.local?.name
+        path.remove()
+        console.log(`    🗑️  Removed image import: ${importName} (belongs to component)`)
+      }
+    }
+  })
+
   // Generate transformed code
   const output = generate.default(ast, { retainLines: false, compact: false })
   let finalCode = output.code
 
-  // Add component imports after React import
+  // Add component imports after React import with header comment
   const imports = Array.from(componentsToImport)
     .map(name => `import ${name} from './components/${name}';`)
     .join('\n')
 
+  const header = `/**
+ * Page Component
+ * Main page orchestrating all subcomponents
+ * Generated from Figma design - Developer-ready export
+ */
+`
+
   finalCode = finalCode.replace(
     /import React from ['"]react['"];/,
-    `import React from 'react';\nimport './Page.css';\n${imports}`
+    `${header}import React from 'react';\nimport './Page.css';\n\n// ========================================\n// Component Imports\n// ========================================\n\n${imports}`
   )
 
-  // Remove CSS import (already added above)
+  // Remove CSS imports (already added above as './Page.css')
+  // Remove parent function name CSS
   finalCode = finalCode.replace(`import './${parentName}.css';`, '')
   finalCode = finalCode.replace(`import "./${parentName}.css";`, '')
+  // Remove Component-clean.css (always present in source)
+  finalCode = finalCode.replace(`import './Component-clean.css';`, '')
+  finalCode = finalCode.replace(`import "./Component-clean.css";`, '')
 
-  // Rename main function to Page
-  finalCode = finalCode.replace(/export default function \w+\(\)/, 'export default function Page()')
+  // Rename main function to Page with comment
+  finalCode = finalCode.replace(
+    /export default function \w+\(\)/,
+    '\n// ========================================\n// Main Page Component\n// ========================================\n\nexport default function Page()'
+  )
 
   // Clean up excessive blank lines
   finalCode = finalCode.replace(/\n{3,}/g, '\n\n')
@@ -279,6 +596,16 @@ function copyPageFile(exportDir, distDir) {
 
   if (fs.existsSync(pageCss)) {
     let content = fs.readFileSync(pageCss, 'utf8')
+
+    // Prepend Tailwind directives for Docker builds
+    const tailwindDirectives = `/* Tailwind CSS directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+`
+    content = tailwindDirectives + content
+
     // Save to dist root (not dist/components/)
     fs.writeFileSync(path.join(distDir, 'Page.css'), content)
   }

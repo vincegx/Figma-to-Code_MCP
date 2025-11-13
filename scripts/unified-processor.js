@@ -505,6 +505,15 @@ if (fs.existsSync(imgDir)) {
   console.log(`   Images via const declarations: ${constImages}, img tags: ${imgTags}`)
 }
 
+// Prepare pipeline config
+let pipelineConfig = { ...defaultConfig }
+
+// Disable props extraction in clean mode (production version should have hardcoded values)
+if (cleanMode) {
+  pipelineConfig['extract-props'] = { enabled: false }
+  console.log('   ⚠️  Props extraction disabled for clean mode\n')
+}
+
 let result
 try {
   result = await runPipeline(sourceCode, {
@@ -520,7 +529,7 @@ try {
       totalNodes,
       imagesCount
     }
-  }, defaultConfig)
+  }, pipelineConfig)
 } catch (error) {
   console.error(`❌ Pipeline execution failed: ${error.message}`)
   console.error(error.stack)

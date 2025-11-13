@@ -22,6 +22,7 @@ import { parse as babelParse } from '@babel/parser';
 import traverseLib from '@babel/traverse';
 import generateLib from '@babel/generator';
 import { compileResponsiveClasses } from './responsive-css-compiler.js';
+import { execute as extractPropsExecute } from './transformations/extract-props.js';
 
 const traverseDefault = traverseLib.default || traverseLib;
 const generateDefault = generateLib.default || generateLib;
@@ -924,11 +925,23 @@ function injectHelpersIntoComponent(tsxContent, usedHelperNames, helpersMap) {
     const importsToAdd = new Set();
     const helpersToAdd = [];
     const existingImports = new Set();
+    const existingFunctions = new Set();
 
-    // Get existing imports
+    // Get existing imports and function names
     traverseDefault(ast, {
       ImportDeclaration(path) {
         existingImports.add(generateDefault(path.node).code);
+        // Also track import specifiers to avoid duplicate imports
+        path.node.specifiers.forEach(spec => {
+          if (spec.type === 'ImportDefaultSpecifier' || spec.type === 'ImportSpecifier') {
+            existingImports.add(spec.local.name);
+          }
+        });
+      },
+      FunctionDeclaration(path) {
+        if (path.node.id && path.node.id.name) {
+          existingFunctions.add(path.node.id.name);
+        }
       }
     });
 
@@ -936,14 +949,19 @@ function injectHelpersIntoComponent(tsxContent, usedHelperNames, helpersMap) {
     for (const helperName of usedHelperNames) {
       const helper = helpersMap.get(helperName);
       if (helper) {
-        helpersToAdd.push(helper.code);
+        // Only add helper if it doesn't exist already
+        if (!existingFunctions.has(helperName)) {
+          helpersToAdd.push(helper.code);
 
-        // Add imports, fixing paths for nested subcomponents
-        for (const imp of helper.imports) {
-          // Fix image import paths: "./img/" -> "../img/"
-          const fixedImport = imp.replace(/from\s+["']\.\/img\//g, 'from "../img/');
-          if (!existingImports.has(fixedImport)) {
-            importsToAdd.add(fixedImport);
+          // Add imports, fixing paths for nested subcomponents
+          for (const imp of helper.imports) {
+            // Fix image import paths: "./img/" -> "../img/"
+            const fixedImport = imp.replace(/from\s+["']\.\/img\//g, 'from "../img/');
+            // Check if import statement already exists OR import name is already imported
+            const importName = imp.match(/import\s+(\w+)/)?.[1];
+            if (!existingImports.has(fixedImport) && (!importName || !existingImports.has(importName))) {
+              importsToAdd.add(fixedImport);
+            }
           }
         }
       }
@@ -992,6 +1010,49 @@ function injectHelpersIntoComponent(tsxContent, usedHelperNames, helpersMap) {
   }
 }
 
+/**
+ * Extract props from component code (text, images, numbers)
+ * Returns modified code with TypeScript interface + props
+ */
+async function extractPropsFromCode(sourceCode, componentName) {
+  try {
+    // Parse code
+    const ast = babelParse(sourceCode, {
+      sourceType: 'module',
+      plugins: ['jsx', 'typescript']
+    });
+
+    // Run extract-props transform
+    const context = { componentName };
+    const stats = extractPropsExecute(ast, context);
+
+    if (stats.skipped || stats.propsExtracted === 0) {
+      return null; // No props to extract
+    }
+
+    // Generate code with interface prepended
+    const result = generateDefault(ast, {
+      retainLines: false,
+      compact: false,
+      comments: true
+    });
+
+    let finalCode = result.code;
+    if (context.propsExtraction && context.propsExtraction.interface) {
+      finalCode = context.propsExtraction.interface + finalCode;
+    }
+
+    return {
+      code: finalCode,
+      propsCount: stats.propsExtracted,
+      byType: stats.byType
+    };
+  } catch (err) {
+    console.error(`   ⚠️  Error extracting props: ${err.message}`);
+    return null;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // COMPONENT MERGER
 // ═══════════════════════════════════════════════════════════════
@@ -1029,12 +1090,14 @@ async function mergeComponent(componentName, desktop, tablet, mobile, outputDir,
   // 4. Fix image import paths: "./img/" -> "../img/"
   mergedTSX = mergedTSX.replace(/from\s+["']\.\/img\//g, 'from "../img/');
 
+  // 5. Save component WITHOUT props extraction
+  // Props will be extracted only in dist/ via dist-generator.js (same as Process 1)
   fs.writeFileSync(
     path.join(outputDir, `${componentName}.tsx`),
     mergedTSX
   );
 
-  // 5. Merge CSS with media queries
+  // 6. Merge CSS with media queries
   const desktopCSS = readCSS(desktop.testDir, componentName);
   const tabletCSS = readCSS(tablet.testDir, componentName);
   const mobileCSS = readCSS(mobile.testDir, componentName);
@@ -1181,8 +1244,16 @@ async function generatePage(components, desktop, tablet, mobile, outputDir, brea
       finalCode = finalCode.replace(pattern, '');
     });
 
-    // Rename main component to Page
-    finalCode = finalCode.replace(/export default function \w+\(\)/, 'export default function Page()');
+    // Rename main component to Page and remove all props (components handle their own props)
+    // Match: export default function ComponentName({ ...props }: PropsInterface)
+    // Replace with: export default function Page()
+    finalCode = finalCode.replace(
+      /export default function \w+\([^)]*\)(?::\s*\w+Props)?/,
+      'export default function Page()'
+    );
+
+    // Remove the Props interface as it's no longer needed (components have their own)
+    finalCode = finalCode.replace(/interface \w+Props\s*\{[^}]*\}\s*\n*/g, '');
 
     // Clean up excessive blank lines
     finalCode = finalCode.replace(/\n{3,}/g, '\n\n');
