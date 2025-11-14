@@ -170,6 +170,26 @@ function convertToRelative(path, stats) {
 }
 
 /**
+ * Check if element is the root JSX element returned by export default
+ */
+function isRootElement(path) {
+  if (!path) return false
+
+  // Check if parent is a ReturnStatement
+  const parent = path.parentPath
+  if (!parent || !parent.isReturnStatement()) {
+    return false
+  }
+
+  // Check if the function parent is exported by default
+  const functionParent = parent.getFunctionParent()
+  if (!functionParent) return false
+
+  const declarationParent = functionParent.parentPath
+  return declarationParent && declarationParent.isExportDefaultDeclaration()
+}
+
+/**
  * Wrap absolutely positioned siblings in a flex container
  * This helps maintain layout when converting from absolute to relative
  */
@@ -177,6 +197,13 @@ function wrapInFlexContainer(path, stats) {
   const parent = path.parent
 
   if (!parent || !t.isJSXElement(parent)) {
+    return false
+  }
+
+  // IMPORTANT: Ne pas ajouter flex sur la div racine du composant
+  // La div racine doit rester "relative w-full" pour s'adapter au conteneur parent
+  const parentPath = path.parentPath
+  if (parentPath && isRootElement(parentPath)) {
     return false
   }
 
@@ -334,7 +361,8 @@ export function execute(ast) {
     flexContainersAdded: 0,
     insetFixed: 0,
     percentageFixed: 0,
-    missingPositionFixed: 0
+    missingPositionFixed: 0,
+    rootElementFixed: 0
   }
 
   // First pass: Fix common patterns
@@ -355,6 +383,30 @@ export function execute(ast) {
   traverse.default(ast, {
     JSXElement(path) {
       wrapInFlexContainer(path, stats)
+    }
+  })
+
+  // Fourth pass: Fix root element (size-full → w-full flex-1)
+  // size-full (height: 100%) doesn't work with parent's min-height
+  // flex-1 allows the root element to fill the flex container properly
+  traverse.default(ast, {
+    JSXElement(path) {
+      if (isRootElement(path)) {
+        const classNameAttr = path.node.openingElement.attributes.find(
+          attr => attr.name && attr.name.name === 'className'
+        )
+
+        if (classNameAttr && t.isStringLiteral(classNameAttr.value)) {
+          let className = classNameAttr.value.value
+
+          // Replace size-full with w-full flex-1 on root element
+          if (className.includes('size-full')) {
+            className = className.replace('size-full', 'w-full flex-1')
+            classNameAttr.value = t.stringLiteral(className)
+            stats.rootElementFixed++
+          }
+        }
+      }
     }
   })
 

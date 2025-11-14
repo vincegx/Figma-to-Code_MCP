@@ -13,6 +13,7 @@ export default function ExportFigmaPreviewPage() {
   const [Component, setComponent] = useState<React.ComponentType | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null)
 
   useEffect(() => {
     if (!exportId) {
@@ -28,6 +29,24 @@ export default function ExportFigmaPreviewPage() {
     try {
       setLoading(true)
       setError(null)
+
+      // Load metadata.xml to get dimensions
+      try {
+        const metadataResponse = await fetch(`/src/generated/export_figma/${exportId}/metadata.xml`)
+        if (metadataResponse.ok) {
+          const metadataText = await metadataResponse.text()
+          const parser = new DOMParser()
+          const xmlDoc = parser.parseFromString(metadataText, 'text/xml')
+          const root = xmlDoc.documentElement
+          const width = parseInt(root.getAttribute('width') || '0')
+          const height = parseInt(root.getAttribute('height') || '0')
+          if (width && height) {
+            setDimensions({ width, height })
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load metadata.xml:', e)
+      }
 
       // Load CSS
       const link = document.createElement('link')
@@ -100,5 +119,17 @@ export default function ExportFigmaPreviewPage() {
     )
   }
 
-  return <Component />
+  // Wrapper flex pour que flex-1 sur le composant racine fonctionne
+  // Utilise les dimensions de Figma pour définir la hauteur minimale
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: dimensions?.height ? `${dimensions.height}px` : '100vh'
+    }}>
+      <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column' }}>
+        <Component />
+      </div>
+    </div>
+  )
 }

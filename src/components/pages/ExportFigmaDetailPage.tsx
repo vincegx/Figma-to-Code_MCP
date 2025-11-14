@@ -556,15 +556,20 @@ function PreviewTab({ exportId, dimensions }: PreviewTabProps) {
         <div
           className="bg-white shadow-lg"
           style={{
+            display: 'flex',
+            flexDirection: 'column',
             width: `${viewportWidth}px`,
             minHeight: dimensions?.height ? `${dimensions.height}px` : 'auto'
           }}
         >
-          {Component && (
-            <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading component...</div>}>
-              <Component />
-            </Suspense>
-          )}
+          {/* Wrapper flex: permet à la racine avec flex-1 de fonctionner correctement avec minHeight */}
+          <div style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column' }}>
+            {Component && (
+              <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading component...</div>}>
+                <Component />
+              </Suspense>
+            )}
+          </div>
         </div>
       </div>
     </div>
