@@ -414,8 +414,12 @@ function transformAST(ast, groups) {
       // Add new imports for consolidated files
       for (const group of groups) {
         if (group.consolidatedFile) {
-          // Use valid JS identifier: group1 instead of group-1
-          const safeGroupName = group.groupName.replace(/-/g, '')
+          // Use valid JS identifier: remove ALL invalid chars (not just -)
+          // Valid chars: letters, numbers, underscore, dollar sign
+          const safeGroupName = group.groupName
+            .replace(/[^a-zA-Z0-9_$]/g, '_')  // Replace invalid chars with underscore
+            .replace(/_+/g, '_')               // Collapse multiple underscores
+            .replace(/^_+|_+$/g, '')           // Remove leading/trailing underscores
           let baseImportVarName = `img${safeGroupName.charAt(0).toUpperCase()}${safeGroupName.slice(1)}`
 
           // Avoid naming collisions

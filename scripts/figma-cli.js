@@ -85,6 +85,9 @@ class FigmaCLI {
     const directories = getDirectories();
     const generationSettings = getGenerationSettings();
 
+    // Track if MCP extraction succeeded (to avoid deleting files on post-processing errors)
+    this.mcpSucceeded = false;
+
     // Legacy config structure (for backward compatibility)
     this.config = {
       mcpServer: {
@@ -741,6 +744,7 @@ class FigmaCLI {
         await this.cleanupTempAssets();
 
         log.success(`Phase 1 terminée en MODE CHUNKING (${4 + nodes.length} appels)\n`);
+        this.mcpSucceeded = true; // Mark MCP extraction as successful
         break;
 
       case 'CONTENT_ERROR':
@@ -768,6 +772,7 @@ class FigmaCLI {
         await this.cleanupTempAssets();
 
         log.success('Phase 1 terminée en MODE SIMPLE (4 appels)\n');
+        this.mcpSucceeded = true; // Mark MCP extraction as successful
         break;
 
       default:
@@ -958,15 +963,18 @@ class FigmaCLI {
       log.error(`ERREUR lors de la génération: ${error.message}`);
       console.log(`${colors.dim}${error.stack}${colors.reset}`);
 
-      // Cleanup: remove incomplete test directory to avoid pollution
-      if (fs.existsSync(this.testDir)) {
-        log.task('🧹', 'Nettoyage du dossier de test incomplet');
+      // Cleanup: only remove folder if MCP extraction failed
+      // If MCP succeeded but post-processing failed, keep files for debugging
+      if (!this.mcpSucceeded && fs.existsSync(this.testDir)) {
+        log.task('🧹', 'Nettoyage du dossier de test incomplet (MCP a échoué)');
         try {
           fs.rmSync(this.testDir, { recursive: true, force: true });
           log.success(`Dossier supprimé: ${path.basename(this.testDir)}`);
         } catch (cleanupError) {
           log.warning(`Impossible de supprimer le dossier: ${cleanupError.message}`);
         }
+      } else if (this.mcpSucceeded && fs.existsSync(this.testDir)) {
+        log.warning(`⚠️  Fichiers conservés pour débogage: ${path.basename(this.testDir)}`);
       }
 
       process.exit(1);

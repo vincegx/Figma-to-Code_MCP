@@ -29,6 +29,52 @@ import fs from 'fs'
 import path from 'path'
 
 // ═══════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Check if a variable name is a valid JavaScript identifier
+ */
+function isValidIdentifier(name) {
+  // Must start with letter, underscore, or dollar sign
+  // Can contain letters, numbers, underscore, dollar sign
+  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name)
+}
+
+/**
+ * Sanitize variable names to be valid JavaScript identifiers
+ * - Remove/replace invalid characters (=, spaces, -, etc.)
+ * - Ensure starts with letter or underscore
+ * - Only sanitize if name is invalid
+ */
+function sanitizeVariableName(varName) {
+  // If already valid, return as-is
+  if (isValidIdentifier(varName)) {
+    return varName
+  }
+
+  // Replace invalid characters with underscore
+  // Valid chars: letters, numbers, underscore, dollar sign
+  // Invalid chars: =, -, spaces, etc.
+  let sanitized = varName
+    .replace(/[^a-zA-Z0-9_$]/g, '_')  // Replace invalid chars with underscore
+    .replace(/_+/g, '_')              // Collapse multiple underscores
+    .replace(/^_+|_+$/g, '')          // Remove leading/trailing underscores
+
+  // Ensure starts with valid character (letter, underscore, or $)
+  if (sanitized && !/^[a-zA-Z_$]/.test(sanitized)) {
+    sanitized = 'img_' + sanitized
+  }
+
+  // Ensure non-empty
+  if (!sanitized) {
+    sanitized = 'imgImage'
+  }
+
+  return sanitized
+}
+
+// ═══════════════════════════════════════════════════════════════
 // CLI ARGUMENTS
 // ═══════════════════════════════════════════════════════════════
 
@@ -360,7 +406,9 @@ if (allImageDeclarations.length > 0) {
       const oldFilename = path.basename(decl.imagePath)
       const newFilename = renameMap.get(oldFilename) || oldFilename
       const newPath = `${imgRelativePath}${newFilename}`
-      return `import ${decl.varName} from "${newPath}";`
+      // Sanitize variable name to ensure it's a valid JavaScript identifier
+      const sanitizedVarName = sanitizeVariableName(decl.varName)
+      return `import ${sanitizedVarName} from "${newPath}";`
     }).join('\n')
 
     // Find insertion position (after existing imports, or at the top)
