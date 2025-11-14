@@ -16,6 +16,7 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    "./src/generated/export_figma/**/*.{tsx,jsx}",  // Auto-scan Figma exports for hot-reload
   ],
   theme: {
     screens: {
