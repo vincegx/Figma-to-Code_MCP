@@ -577,6 +577,10 @@ ls -la src/generated/export_figma/node-*
 **2. Test Individual Scripts:**
 
 ```bash
+# Test reprocessing (re-runs phases 2-4 without MCP)
+./cli/figma-reprocess node-X-Y-TIMESTAMP
+./cli/figma-reprocess node-X-Y-TIMESTAMP --clean
+
 # Test image organization
 docker exec mcp-figma-v1 node scripts/post-processing/organize-images.js \
   src/generated/export_figma/node-X-Y
@@ -753,6 +757,10 @@ docker-compose up
 ```bash
 # Run analysis
 docker exec mcp-figma-v1 node scripts/figma-cli.js "URL"
+
+# Reprocess existing export (no MCP calls)
+docker exec mcp-figma-v1 node scripts/figma-export-reprocess.js node-{id}-{timestamp}
+docker exec mcp-figma-v1 node scripts/figma-export-reprocess.js node-{id}-{timestamp} --clean
 
 # Install new package
 docker exec mcp-figma-v1 npm install package-name

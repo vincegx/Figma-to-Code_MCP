@@ -98,6 +98,63 @@ function shouldExtract(value) {
 }
 
 /**
+ * Check if image is a Figma instance screenshot (should NOT be extracted as prop)
+ *
+ * Figma exports complex instances (SideMenu, Header) as BOTH:
+ * 1. Unfolded component code with full structure
+ * 2. Screenshot SVG (sidemenu.svg) of the instance
+ *
+ * We must skip the screenshot to preserve the full component structure.
+ *
+ * Detection strategy:
+ * 1. Primary: Check if image name matches instance names from metadata.xml
+ * 2. Fallback: Check file naming convention (simple lowercase = instance)
+ *
+ * @param {string} importPath - Import path (e.g., "./img/sidemenu.svg")
+ * @param {string} importName - Import variable name (e.g., "imgSidemenu")
+ * @param {object} context - Pipeline context with metadata
+ * @returns {boolean} - True if this is an instance screenshot (skip extraction)
+ */
+function isInstanceScreenshot(importPath, importName, context = {}) {
+  // Strategy 1: Check against instance names from metadata.xml (most reliable)
+  if (context.metadata && context.metadata.instances) {
+    const instanceNames = context.metadata.instances
+
+    // Normalize import name: imgSidemenu → sidemenu
+    const normalizedImportName = importName
+      .replace(/^img/, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+
+    // Check if matches any instance name
+    for (const instanceName of instanceNames) {
+      const normalizedInstanceName = instanceName
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+
+      if (normalizedImportName === normalizedInstanceName) {
+        return true // Matched instance from metadata.xml
+      }
+    }
+  }
+
+  // Strategy 2: Fallback - Check file naming convention
+  // Instance screenshots: simple lowercase word (sidemenu.svg, header.svg, footer.svg)
+  // Actual images: descriptive kebab-case (icon-search.svg, frame-1008.svg, group-1000001432.svg)
+  const filename = importPath.split('/').pop()
+  const basename = filename.replace(/\.(svg|png|jpg|jpeg|gif|webp)$/i, '')
+
+  // Pattern: Simple lowercase word with 4+ characters (likely instance)
+  // Examples that match: sidemenu, header, footer, navbar
+  // Examples that DON'T match: icon-search (has dash), img (too short), frame-1008 (has dash+number)
+  if (/^[a-z]{4,}$/.test(basename)) {
+    return true // Likely instance screenshot (simple word)
+  }
+
+  return false // Not an instance screenshot
+}
+
+/**
  * Extract text content from JSX elements (only from main component)
  */
 function extractTexts(ast, componentName) {
@@ -156,19 +213,27 @@ function extractTexts(ast, componentName) {
 
 /**
  * Extract image imports and usages (only from main component)
+ * EXCLUDES Figma instance screenshots to preserve full component structure
  */
-function extractImages(ast, componentName) {
+function extractImages(ast, componentName, context = {}) {
   const images = []
   const imageImports = new Map() // importName → importPath
 
-  // Step 1: Find all image imports
+  // Step 1: Find all image imports (skip instance screenshots)
   traverse.default(ast, {
     ImportDeclaration(path) {
       const source = path.node.source.value
       if (source.match(/\.(svg|png|jpg|jpeg|gif|webp)$/i)) {
         const importName = path.node.specifiers[0]?.local.name
         if (importName) {
-          imageImports.set(importName, source)
+          // Check if this is a Figma instance screenshot
+          if (isInstanceScreenshot(source, importName, context)) {
+            // Skip instance screenshots - they are visual representations of unfolded components
+            console.log(`   ⏭️  [extract-props] Skipped instance screenshot: ${importName} (${source})`)
+          } else {
+            // Real image - add to extraction candidates
+            imageImports.set(importName, source)
+          }
         }
       }
     }
@@ -500,7 +565,7 @@ export function execute(ast, context) {
 
   // Extract all props (only from main component, not helpers)
   const texts = extractTexts(ast, componentName)
-  const images = extractImages(ast, componentName)
+  const images = extractImages(ast, componentName, context)
   const numbers = extractNumbers(ast, componentName)
   let allProps = [...texts, ...images, ...numbers]
 

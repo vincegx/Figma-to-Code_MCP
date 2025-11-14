@@ -35,8 +35,8 @@ export function execute(ast, context) {
   // Step 1: Build import map from AST
   const importMap = buildImportMap(ast)
 
-  // Step 2: Find SVG groups
-  const groups = findSVGGroups(ast, importMap)
+  // Step 2: Find SVG groups (pass context to check for Figma instances)
+  const groups = findSVGGroups(ast, importMap, context)
 
   if (groups.length === 0) {
     return stats
@@ -84,8 +84,9 @@ function buildImportMap(ast) {
 
 /**
  * Find SVG groups (divs with 5+ SVG images)
+ * EXCLUDES Figma instance containers to preserve component structure
  */
-function findSVGGroups(ast, importMap) {
+function findSVGGroups(ast, importMap, context = {}) {
   const groups = []
 
   traverse.default(ast, {
@@ -98,6 +99,28 @@ function findSVGGroups(ast, importMap) {
         attr => attr.name && attr.name.name === 'data-name'
       )
       const containerDataName = dataNameAttr?.value?.value
+
+      // Check if this container is a Figma instance (should NOT be consolidated)
+      if (containerDataName && context.metadata && context.metadata.instances) {
+        const instanceNames = context.metadata.instances
+
+        // Normalize container name for comparison
+        const normalizedContainerName = containerDataName
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+
+        // Check if matches any instance name
+        for (const instanceName of instanceNames) {
+          const normalizedInstanceName = instanceName
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '')
+
+          if (normalizedContainerName === normalizedInstanceName) {
+            console.log(`   ⏭️  [svg-consolidation] Skipped Figma instance: ${containerDataName}`)
+            return // Skip this container - it's a Figma instance component
+          }
+        }
+      }
 
       // Find <img> children at depth 1-2 only (not recursive through entire tree)
       const svgElements = []

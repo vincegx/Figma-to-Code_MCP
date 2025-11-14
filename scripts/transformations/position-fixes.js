@@ -78,13 +78,22 @@ function shouldStayAbsolute(path) {
   }
 
   // Check if parent is relative/absolute (intentional positioning context)
-  const parent = path.parent
-  if (parent && t.isJSXElement(parent)) {
-    const parentClassAttr = parent.openingElement.attributes.find(
+  const parentPath = path.parentPath
+  if (parentPath && parentPath.isJSXElement()) {
+    const parentClassAttr = parentPath.node.openingElement.attributes.find(
       attr => attr.name && attr.name.name === 'className'
     )
-    if (parentClassAttr && t.isStringLiteral(parentClassAttr.value)) {
-      const parentClasses = parentClassAttr.value.value
+    if (parentClassAttr) {
+      // Handle both StringLiteral and JSXExpressionContainer
+      let parentClasses = ''
+      if (t.isStringLiteral(parentClassAttr.value)) {
+        parentClasses = parentClassAttr.value.value
+      } else if (t.isJSXExpressionContainer(parentClassAttr.value) &&
+                 t.isIdentifier(parentClassAttr.value.expression)) {
+        // className={className} - assume it might have positioning
+        return true
+      }
+
       if (parentClasses.includes('relative') || parentClasses.includes('absolute')) {
         // Parent has positioning context, might be intentional
         return true

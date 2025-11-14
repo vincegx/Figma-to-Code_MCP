@@ -512,6 +512,24 @@ let pipelineConfig = { ...defaultConfig }
 // Props are ONLY extracted in dist/ via dist-generator.js
 pipelineConfig['extract-props'] = { enabled: false }
 
+// Parse metadata.xml to extract Figma instance names
+// This helps extract-props distinguish between instance screenshots and real images
+let instanceNames = []
+if (metadataXmlPath && fs.existsSync(metadataXmlPath)) {
+  try {
+    const metadataContent = fs.readFileSync(metadataXmlPath, 'utf8')
+    // Extract instance names: <instance id="..." name="SideMenu" .../>
+    const instanceMatches = metadataContent.matchAll(/<instance[^>]+name="([^"]+)"/g)
+    instanceNames = Array.from(instanceMatches, m => m[1])
+
+    if (instanceNames.length > 0) {
+      console.log(`   Found ${instanceNames.length} Figma instances: ${instanceNames.join(', ')}`)
+    }
+  } catch (error) {
+    console.warn(`   ⚠️  Could not parse metadata.xml: ${error.message}`)
+  }
+}
+
 let result
 try {
   result = await runPipeline(sourceCode, {
@@ -522,6 +540,9 @@ try {
     metadataXmlPath,
     cleanMode,
     keepDataName: true, // Keep data-name attributes for responsive merging
+    metadata: {
+      instances: instanceNames // Pass instance names to transformations
+    },
     analysis: {
       sections: [],
       totalNodes,

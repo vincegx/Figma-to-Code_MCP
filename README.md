@@ -212,6 +212,34 @@ curl http://localhost:3845/mcp
 6. Watch real-time logs in the modal
 7. View results in the **Export Figma** page
 
+### Reprocessing Exports (No MCP Calls)
+
+Already have an export but need to regenerate files? Use the reprocess command:
+
+```bash
+# Find your export ID
+ls src/generated/export_figma/
+# Example: node-8132-3793-1763118767
+
+# Reprocess with Tailwind version only
+./cli/figma-reprocess node-8132-3793-1763118767
+
+# Reprocess with both Tailwind + Clean versions
+./cli/figma-reprocess node-8132-3793-1763118767 --clean
+```
+
+**What it does:**
+- Re-runs AST transformations (Phase 2)
+- Recaptures web screenshot (Phase 3)
+- Regenerates reports and dist package (Phase 4)
+- Uses existing `Component.tsx` (no MCP calls = faster)
+
+**Use cases:**
+- Modified transform configuration and want to re-apply
+- Need clean version but forgot `--clean` flag initially
+- Screenshot failed and want to retry
+- Testing transform changes during development
+
 ---
 
 ## 📖 Documentation
@@ -242,6 +270,7 @@ Comprehensive guides available in the `/docs` folder:
 
 **Usage:**
 - [CLI Commands](docs/ARCHITECTURE.md#cli-usage)
+- [Reprocessing Exports](#reprocessing-exports-no-mcp-calls) - Regenerate files without MCP calls
 - [API Endpoints](docs/API.md)
 - [Configuration](docs/DEVELOPMENT.md#configuration)
 
@@ -479,6 +508,15 @@ docker exec mcp-figma-v1 curl http://host.docker.internal:3845/mcp
 # Re-organize images
 docker exec mcp-figma-v1 node scripts/post-processing/organize-images.js \
   src/generated/export_figma/node-{id}
+```
+
+**Need to Regenerate Files?**
+```bash
+# Reprocess existing export (no MCP calls)
+./cli/figma-reprocess node-{id}-{timestamp}
+
+# With clean version
+./cli/figma-reprocess node-{id}-{timestamp} --clean
 ```
 
 **Component Won't Load?**

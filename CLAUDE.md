@@ -71,6 +71,37 @@ docker exec mcp-figma-v1 node scripts/figma-cli.js "URL" --clean
 - Paste Figma URL in the analysis form
 - Click "Lancer l'analyse"
 
+### Reprocessing Exports (Without MCP Calls)
+
+When you need to regenerate files from an existing export without making new MCP calls to Figma:
+
+**CLI (from host):**
+```bash
+# Reprocess with Tailwind version only
+./cli/figma-reprocess node-8132-3793-1763118767
+
+# Reprocess with both Tailwind + Clean versions
+./cli/figma-reprocess node-8132-3793-1763118767 --clean
+```
+
+**CLI (in Docker):**
+```bash
+docker exec mcp-figma-v1 node scripts/figma-export-reprocess.js node-8132-3793-1763118767
+docker exec mcp-figma-v1 node scripts/figma-export-reprocess.js node-8132-3793-1763118767 --clean
+```
+
+**What it does:**
+- Re-runs Phase 2: AST transformations + reports generation
+- Re-runs Phase 3: Web screenshot capture
+- Re-runs Phase 4: Component splitting + dist package generation
+- Uses existing `Component.tsx` (no MCP calls to Figma)
+
+**Use cases:**
+- Modified AST transforms and want to re-apply them
+- Need to regenerate clean version with `--clean` flag
+- Screenshot capture failed and you want to retry
+- Update reports after modifying transform configuration
+
 ### Processing Commands
 
 ```bash
@@ -235,6 +266,7 @@ responsive-merger-{timestamp}/
 ```
 scripts/
 ├── figma-cli.js              # Main orchestrator (MCP SDK, phases 1-4)
+├── figma-export-reprocess.js # Reprocess existing exports (phases 2-4 only, no MCP)
 ├── responsive-merger.js      # Responsive merge orchestrator (multi-screen fusion)
 ├── pipeline.js               # Transform pipeline executor (loads and runs transforms)
 ├── responsive-pipeline.js    # Responsive transform pipeline (7 transforms)

@@ -2,9 +2,9 @@
 
 /**
  * Capture screenshot du rendu web HTML
- * Usage: node scripts/capture-web-screenshot.js <test-dir> <port> [width] [height]
+ * Usage: node scripts/post-processing/capture-screenshot.js <export-dir> <port> [width] [height]
  *
- * Exemple: node scripts/capture-web-screenshot.js src/generated/export_figma/test-123 5173 1426 734
+ * Exemple: node scripts/post-processing/capture-screenshot.js src/generated/export_figma/node-123-456-1234567890 5173 1426 734
  */
 
 import puppeteer from 'puppeteer';
@@ -18,8 +18,8 @@ async function captureWebScreenshot(testDir, port = 5173, fixedWidth = null, fix
     console.log(`   Fixed dimensions: ${fixedWidth}x${fixedHeight} (from Figma node)`);
   }
 
-  // Extract testId from testDir (e.g., "src/generated/export_figma/test-123" -> "test-123")
-  const testId = path.basename(testDir);
+  // Extract exportId from testDir (e.g., "src/generated/export_figma/node-6047-3245-1763118817" -> "node-6047-3245-1763118817")
+  const exportId = path.basename(testDir);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -29,8 +29,8 @@ async function captureWebScreenshot(testDir, port = 5173, fixedWidth = null, fix
   try {
     const page = await browser.newPage();
 
-    // Use preview mode to render ONLY the component (not the dashboard)
-    const url = `http://localhost:${port}/?preview=true&test=${testId}`;
+    // Use new preview route to render ONLY the component (iframe content)
+    const url = `http://localhost:${port}/export_figma/${exportId}/preview?version=fixed`;
     console.log(`🌐 Opening ${url}...`);
 
     await page.goto(url, {
@@ -106,9 +106,9 @@ async function captureWebScreenshot(testDir, port = 5173, fixedWidth = null, fix
 const [testDir, port, width, height] = process.argv.slice(2);
 
 if (!testDir) {
-  console.error('Usage: node scripts/capture-web-screenshot.js <test-dir> [port] [width] [height]');
-  console.error('Example: node scripts/capture-web-screenshot.js src/generated/export_figma/test-123 5173');
-  console.error('Example: node scripts/capture-web-screenshot.js src/generated/export_figma/test-123 5173 1426 734');
+  console.error('Usage: node scripts/post-processing/capture-screenshot.js <export-dir> [port] [width] [height]');
+  console.error('Example: node scripts/post-processing/capture-screenshot.js src/generated/export_figma/node-123-456-1234567890 5173');
+  console.error('Example: node scripts/post-processing/capture-screenshot.js src/generated/export_figma/node-123-456-1234567890 5173 1426 734');
   process.exit(1);
 }
 
