@@ -5,8 +5,8 @@ src/generated
 *.log
 
 # Temporary MCP assets (keep directory structure)
-tmp/figma-assets/*
-!tmp/figma-assets/.gitkeep
+tmp/figma-assets-*
+tmp/test-props/
 
 # Usage tracking data (keep directory structure)
 data/*

@@ -113,6 +113,9 @@ class FigmaCLI {
       this.cleanMode = cleanMode;
     }
 
+    // Initialize timestamp early (needed for unique assets directory)
+    this.timestamp = Math.floor(Date.now() / 1000);
+
     // Determine project root (works from both Docker and host)
     // MCP Figma Desktop runs on HOST, so we need the HOST path for dirForAssetWrites
     const isDocker = process.env.PROJECT_ROOT || fs.existsSync('/.dockerenv');
@@ -121,12 +124,14 @@ class FigmaCLI {
       // Docker mode: we need BOTH paths
       // - HOST path for MCP to write assets
       // - Docker path for us to read/copy assets
-      this.assetsDirHost = path.join(process.env.PROJECT_ROOT, 'tmp', 'figma-assets');  // For MCP
-      this.assetsDir = '/app/tmp/figma-assets';  // For Docker to read
+      // Use unique directory per export to avoid conflicts
+      this.assetsDirHost = path.join(process.env.PROJECT_ROOT, 'tmp', `figma-assets-${this.timestamp}`);  // For MCP
+      this.assetsDir = `/app/tmp/figma-assets-${this.timestamp}`;  // For Docker to read
     } else {
       // Running on host directly - same path for both
+      // Use unique directory per export to avoid conflicts
       const projectRoot = path.join(__dirname, '..');
-      this.assetsDir = path.join(projectRoot, 'tmp', 'figma-assets');
+      this.assetsDir = path.join(projectRoot, 'tmp', `figma-assets-${this.timestamp}`);
       this.assetsDirHost = this.assetsDir;
     }
 
@@ -139,8 +144,7 @@ class FigmaCLI {
     this.nodeIdHyphen = parsed.nodeIdHyphen;
     this.figmaUrl = url;
 
-    // Create test directory
-    this.timestamp = Math.floor(Date.now() / 1000);
+    // Create test directory (timestamp already initialized above)
     this.testDir = path.join(
       __dirname,
       '..',
@@ -441,6 +445,74 @@ class FigmaCLI {
   }
 
   /**
+   * Classify code result from MCP into categories
+   * @param {string} code - Code received from MCP
+   * @returns {object} - {category: string, reason: string, needsChunking: boolean}
+   */
+  classifyCodeResult(code) {
+    // 0. Check if code exists
+    if (!code || typeof code !== 'string') {
+      return { category: 'CONTENT_ERROR', reason: 'No code received from MCP', needsChunking: false };
+    }
+
+    // 1. Fatal API errors (rate limit, auth, etc.) → FAIL immediately
+    const fatalErrors = [
+      { pattern: /rate limit exceeded/i, message: 'Rate limit exceeded' },
+      { pattern: /unauthorized/i, message: 'Unauthorized' },
+      { pattern: /forbidden/i, message: 'Forbidden' },
+      { pattern: /api error/i, message: 'API error' },
+      { pattern: /request failed/i, message: 'Request failed' }
+    ];
+
+    for (const { pattern, message } of fatalErrors) {
+      if (pattern.test(code)) {
+        return { category: 'FATAL_ERROR', reason: message, needsChunking: false };
+      }
+    }
+
+    // 2. Signals that chunking is needed (content too large/complex)
+    const chunkSignals = [
+      { pattern: /too large/i, message: 'Content too large' },
+      { pattern: /too complex/i, message: 'Content too complex' },
+      { pattern: /exceeds limit/i, message: 'Exceeds limit' },
+      { pattern: /content size/i, message: 'Content size exceeded' },
+      { pattern: /cannot generate.*size/i, message: 'Cannot generate due to size' },
+      { pattern: /selection too big/i, message: 'Selection too big' },
+      { pattern: /try.*smaller/i, message: 'Try smaller selection' }
+    ];
+
+    for (const { pattern, message } of chunkSignals) {
+      if (pattern.test(code)) {
+        return { category: 'TOO_LARGE', reason: message, needsChunking: true };
+      }
+    }
+
+    // 3. Content errors (empty node, not found, etc.) → FAIL
+    const contentErrors = [
+      { pattern: /node is empty/i, message: 'Node is empty' },
+      { pattern: /no code available/i, message: 'No code available' },
+      { pattern: /not found/i, message: 'Not found' },
+      { pattern: /node.*empty/i, message: 'Empty node' },
+      { pattern: /cannot generate/i, message: 'Code generation failed' }
+    ];
+
+    for (const { pattern, message } of contentErrors) {
+      if (pattern.test(code)) {
+        return { category: 'CONTENT_ERROR', reason: message, needsChunking: false };
+      }
+    }
+
+    // 4. Validate as React code
+    const validation = this.isValidReactCode(code, false);
+    if (!validation.valid) {
+      return { category: 'INVALID_CODE', reason: validation.reason, needsChunking: false };
+    }
+
+    // 5. Valid code
+    return { category: 'VALID_CODE', reason: 'Valid React code', needsChunking: false };
+  }
+
+  /**
    * Extract child nodes from metadata XML (already saved)
    */
   extractChildNodes() {
@@ -473,7 +545,7 @@ class FigmaCLI {
 
       const codeResult = await this.callMCPTool('get_design_context', {
         nodeId: node.id,
-        dirForAssetWrites: '',  // Images already retrieved
+        dirForAssetWrites: this.assetsDirHost,  // Required by MCP server
         forceCode: true,
         clientLanguages: this.config.commonParams.clientLanguages,
         clientFrameworks: this.config.commonParams.clientFrameworks
@@ -550,34 +622,33 @@ class FigmaCLI {
     fs.mkdirSync(this.testDir, { recursive: true });
     log.success('Dossier créé');
 
-    // Ensure assets directory exists with proper permissions
-    log.task('🧹', `Nettoyage ${this.assetsDir}`);
-    if (!fs.existsSync(this.assetsDir)) {
-      fs.mkdirSync(this.assetsDir, { recursive: true, mode: 0o755 });
-    }
-    execSync(`rm -rf ${this.assetsDir}/* 2>/dev/null || true`);
-    log.success('Assets directory nettoyé\n');
+    // Create unique assets directory for this export
+    log.task('📁', 'Création dossier assets');
+    fs.mkdirSync(this.assetsDir, { recursive: true, mode: 0o755 });
+    log.success(`Assets: ${path.basename(this.assetsDir)}\n`);
   }
 
   /**
-   * PHASE 1: MCP Extraction (Try Simple First)
+   * PHASE 1: MCP Extraction (Metadata First, Intelligent Classification)
    */
   async phase1_extraction() {
-    log.phase('PHASE 1: EXTRACTION MCP (Try Simple First)');
+    log.phase('PHASE 1: EXTRACTION MCP (Metadata First)');
 
-    // 1. Call 4 MCP tools in parallel
-    log.task('🎨', '4 appels MCP en parallèle');
-    const [codeResult, screenshotResult, variablesResult, metadataResult] = await Promise.all([
-      this.callMCPTool('get_design_context', {
-        nodeId: this.nodeId,
-        dirForAssetWrites: this.assetsDirHost,  // HOST path for MCP to write
-        forceCode: true,
-        clientLanguages: this.config.commonParams.clientLanguages,
-        clientFrameworks: this.config.commonParams.clientFrameworks
-      }),
+    // 1. Get metadata first (needed for both modes)
+    log.task('📋', 'Récupération metadata');
+    const metadataResult = await this.callMCPTool('get_metadata', {
+      nodeId: this.nodeId,
+      clientLanguages: this.config.commonParams.clientLanguages,
+      clientFrameworks: this.config.commonParams.clientFrameworks
+    });
+    this.saveFile('metadata.xml', metadataResult.content[0].text);
+    log.success('Metadata sauvegardé\n');
+
+    // 2. Get variables and screenshot in parallel
+    log.task('🎨', '2 appels MCP en parallèle');
+    const [screenshotResult, variablesResult] = await Promise.all([
       this.callMCPTool('get_screenshot', { nodeId: this.nodeId }),
-      this.callMCPTool('get_variable_defs', { nodeId: this.nodeId }),
-      this.callMCPTool('get_metadata', { nodeId: this.nodeId })
+      this.callMCPTool('get_variable_defs', { nodeId: this.nodeId })
     ]);
 
     // Save screenshot (handle base64/binary)
@@ -591,71 +662,117 @@ class FigmaCLI {
       log.warning('Screenshot non disponible');
     }
 
-    // Save variables and metadata
+    // Save variables
     this.saveFile('variables.json', variablesResult.content[0].text);
-    this.saveFile('metadata.xml', metadataResult.content[0].text);
-    log.success('4 appels MCP terminés\n');
+    log.success('2 appels MCP terminés\n');
 
-    // 2. Check if code is valid and not too large
-    const code = codeResult.content[0].text;
-    const validation = this.isValidReactCode(code);
-    const isTooLarge = code.length > 100000;
-
-    if (validation.valid && !isTooLarge) {
-      // SIMPLE MODE (4 calls total)
-      log.success('✅ MODE SIMPLE: Code valide et taille OK');
-      this.saveFile('Component.tsx', code);
-
-      // Wait for images to be written asynchronously
-      log.task('⏳', 'Attente des images MCP');
-      log.info('Délai de grâce de 5s pour l\'écriture asynchrone des images...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      await this.waitForImages();
-
-      log.success('Phase 1 terminée en MODE SIMPLE (4 appels)\n');
-      return;
-    }
-
-    // Check for fatal API errors before entering CHUNK MODE (avoid wasting 5+N more calls)
-    this.checkForFatalAPIError(validation, code);
-
-    // CHUNK MODE (5+N calls)
-    log.warning('⚠️  MODE CHUNKING: Code invalide ou trop volumineux');
-    log.info(`   Code valide: ${validation.valid}`);
-    if (!validation.valid) {
-      log.info(`   Raison: ${validation.reason}`);
-    }
-    log.info(`   Taille: ${(code.length / 1000).toFixed(1)}k caractères\n`);
-
-    // 3. Extract child nodes
-    const nodes = this.extractChildNodes();
-    log.info(`${nodes.length} node(s) à traiter\n`);
-
-    // 4. Get parent wrapper for CSS classes
-    log.task('📦', 'Récupération parent wrapper');
-    const parentWrapperResult = await this.callMCPTool('get_design_context', {
+    // 3. Get design context with assets
+    log.task('💻', 'Récupération code + assets');
+    const codeResult = await this.callMCPTool('get_design_context', {
       nodeId: this.nodeId,
-      dirForAssetWrites: '',  // Images already retrieved
+      dirForAssetWrites: this.assetsDirHost,  // Unique per export, no conflicts
       forceCode: true,
       clientLanguages: this.config.commonParams.clientLanguages,
       clientFrameworks: this.config.commonParams.clientFrameworks
     });
-    this.saveFile('parent-wrapper.tsx', parentWrapperResult.content[0].text);
-    log.success('Parent wrapper sauvegardé\n');
 
-    // 5. Generate chunks sequentially
-    await this.generateChunks(nodes);
+    // Safe access to code (may be undefined if MCP returns error)
+    const code = codeResult?.content?.[0]?.text;
 
-    // 6. Assemble chunks
-    log.task('🔗', 'Assemblage des chunks');
-    this.assembleChunks();
-    log.success('Component.tsx assemblé\n');
+    if (!code) {
+      log.error('MCP returned empty or invalid response');
+      log.info(`Response structure: ${JSON.stringify(codeResult, null, 2).substring(0, 500)}...\n`);
+    } else {
+      log.success('Code + assets récupérés\n');
+      // Debug: show first 200 chars to understand what MCP returns
+      if (code.length < 500) {
+        log.info(`   Code complet reçu (${code.length} chars):\n${code}\n`);
+      }
+    }
 
-    // 7. Wait for images (already should be there from first call)
-    log.task('⏳', 'Vérification des images');
-    await this.waitForImages();
+    // 4. Classify the result
+    const classification = this.classifyCodeResult(code);
+    log.info(`   Classification: ${classification.category}`);
+    log.info(`   Raison: ${classification.reason}`);
+    if (code) {
+      log.info(`   Taille: ${(code.length / 1000).toFixed(1)}k caractères\n`);
+    } else {
+      log.info(`   Taille: N/A (code manquant)\n`);
+    }
 
-    log.success(`Phase 1 terminée en MODE CHUNKING (${5 + nodes.length} appels)\n`);
+    // 5. Handle based on classification
+    switch (classification.category) {
+      case 'FATAL_ERROR':
+        log.error(`❌ ERREUR API MCP: ${classification.reason}`);
+        throw new Error(`MCP API Error: ${classification.reason}. Aborting to save API calls.`);
+
+      case 'TOO_LARGE':
+        // MODE CHUNK - Figma signals content too large
+        log.warning(`⚠️  MODE CHUNKING: ${classification.reason}`);
+
+        // Extract child nodes from metadata (already retrieved)
+        const nodes = this.extractChildNodes();
+        log.info(`${nodes.length} node(s) à traiter\n`);
+
+        // Get parent wrapper
+        log.task('📦', 'Récupération parent wrapper');
+        const parentWrapperResult = await this.callMCPTool('get_design_context', {
+          nodeId: this.nodeId,
+          dirForAssetWrites: this.assetsDirHost,  // Same folder, no conflict
+          forceCode: true,
+          clientLanguages: this.config.commonParams.clientLanguages,
+          clientFrameworks: this.config.commonParams.clientFrameworks
+        });
+        this.saveFile('parent-wrapper.tsx', parentWrapperResult.content[0].text);
+        log.success('Parent wrapper sauvegardé\n');
+
+        // Generate chunks sequentially
+        await this.generateChunks(nodes);
+
+        // Assemble chunks
+        log.task('🔗', 'Assemblage des chunks');
+        this.assembleChunks();
+        log.success('Component.tsx assemblé\n');
+
+        // Wait for images
+        await this.waitForImages();
+
+        // Cleanup temp assets
+        await this.cleanupTempAssets();
+
+        log.success(`Phase 1 terminée en MODE CHUNKING (${4 + nodes.length} appels)\n`);
+        break;
+
+      case 'CONTENT_ERROR':
+      case 'INVALID_CODE':
+        log.error(`❌ Code invalide: ${classification.reason}`);
+        if (code && typeof code === 'string') {
+          log.info(`   Aperçu du code:\n${code.substring(0, 300)}${code.length > 300 ? '...' : ''}\n`);
+        } else {
+          log.info(`   Code reçu: ${JSON.stringify(code)}\n`);
+        }
+        throw new Error(`Invalid content from MCP: ${classification.reason}. Cannot process.`);
+
+      case 'VALID_CODE':
+        // MODE SIMPLE - Valid code received
+        log.success('✅ MODE SIMPLE: Code valide');
+        this.saveFile('Component.tsx', code);
+
+        // Wait for images to be written asynchronously
+        log.task('⏳', 'Attente des images MCP');
+        log.info('Délai de grâce de 5s pour l\'écriture asynchrone des images...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        await this.waitForImages();
+
+        // Cleanup temp assets
+        await this.cleanupTempAssets();
+
+        log.success('Phase 1 terminée en MODE SIMPLE (4 appels)\n');
+        break;
+
+      default:
+        throw new Error(`Unknown classification category: ${classification.category}`);
+    }
   }
 
   /**
@@ -684,6 +801,23 @@ class FigmaCLI {
     } catch (error) {
       log.error(`Erreur lors de la copie des images: ${error.message}`);
       throw error;
+    }
+  }
+
+  /**
+   * Cleanup temporary assets directory after images are copied
+   */
+  async cleanupTempAssets() {
+    log.task('🧹', 'Nettoyage dossier temporaire');
+    try {
+      if (fs.existsSync(this.assetsDir)) {
+        execSync(`rm -rf "${this.assetsDir}" 2>/dev/null || true`);
+        log.success(`Dossier temporaire nettoyé: ${path.basename(this.assetsDir)}\n`);
+      } else {
+        log.info('Dossier temporaire déjà supprimé\n');
+      }
+    } catch (error) {
+      log.warning(`Impossible de nettoyer ${path.basename(this.assetsDir)}: ${error.message}\n`);
     }
   }
 

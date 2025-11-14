@@ -218,6 +218,30 @@ function wrapInFlexContainer(path, stats) {
 }
 
 /**
+ * Check if className has positioning classes (inset, top, left, etc.)
+ */
+function hasPositioningClasses(className) {
+  const classes = className.split(/\s+/)
+  return classes.some(c =>
+    c.startsWith('inset-') ||
+    c.startsWith('top-') ||
+    c.startsWith('bottom-') ||
+    c.startsWith('left-') ||
+    c.startsWith('right-')
+  )
+}
+
+/**
+ * Check if className has position type classes
+ */
+function hasPositionType(className) {
+  return className.includes('absolute') ||
+         className.includes('relative') ||
+         className.includes('fixed') ||
+         className.includes('sticky')
+}
+
+/**
  * Fix common absolute positioning patterns
  */
 function fixCommonPatterns(path, stats) {
@@ -233,20 +257,35 @@ function fixCommonPatterns(path, stats) {
   let className = classNameAttr.value.value
   let modified = false
 
+  // Pattern 0: inset-* without position type → add absolute
+  // This fixes background images/overlays that need to be behind content
+  if (hasPositioningClasses(className) && !hasPositionType(className)) {
+    // Add absolute at the beginning of the className
+    className = 'absolute ' + className
+    modified = true
+    stats.missingPositionFixed++
+  }
+
   // Pattern 1: absolute inset-0 → remove absolute, keep inset-0 for grid/flex children
+  // Skip overlays (aria-hidden or pointer-events-none)
   if (className.includes('absolute') && className.includes('inset-0')) {
-    const parent = path.parent
-    if (parent && t.isJSXElement(parent)) {
-      const parentClassAttr = parent.openingElement.attributes.find(
-        attr => attr.name && attr.name.name === 'className'
-      )
-      if (parentClassAttr && t.isStringLiteral(parentClassAttr.value)) {
-        const parentClasses = parentClassAttr.value.value
-        // If parent is grid or flex, child doesn't need absolute
-        if (parentClasses.includes('grid') || parentClasses.includes('flex')) {
-          className = className.replace('absolute', '').trim()
-          modified = true
-          stats.insetFixed++
+    const isOverlay = className.includes('pointer-events-none') ||
+                      attributes.some(attr => attr.name?.name === 'aria-hidden')
+
+    if (!isOverlay) {
+      const parent = path.parent
+      if (parent && t.isJSXElement(parent)) {
+        const parentClassAttr = parent.openingElement.attributes.find(
+          attr => attr.name && attr.name.name === 'className'
+        )
+        if (parentClassAttr && t.isStringLiteral(parentClassAttr.value)) {
+          const parentClasses = parentClassAttr.value.value
+          // If parent is grid or flex, child doesn't need absolute
+          if (parentClasses.includes('grid') || parentClasses.includes('flex')) {
+            className = className.replace('absolute', '').trim()
+            modified = true
+            stats.insetFixed++
+          }
         }
       }
     }
@@ -276,6 +315,7 @@ function fixCommonPatterns(path, stats) {
     stats.percentageFixed++
   }
 
+
   if (modified) {
     classNameAttr.value = t.stringLiteral(className.trim())
     return true
@@ -287,13 +327,14 @@ function fixCommonPatterns(path, stats) {
 /**
  * Main execution function
  */
-export function execute(ast, context) {
+export function execute(ast) {
   const stats = {
     converted: 0,
     coordsRemoved: 0,
     flexContainersAdded: 0,
     insetFixed: 0,
-    percentageFixed: 0
+    percentageFixed: 0,
+    missingPositionFixed: 0
   }
 
   // First pass: Fix common patterns
