@@ -295,7 +295,10 @@ Phase 2: PROCESSING (AST)
 │  ├─ Apply 11 transforms (priority 10-100)
 │  └─ Extract CSS
 ├─ Consolidate chunks → Component-fixed.tsx
-└─ Merge CSS → Component-fixed.css
+├─ Merge CSS → Component-fixed.css
+├─ Generate clean version → Component-clean.tsx/css
+├─ Optimize CSS/TSX → Component-optimized.tsx/css (sync-optimizer.js)
+└─ Split components → components/*.tsx/css (if --split-components)
 
 Phase 3: VALIDATION (Visual)
 ├─ Launch Puppeteer

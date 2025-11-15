@@ -414,6 +414,7 @@ Figma sometimes generates nested `<svg>` elements which cause rendering issues.
    - Fix negative values
    - Fix percentage values
    - Ensure parent is relative
+   - **Parent Context Detection** *(Enhanced Jan 2025)* - Check parent for overlay attributes
 
 2. **Flex Layout**
    - Fix flex-grow/shrink
@@ -431,6 +432,113 @@ Figma sometimes generates nested `<svg>` elements which cause rendering issues.
 
 // After (convert to style for negative values)
 <div className="absolute" style={{ top: '-10px' }}>
+```
+
+---
+
+#### Parent Context Detection (Bug Fix - Jan 2025)
+
+**Problem:** Overlay elements inside `aria-hidden` parent containers were incorrectly having `absolute` removed.
+
+**Pattern 1 Enhancement (lines 296-330):**
+
+The transform now checks **both the element itself AND its parent** for overlay attributes before removing `absolute` positioning.
+
+**Old Logic (BUGGY):**
+```javascript
+// ❌ Only checked element itself
+const isOverlay = className.includes('pointer-events-none') ||
+                  attributes.some(attr => attr.name?.name === 'aria-hidden')
+
+if (!isOverlay) {
+  // Remove absolute if parent is grid/flex
+}
+```
+
+**New Logic (FIXED):**
+```javascript
+// ✅ Also checks parent for overlay attributes
+const isOverlay = className.includes('pointer-events-none') ||
+                  attributes.some(attr => attr.name?.name === 'aria-hidden')
+
+// Check if parent has aria-hidden or pointer-events-none (overlay container)
+const parent = path.parent
+let parentIsOverlay = false
+if (parent && t.isJSXElement(parent)) {
+  const parentAttributes = parent.openingElement.attributes
+  const parentClassAttr = parentAttributes.find(attr => attr.name && attr.name.name === 'className')
+
+  parentIsOverlay = parentAttributes.some(attr => attr.name?.name === 'aria-hidden') ||
+                    (parentClassAttr && t.isStringLiteral(parentClassAttr.value) &&
+                     parentClassAttr.value.value.includes('pointer-events-none'))
+}
+
+if (!isOverlay && !parentIsOverlay) {
+  // Only remove absolute if neither element nor parent is an overlay
+  if (parent && t.isJSXElement(parent)) {
+    const parentClassAttr = parent.openingElement.attributes.find(
+      attr => attr.name && attr.name.name === 'className'
+    )
+    if (parentClassAttr && t.isStringLiteral(parentClassAttr.value)) {
+      const parentClasses = parentClassAttr.value.value
+      // If parent is grid or flex, child doesn't need absolute
+      if (parentClasses.includes('grid') || parentClasses.includes('flex')) {
+        className = className.replace('absolute', '').trim()
+        modified = true
+        stats.insetFixed++
+      }
+    }
+  }
+}
+```
+
+**Example Scenario:**
+
+```jsx
+// Figma Design: Header with overlay background
+<div aria-hidden="true" className="absolute inset-0 pointer-events-none">
+  <img className="absolute max-w-none object-cover size-full" src={bg} />
+  <div className="absolute bg-opacity-30 inset-0" />
+    ↑ This overlay child needs absolute positioning
+</div>
+```
+
+**Before Fix:** ❌
+```jsx
+// Bug: absolute removed from child because parent is an overlay
+<div aria-hidden="true" className="absolute inset-0 pointer-events-none">
+  <img className="max-w-none object-cover size-full" src={bg} />
+  <div className="bg-opacity-30 inset-0" />
+    ↑ absolute removed - overlay broken!
+</div>
+```
+
+**After Fix:** ✅
+```jsx
+// Fixed: absolute preserved because parent has aria-hidden
+<div aria-hidden="true" className="absolute inset-0 pointer-events-none">
+  <img className="absolute max-w-none object-cover size-full" src={bg} />
+  <div className="absolute bg-opacity-30 inset-0" />
+    ↑ absolute preserved - overlay works correctly!
+</div>
+```
+
+**Why This Matters:**
+
+- **Figma pattern**: Figma often creates overlay containers with `aria-hidden="true"` parent
+- **Visual fidelity**: Child overlay elements need `absolute` positioning to work correctly
+- **Previous logic**: Only checked element itself, not parent context
+- **Fixed logic**: Checks parent for `aria-hidden` or `pointer-events-none` attributes
+
+**Detection Logic:**
+1. Check if element has `pointer-events-none` or `aria-hidden` → skip fix
+2. Check if **parent** has `aria-hidden` or `pointer-events-none` → skip fix
+3. Otherwise, apply position fix (remove `absolute` if parent is grid/flex)
+
+**Stats Impact:**
+```javascript
+// Before fix: insetFixed: 1 (absolute removed)
+// After fix: insetFixed: 0 (absolute preserved)
 ```
 
 ---

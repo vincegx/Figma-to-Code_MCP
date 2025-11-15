@@ -139,6 +139,9 @@ mcp-figma-to-code/
 │   ├── 📁 post-processing/
 │   │   ├── organize-images.js       # Image renaming
 │   │   ├── fix-svg-vars.js          # SVG variable fixes
+│   │   ├── sync-optimizer.js        # CSS/TSX synchronization (Phase 4 - NEW Jan 2025)
+│   │   ├── component-splitter.js    # Component splitting (Phase 5)
+│   │   ├── dist-generator.js        # Dist package generation (Phase 6)
 │   │   └── capture-screenshot.js    # Puppeteer capture
 │   ├── 📁 reporting/
 │   │   ├── generate-metadata.js     # Dashboard metadata
@@ -849,69 +852,416 @@ export async function runPipeline(sourceCode, context, config) {
 
 ---
 
-## CSS Consolidation
+## CSS Processing Pipeline
 
-### Strategy
+### Overview
 
-When processing chunks, CSS is consolidated using this approach:
+The system processes CSS through **6 distinct phases** to transform raw Figma output into optimized, production-ready stylesheets.
 
-1. **Per-Chunk CSS**
-   - Each chunk generates separate CSS during processing
-   - Saved as `chunks-fixed/{name}.css`
+```
+Phase 1: Chunk Processing
+    ↓ (chunks-fixed/*.css)
+Phase 2: Consolidation
+    ↓ (Component-fixed.css)
+Phase 3: Clean Generation
+    ↓ (Component-clean.css)
+Phase 4: Optimization ⭐ NEW
+    ↓ (Component-optimized.css)
+Phase 5: Component Splitting
+    ↓ (components/*.css)
+Phase 6: Dist Generation
+    ↓ (dist/components/*.css)
+```
 
-2. **Merging Process**
+### Phase 1: Chunk Processing
+
+**Purpose:** Extract CSS from individual React components during AST transformation.
+
+**Input:** `chunks/*.tsx` (raw Figma output)
+
+**Process:**
+- Parse TSX to AST
+- Apply 11 AST transforms (priority 10-100)
+- Extract CSS classes during traversal
+- Generate component-specific CSS
+
+**Output:** `chunks-fixed/*.css` (one CSS file per component)
+
+**Example:**
+```css
+/* chunks-fixed/Header.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap');
+
+:root {
+  --brand: #9DFFB9;
+  --black-700: #282828;
+}
+
+.bg-brand { background-color: var(--brand); }
+.h-custom-918 { height: 918px; }
+.px-20 { padding-left: 80px; padding-right: 80px; }
+```
+
+---
+
+### Phase 2: Consolidation
+
+**Purpose:** Merge all chunk CSS files into a single consolidated stylesheet.
+
+**Input:** `chunks-fixed/*.css` (multiple files)
+
+**Process:**
+```javascript
+function consolidateCSS(chunkCSSFiles) {
+  const rootVars = new Map()  // Deduplicate :root
+  const utilClasses = new Set()  // Deduplicate utilities
+  let googleFonts = ''  // From first chunk
+
+  for (const cssFile of chunkCSSFiles) {
+    const css = fs.readFileSync(cssFile, 'utf8')
+
+    // Extract Google Fonts import
+    if (!googleFonts) {
+      googleFonts = extractGoogleFonts(css)
+    }
+
+    // Extract :root variables
+    const vars = extractRootVars(css)
+    for (const [key, value] of vars) {
+      rootVars.set(key, value)
+    }
+
+    // Extract utility classes
+    const utils = extractUtilClasses(css)
+    utils.forEach(u => utilClasses.add(u))
+  }
+
+  // Assemble final CSS
+  return [
+    googleFonts,
+    generateRootVars(rootVars),
+    ...utilClasses
+  ].join('\n')
+}
+```
+
+**Deduplication Rules:**
+- `:root` variables: Last value wins (Map)
+- Utility classes: Exact match deduplication (Set)
+- Google Fonts: Use first chunk's import
+
+**Output:** `Component-fixed.css` (single consolidated file)
+
+```css
+/* Component-fixed.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+:root {
+  --brand: #9DFFB9;          /* Deduplicated */
+  --black-700: #282828;      /* From chunk 1 */
+  --white: #FFFFFF;          /* From chunk 2 */
+}
+
+.content-start { align-content: flex-start; }  /* Deduplicated */
+.bg-brand { background-color: var(--brand); }
+.h-custom-918 { height: 918px; }
+```
+
+---
+
+### Phase 3: Clean Generation
+
+**Purpose:** Generate production-ready version without Tailwind dependencies or debug attributes.
+
+**Input:** `Component-fixed.tsx/css` (Tailwind version with debug attrs)
+
+**Process:**
+- Remove `data-name` and `data-node-id` attributes from TSX
+- Convert Tailwind utility classes to pure CSS classes
+- Remove debug comments
+
+**Output:** `Component-clean.tsx/css` (production-ready, zero dependencies)
+
+**Comparison:**
+```jsx
+// Component-fixed.tsx (Tailwind version)
+<div data-name="Header" data-node-id="9:2654" className="flex items-center">
+
+// Component-clean.tsx (production version)
+<div className="header-container">
+```
+
+```css
+/* Component-clean.css */
+.header-container {
+  display: flex;
+  align-items: center;
+}
+```
+
+---
+
+### Phase 4: Optimization ⭐ NEW (Jan 2025)
+
+**Purpose:** Optimize CSS class names and synchronize with TSX to prevent desynchronization.
+
+**Script:** `scripts/post-processing/sync-optimizer.js`
+
+**Input:** `Component-clean.tsx/css` (unoptimized)
+
+**Process:**
+
+1. **Build Transform Map** - Analyze CSS to detect all optimizations:
    ```javascript
-   function consolidateCSS(chunkCSSFiles) {
-     const rootVars = new Map()  // Deduplicate :root
-     const utilClasses = new Set()  // Deduplicate utilities
-     let googleFonts = ''  // From first chunk
+   const transformMap = new Map([
+     // Color mappings (from :root variables)
+     ['bg-custom-9dffb9', 'bg-brand'],
+     ['text-custom-282828', 'text-black-700'],
 
-     for (const cssFile of chunkCSSFiles) {
-       const css = fs.readFileSync(cssFile, 'utf8')
+     // Spacing mappings (Tailwind equivalents ±2px tolerance)
+     ['px-custom-80', 'px-20'],    // 80px → 20 * 4px
+     ['gap-custom-32', 'gap-8'],   // 32px → 8 * 4px
 
-       // Extract Google Fonts import
-       if (!googleFonts) {
-         googleFonts = extractGoogleFonts(css)
-       }
-
-       // Extract :root variables
-       const vars = extractRootVars(css)
-       for (const [key, value] of vars) {
-         rootVars.set(key, value)
-       }
-
-       // Extract utility classes
-       const utils = extractUtilClasses(css)
-       utils.forEach(u => utilClasses.add(u))
-     }
-
-     // Assemble final CSS
-     return [
-       googleFonts,
-       generateRootVars(rootVars),
-       ...utilClasses
-     ].join('\n')
-   }
+     // Decimal rounding
+     ['h-custom-29dot268', 'h-custom-29'],
+     ['w-custom-654dot12', 'w-custom-654']
+   ])
    ```
 
-3. **Deduplication Rules**
-   - `:root` variables: Last value wins (Map)
-   - Utility classes: Exact match deduplication (Set)
-   - Google Fonts: Use first chunk's import
-
-4. **Output**
+2. **Transform CSS** - Apply map to CSS class definitions:
    ```css
-   /* Component-fixed.css */
-   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+   /* Before */
+   .bg-custom-9dffb9 { background-color: var(--brand); }
+   .px-custom-80 { padding-left: 80px; padding-right: 80px; }
 
-   :root {
-     --colors-primary: #7C3AED;    /* Deduplicated */
-     --spacing-lg: 32px;           /* From chunk 1 */
-     --spacing-xl: 64px;           /* From chunk 2 */
+   /* After */
+   .bg-brand { background-color: var(--brand); }
+   .px-20 { padding-left: 80px; padding-right: 80px; }
+   ```
+
+3. **Transform TSX** - Apply **SAME map** to TSX classNames (synchronization!):
+   ```jsx
+   // Before
+   <div className="bg-custom-9dffb9 px-custom-80">
+
+   // After
+   <div className="bg-brand px-20">
+   ```
+
+4. **Validate Sync** - Ensure all TSX classes exist in CSS:
+   ```javascript
+   const validation = validateSync(optimizedTSX, optimizedCSS, transformMap)
+   // Returns: { tsxClasses: 145, cssClasses: 142, missingClasses: [] }
+   ```
+
+**Output:** `Component-optimized.tsx/css` (synchronized, optimized)
+
+**Why This Matters:**
+
+❌ **Previous approach:** CSS optimized separately from TSX → class name mismatch → broken styling
+
+✅ **New approach:** Single transformMap applied to both files → guaranteed synchronization
+
+**Transformations Applied:**
+- **Color mapping** - `bg-custom-9dffb9` → `bg-brand` (uses :root variables)
+- **Spacing mapping** - `px-custom-80` → `px-20` (Tailwind equivalents with ±2px tolerance)
+- **Decimal rounding** - `h-custom-29dot268` → `h-custom-29`
+- **Value optimization** - Round decimal values in CSS properties
+
+---
+
+### Phase 5: Component Splitting
+
+**Purpose:** Split monolithic component into modular chunks for responsive merging.
+
+**Script:** `scripts/post-processing/component-splitter.js`
+
+**Input:** `Component-optimized.tsx/css`
+
+**Process:**
+
+1. **Extract Components:**
+   - React function components (except main component)
+   - Direct children of "Container"
+   - Semantic sections (Header, Footer, *Section, *Overview, *Actions)
+
+2. **Filter CSS Per Component:**
+   - Extract only classes used by each component
+   - Parse TSX to find all className attributes
+   - Filter CSS to matching classes only
+
+3. **Buffer Save Fix** *(Bug Fix - Jan 2025)*:
+   ```javascript
+   // Problem: Last CSS rule lost during filtering
+   for (const line of lines) {
+     if (line.startsWith('.')) {
+       if (currentRule.length > 0) {
+         filteredLines.push(...currentRule)
+       }
+       currentRule = [line]
+     } else {
+       currentRule.push(line)
+     }
+   }
+   // ❌ Loop ends - last currentRule never saved!
+
+   // FIX (lines 628-631): Save final buffer
+   if (keepCurrentRule && currentRule.length > 0) {
+     filteredLines.push(...currentRule);
+   }
+   ```
+
+**Output:** `components/*.tsx` + `*.css` (modular files)
+
+```
+components/
+├── Header.tsx + Header.css       (only Header-specific classes)
+├── Hero.tsx + Hero.css           (only Hero-specific classes)
+└── Footer.tsx + Footer.css       (only Footer-specific classes)
+```
+
+**Example Bug Fixed:**
+```css
+/* Before Fix (Footer.css) */
+.border-w-0-0-1 { border-width: 0 0 1px 0; }
+.border-w-0-1-1-0 { border-width: 0 1px 1px 0; }
+.border-w-2-0-0 { ... }  ← LOST (last rule)
+
+/* After Fix (Footer.css) */
+.border-w-0-0-1 { border-width: 0 0 1px 0; }
+.border-w-0-1-1-0 { border-width: 0 1px 1px 0; }
+.border-w-2-0-0 { border-width: 2px 0 0 0; }  ✅ PRESERVED
+```
+
+---
+
+### Phase 6: Dist Generation
+
+**Purpose:** Generate production-ready dist/ package with organized CSS.
+
+**Script:** `scripts/post-processing/dist-generator.js`
+
+**Input:** `components/*.tsx` + `*.css`
+
+**Process:**
+
+1. **Copy TSX Files** - Copy to `dist/components/`
+
+2. **Reorganize CSS** - Generic section-based approach *(Rewritten Jan 2025)*:
+
+   **Old Approach (REMOVED):**
+   ```javascript
+   // ❌ Hardcoded prefix rules
+   if (className.startsWith('bg-') || className.startsWith('text-')) {
+     currentSection = 'colors'
+   }
+   // Problem: border-w-* misclassified as Colors
+   ```
+
+   **New Approach:**
+   ```javascript
+   // ✅ Section detection by comments
+   const sectionMap = {
+     'Figma-specific utility': 'utilities',
+     'Font': 'fonts',
+     'Color': 'colors',
+     'Dimension': 'dimensions',
+     'Spacing': 'spacing',
+     'Typography': 'typography',
+     'Layout': 'layout',
+     'Figma Variable': 'layout',  // Maps to Layout
+     'Other Custom': 'layout'      // Maps to Layout
    }
 
-   .content-start { align-content: flex-start; }  /* Deduplicated */
+   // Detect section by comment header
+   for (const line of lines) {
+     if (line.match(/^\/\* (.*?) \*\/$/)) {
+       const commentText = match[1]
+       currentSection = findMappedSection(commentText, sectionMap)
+     }
+     currentSectionBuffer.push(line)
+   }
+
+   // Output sections in logical order
+   // Header → Imports → :root → Utilities → Fonts → Colors →
+   // Dimensions → Spacing → Typography → Layout → Other
    ```
+
+   **Benefits:**
+   - No edge cases (doesn't re-categorize individual classes)
+   - Flexible (easy to add new section mappings)
+   - Preserves all classes without categorization failures
+
+3. **Generate Page.tsx** - Import all components
+
+4. **Copy Images** - Copy to `dist/img/`
+
+**Output:** `dist/` (copy-paste ready for production)
+
+```
+dist/
+├── Page.tsx                # Imports all components
+├── Page.css                # Page-level styles
+├── components/
+│   ├── Header.tsx
+│   ├── Header.css          # Organized with logical sections
+│   ├── Hero.tsx
+│   ├── Hero.css
+│   ├── Footer.tsx
+│   └── Footer.css
+└── img/
+    ├── logo.png
+    └── hero-bg.jpg
+```
+
+**Example Organized CSS:**
+```css
+/* dist/components/Header.css */
+
+/* Auto-generated scoped CSS for Header */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap');
+
+:root {
+  --brand: #9DFFB9;
+  --black-700: #282828;
+}
+
+/* Utilities */
+.content-start { align-content: flex-start; }
+
+/* Fonts */
+.font-inter-400 { font-family: "Inter", sans-serif; font-weight: 400; }
+
+/* Colors */
+.bg-brand { background-color: var(--brand); }
+.text-black-700 { color: var(--black-700); }
+
+/* Dimensions */
+.h-custom-918 { height: 918px; }
+.w-custom-1280 { width: 1280px; }
+
+/* Spacing */
+.px-20 { padding-left: 80px; padding-right: 80px; }
+
+/* Typography */
+.line-height-custom-46px { line-height: 46px; }
+.letter-spacing-custom-neg-2px { letter-spacing: -2px; }
+
+/* Layout */
+.border-w-2-0-0 { border-width: 2px 0 0 0; }
+.top-custom-calc-50pct-0dot3px { top: calc(50%); }
+```
+
+---
+
+### Performance Optimizations
+
+- **Single-pass AST** - Phase 1: All transforms execute in one traversal
+- **Synchronization** - Phase 4: Single transformMap prevents TSX/CSS desync
+- **Deduplication** - Phase 2: Map for :root variables, Set for utilities
+- **Scoped CSS** - Phase 5: Each component gets only its used classes
+- **Buffer Management** - Phase 5: Proper flushing prevents data loss
 
 ---
 

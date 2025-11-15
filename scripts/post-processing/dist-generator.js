@@ -842,30 +842,41 @@ function transformToPageComponent(sourceCode, parentName, extractedComponents, e
 
   // STEP 5: Find images still used in Page.tsx (after component extraction)
   const usedImages = new Set()
+
+  // Only traverse the JSX return statement, not imports
   traverse.default(ast, {
-    // Detect images in JSX src attributes
-    JSXAttribute(path) {
-      if (path.node.name?.name === 'src' &&
-          path.node.value?.type === 'JSXExpressionContainer' &&
-          path.node.value.expression?.type === 'Identifier') {
-        usedImages.add(path.node.value.expression.name)
+    ReturnStatement(path) {
+      const jsx = path.node.argument
+      if (!jsx) return
+
+      // Convert JSX to string to search for image references
+      const jsxCode = generate.default(jsx).code
+
+      // Pattern 1: src={imgVariableName}
+      const srcRegex = /src=\{(\w+)\}/g
+      let match
+      while ((match = srcRegex.exec(jsxCode)) !== null) {
+        usedImages.add(match[1])
       }
-    },
-    // Detect images referenced anywhere in code (maskImage, backgroundImage, etc.)
-    Identifier(path) {
-      const name = path.node.name
-      // Check if this identifier could be an image variable (skip if it's a declaration)
-      if (name &&
-          (name.startsWith('img') ||
-           name.includes('Image') ||
-           name.includes('image') ||
-           name.toLowerCase().includes('icon') ||
-           name.toLowerCase().includes('logo') ||
-           name.toLowerCase().includes('picture')) &&
-          !path.isImportDefaultSpecifier() &&
-          !path.isImportSpecifier() &&
-          path.scope.hasBinding(name)) {
-        usedImages.add(name)
+
+      // Pattern 2: url('${imgVariableName}') or url("${imgVariableName}")
+      const urlRegex = /url\(['"`]\$\{(\w+)\}['"`]\)/g
+      while ((match = urlRegex.exec(jsxCode)) !== null) {
+        usedImages.add(match[1])
+      }
+
+      // Pattern 3: Any ${imgVar} in template literals (for maskImage, backgroundImage, etc.)
+      const templateRegex = /\$\{(\w+)\}/g
+      while ((match = templateRegex.exec(jsxCode)) !== null) {
+        const varName = match[1]
+        // Only add if it looks like an image variable
+        if (varName.startsWith('img') ||
+            varName.toLowerCase().includes('image') ||
+            varName.toLowerCase().includes('icon') ||
+            varName.toLowerCase().includes('logo') ||
+            varName.toLowerCase().includes('picture')) {
+          usedImages.add(varName)
+        }
       }
     }
   })

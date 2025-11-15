@@ -45,33 +45,58 @@ const EXCLUDE_PATTERNS = [
   /^card\//i,       // card/actions, card/transaction (too granular)
   /^copyright$/i,   // Copyright (part of Footer)
   /^socials$/i,     // Socials (part of Footer)
+  /^icon[\/\s]/i,   // Icon/chevron-up, Icon Corner Left (icons are too small)
 ];
 
 /**
- * Parse metadata.xml to get actual Figma components (name + node-id)
+ * Parse metadata.xml to get Figma components (instances) + top-level frames
  */
 function parseFigmaComponents(testDir) {
   const metadataPath = path.join(testDir, 'metadata.xml');
 
   if (!fs.existsSync(metadataPath)) {
-    return [];
+    return { instances: [], topLevelFrames: [] };
   }
 
   const xml = fs.readFileSync(metadataPath, 'utf8');
-  const components = [];
+  const instances = [];
+  const topLevelFrames = [];
 
-  // Extract <instance id="..." name="..." /> elements
+  // Extract <instance id="..." name="..." /> elements (Figma components)
   const instanceRegex = /<instance[^>]*id="([^"]+)"[^>]*name="([^"]+)"[^>]*\/>/g;
   let match;
 
   while ((match = instanceRegex.exec(xml)) !== null) {
-    components.push({
+    instances.push({
       nodeId: match[1],
-      name: match[2]
+      name: match[2],
+      type: 'instance'
     });
   }
 
-  return components;
+  // Extract top-level <frame> elements (direct children of root)
+  // Pattern: ^  <frame (2 spaces = level 1)
+  const topLevelFrameRegex = /^  <frame id="([^"]+)" name="([^"]+)"/gm;
+
+  while ((match = topLevelFrameRegex.exec(xml)) !== null) {
+    const frameName = match[2];
+
+    // Auto-rename generic "Frame XXXXXX" names
+    let displayName = frameName;
+    if (frameName.match(/^Frame\s+\d+$/)) {
+      // Will be renamed later with section index
+      displayName = '__GENERIC_FRAME__';
+    }
+
+    topLevelFrames.push({
+      nodeId: match[1],
+      name: frameName,        // Original name
+      displayName: displayName, // Name for component generation
+      type: 'top-level-frame'
+    });
+  }
+
+  return { instances, topLevelFrames };
 }
 
 /**
@@ -256,13 +281,21 @@ function detectSections(tsxCode, figmaComponents) {
 
         // Check extraction rules
         if (dataName && nodeId && shouldExtract(dataName, nodeId, parentName, functionNames, extractedSections, figmaComponents)) {
+          // Auto-rename generic "Frame XXXXXX" names
+          let componentName = dataName;
+          if (dataName.match(/^Frame\s+\d+$/)) {
+            // Find the section index (how many sections extracted so far)
+            const sectionIndex = sections.filter(s => s.type === 'inline').length + 1;
+            componentName = `Section${sectionIndex}`;
+          }
+
           // Convert to PascalCase (same as file name)
-          let pascalName = toPascalCase(dataName);
+          let pascalName = toPascalCase(componentName);
 
           // Handle duplicates by adding suffix
           let counter = 2;
           while (sections.find(s => s.name === pascalName)) {
-            pascalName = `${toPascalCase(dataName)}${counter}`;
+            pascalName = `${toPascalCase(componentName)}${counter}`;
             counter++;
           }
 
@@ -270,7 +303,8 @@ function detectSections(tsxCode, figmaComponents) {
             name: pascalName,  // Store PascalCase name (matches file name)
             type: 'inline',
             jsx: generate.default(jsxNode).code,
-            nodeId: nodeId  // Store nodeId for mapping
+            nodeId: nodeId,  // Store nodeId for mapping
+            originalName: dataName  // Store original Figma name for reference
           });
 
           // Track that this section is extracted (to skip its children)
@@ -316,8 +350,18 @@ function shouldExtract(dataName, nodeId, parentName, functionNames, extractedSec
     return true;
   }
 
-  // Rule 3: Match exact Figma component by node-id
-  return figmaComponents.some(comp => comp.nodeId === nodeId && comp.name === dataName);
+  // Rule 3: Match exact Figma component (instance) by node-id
+  if (figmaComponents.instances.some(comp => comp.nodeId === nodeId && comp.name === dataName)) {
+    return true;
+  }
+
+  // Rule 4: Top-level frames (fallback for poorly organized Figma files)
+  // Extract all direct children of root (level 1 frames)
+  if (figmaComponents.topLevelFrames.some(frame => frame.nodeId === nodeId)) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -345,12 +389,36 @@ function extractImageImports(sourceCode) {
 function extractUsedImages(jsx) {
   const usedImages = new Set();
 
-  // Match: src={imgVariableName}
-  const imgRegex = /src=\{(\w+)\}/g;
+  // Pattern 1: src={imgVariableName}
+  const srcRegex = /src=\{(\w+)\}/g;
   let match;
 
-  while ((match = imgRegex.exec(jsx)) !== null) {
+  while ((match = srcRegex.exec(jsx)) !== null) {
     usedImages.add(match[1]);
+  }
+
+  // Pattern 2: maskImage: url('${imgVariableName}')
+  // Pattern 3: backgroundImage: url('${imgVariableName}')
+  const urlRegex = /url\(['"`]\$\{(\w+)\}['"`]\)/g;
+
+  while ((match = urlRegex.exec(jsx)) !== null) {
+    usedImages.add(match[1]);
+  }
+
+  // Pattern 4: Any variable reference in template literal within style
+  // style={{ maskImage: `url('${imgVar}')`, backgroundImage: `url('${imgVar2}')` }}
+  const styleTemplateRegex = /\$\{(\w+)\}/g;
+
+  while ((match = styleTemplateRegex.exec(jsx)) !== null) {
+    // Only add if it looks like an image variable (starts with 'img' or contains 'image')
+    const varName = match[1];
+    if (varName.startsWith('img') ||
+        varName.toLowerCase().includes('image') ||
+        varName.toLowerCase().includes('icon') ||
+        varName.toLowerCase().includes('logo') ||
+        varName.toLowerCase().includes('picture')) {
+      usedImages.add(varName);
+    }
   }
 
   return usedImages;

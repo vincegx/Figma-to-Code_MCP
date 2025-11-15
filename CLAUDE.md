@@ -300,6 +300,9 @@ scripts/
 ├── post-processing/
 │   ├── organize-images.js    # Rename image hashes to Figma layer names
 │   ├── fix-svg-vars.js       # Fix CSS vars in SVG path data
+│   ├── sync-optimizer.js     # Sync CSS optimizations (Component-optimized → components/)
+│   ├── component-splitter.js # Split component into modular chunks (Phase 5)
+│   ├── dist-generator.js     # Generate dist/ package with organized CSS (Phase 6)
 │   └── capture-screenshot.js # Puppeteer screenshot capture
 └── reporting/
     ├── generate-metadata.js  # Dashboard metadata (nodeId, stats, timestamp)
@@ -408,13 +411,57 @@ Dockerfile                    # Alpine Linux + Chromium + Node.js
   - `get_variable_defs(nodeId)` → Design tokens
 - 1 second delay between `get_design_context` calls (rate limiting)
 
-**5. CSS Consolidation Strategy**
-- Each chunk generates separate CSS during processing
-- All chunk CSS files merged into Component-{fixed|clean}.css
-- Deduplicate :root variables using Map
-- Use first chunk's Google Fonts import
-- Deduplicate Figma utility classes
-- Remove CSS imports from individual chunks
+**5. CSS Processing Pipeline (6 Phases)**
+
+The CSS pipeline processes styles through 6 distinct phases:
+
+**Phase 1: Chunk Processing**
+- Input: `chunks/*.tsx` (raw Figma output)
+- Process: Apply AST transforms → Extract CSS
+- Output: `chunks-fixed/*.css` (individual component CSS with optimizations)
+
+**Phase 2: Consolidation**
+- Input: `chunks-fixed/*.css` (multiple files)
+- Process: Merge all CSS, deduplicate `:root` variables, combine utilities
+- Uses Map for variables (last value wins), Set for utilities (exact match)
+- Output: `Component-fixed.css` (single consolidated file)
+
+**Phase 3: Clean Generation**
+- Input: `Component-fixed.tsx/css` (Tailwind version with debug attrs)
+- Process: Remove `data-name`/`data-node-id` attributes, convert Tailwind → pure CSS classes
+- Output: `Component-clean.tsx/css` (production-ready, no dependencies)
+
+**Phase 4: Optimization** *(NEW - Jan 2025)*
+- Input: `Component-clean.tsx/css` (unoptimized)
+- Process: `sync-optimizer.js` transforms both TSX + CSS with **same transformMap**:
+  - Map color classes: `bg-custom-9dffb9` → `bg-brand`
+  - Map spacing: `px-custom-80` → `px-20` (Tailwind equivalents ±2px tolerance)
+  - Round decimals: `h-custom-29dot268` → `h-custom-29`
+- Output: `Component-optimized.tsx/css` (synchronized, optimized classes)
+- **Key:** Uses single transformMap for both files to prevent TSX/CSS desynchronization
+
+**Phase 5: Component Splitting** (if `--split-components` flag)
+- Input: `Component-optimized.tsx/css`
+- Process: `component-splitter.js`:
+  - Extract React function components
+  - Extract semantic sections (Header, Footer, *Section, *Overview, *Actions)
+  - Filter CSS per component (only used classes)
+  - **Buffer save fix** (lines 628-631): Flush final buffer to prevent last CSS rule loss
+- Output: `components/*.tsx` + `*.css` (modular files for responsive merge)
+
+**Phase 6: Dist Package Generation** (if `--split-components` flag)
+- Input: `components/*.tsx` + `*.css`
+- Process: `dist-generator.js`:
+  - Copy TSX files to `dist/components/`
+  - **Reorganize CSS** via `reorganizeComponentCSS()` (generic section-based approach)
+  - Generate `dist/Page.tsx` with component imports
+  - Copy images to `dist/img/`
+- Output: `dist/` package (copy-paste ready for production)
+
+**Key Features:**
+- **Synchronization** - Phase 4 ensures TSX + CSS classes match via shared transformMap
+- **Buffer Management** - Phase 5 saves final buffer (prevents last rule loss, fixed border-w-* bug)
+- **Generic Organization** - Phase 6 uses section-based reorganization (no hardcoded class prefixes)
 
 **6. Usage Tracking**
 - Tracks all MCP tool calls in data/figma-usage.json
@@ -463,6 +510,192 @@ Dockerfile                    # Alpine Linux + Chromium + Node.js
 - `runPipeline(sourceCode, contextData, config)` → { code, css, stats }
 - Loads transforms, sorts by priority, executes in order
 - Shares context between transforms (stats, analysis data)
+
+### Working with CSS Organization
+
+#### CSS Processing Pipeline
+
+The system processes CSS through 6 distinct phases (see [Key Architectural Concepts](#key-architectural-concepts) → CSS Processing Pipeline for details):
+
+1. **Chunk Processing** - Individual component CSS extraction
+2. **Consolidation** - Merge + deduplicate
+3. **Clean Generation** - Remove debug attrs, pure CSS
+4. **Optimization** - sync-optimizer.js (color/spacing mapping, decimal rounding)
+5. **Component Splitting** - Modular files with scoped CSS
+6. **Dist Generation** - Organized CSS for production
+
+#### sync-optimizer.js (Phase 4 - NEW Jan 2025)
+
+**Purpose:** Synchronize CSS optimizations between TSX and CSS files to prevent class name mismatches.
+
+**Problem Solved:**
+In previous versions, CSS classes were optimized (`bg-custom-9dffb9` → `bg-brand`) but TSX files still referenced old class names, causing styling to break.
+
+**Solution:**
+Build a single `transformMap` by analyzing CSS, then apply **same map** to both TSX and CSS:
+
+```javascript
+// 1. Build transform map from CSS
+const transformMap = await buildTransformMap(cssCode)
+// Map: bg-custom-9dffb9 → bg-brand, px-custom-80 → px-20, etc.
+
+// 2. Transform CSS with map
+let optimizedCSS = await transformCSS(cssCode, transformMap)
+
+// 3. Transform TSX with SAME map (synchronization!)
+let optimizedTSX = await transformTSX(tsxCode, transformMap)
+
+// 4. Validate: ensure TSX classes exist in CSS
+const validation = validateSync(optimizedTSX, optimizedCSS, transformMap)
+```
+
+**Transformations Applied:**
+- **Color mapping** - `bg-custom-9dffb9` → `bg-brand` (uses :root variables)
+- **Spacing mapping** - `px-custom-80` → `px-20` (Tailwind equivalents with ±2px tolerance)
+- **Decimal rounding** - `h-custom-29dot268` → `h-custom-29`
+
+**Files:**
+- Input: `Component-clean.tsx/css`
+- Output: `Component-optimized.tsx/css`
+- Script: `scripts/post-processing/sync-optimizer.js`
+
+#### dist-generator.js - CSS Reorganization (Phase 6)
+
+**Purpose:** Organize component CSS files in dist/ package with logical section ordering.
+
+**Generic Section-Based Approach** *(Rewritten Jan 2025)*
+
+The `reorganizeComponentCSS()` function uses a **generic section detection** strategy instead of hardcoded class-prefix rules:
+
+**How it works:**
+```javascript
+// 1. Detect sections by comment headers
+const sectionMap = {
+  'Figma-specific utility': 'utilities',
+  'Font': 'fonts',
+  'Color': 'colors',
+  'Dimension': 'dimensions',
+  'Spacing': 'spacing',
+  'Typography': 'typography',
+  'Layout': 'layout',
+  'Figma Variable': 'layout',  // Maps to Layout
+  'Other Custom': 'layout'      // Maps to Layout
+}
+
+// 2. Parse CSS line by line
+for (const line of lines) {
+  // Detect section comment: /* Color Classes */
+  if (line.match(/^\/\* (.*?) \*\/$/)) {
+    const commentText = match[1]
+    currentSection = findMappedSection(commentText, sectionMap)
+  }
+
+  // Buffer lines under current section
+  currentSectionBuffer.push(line)
+}
+
+// 3. Output sections in logical order
+// Header → Imports → :root → Utilities → Fonts → Colors →
+// Dimensions → Spacing → Typography → Layout → Other
+```
+
+**Why This Approach?**
+
+❌ **Old approach (strict class-prefix categorization):**
+- Problem: `border-w-2-0-0` misclassified as "Colors" (starts with `border-`)
+- Fragile: Many edge cases, hard to maintain
+
+✅ **New approach (generic section detection):**
+- Detects existing sections by comment headers
+- Maps sections to logical categories
+- **Preserves all classes** without re-categorization
+- No edge cases (doesn't parse individual class names)
+
+**Example Output:**
+```css
+/* Auto-generated scoped CSS for Header */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap');
+
+:root {
+  --brand: #9DFFB9;
+  --black-700: #282828;
+}
+
+/* Utilities */
+.content-start { align-content: flex-start; }
+
+/* Fonts */
+.font-inter-400 { font-family: "Inter", sans-serif; font-weight: 400; }
+
+/* Colors */
+.bg-brand { background-color: var(--brand); }
+.text-black-700 { color: var(--black-700); }
+
+/* Dimensions */
+.h-custom-918 { height: 918px; }
+.w-custom-1280 { width: 1280px; }
+
+/* Spacing */
+.px-20 { padding-left: 80px; padding-right: 80px; }
+
+/* Typography */
+.line-height-custom-46px { line-height: 46px; }
+.letter-spacing-custom-neg-2px { letter-spacing: -2px; }
+
+/* Layout */
+.border-w-2-0-0 { border-width: 2px 0 0 0; }
+.top-custom-calc-50pct-0dot3px { top: calc(50%); }
+```
+
+**Files:**
+- Input: `components/*.css`
+- Output: `dist/components/*.css` (reorganized)
+- Script: `scripts/post-processing/dist-generator.js` (lines 62-207)
+
+#### component-splitter.js - Buffer Management (Phase 5)
+
+**Bug Fix (Jan 2025):** Last CSS rule in file was lost during `filterCSSClasses()`.
+
+**Problem:**
+```css
+/* Before Fix */
+.border-w-0-0-1 { border-width: 0 0 1px 0; }
+.border-w-0-1-1-0 { border-width: 0 1px 1px 0; }
+.border-w-2-0-0 { border-width: 2px 0 0 0; }  ← LOST (last rule not saved)
+```
+
+**Root Cause:**
+```javascript
+// filterCSSClasses() loop
+for (const line of lines) {
+  if (line.startsWith('.')) {
+    // Save previous buffer
+    if (currentRule.length > 0) {
+      filteredLines.push(...currentRule)
+    }
+    currentRule = [line]
+  } else {
+    currentRule.push(line)
+  }
+}
+// ❌ Loop ends here - last currentRule never saved!
+```
+
+**Fix (lines 628-631):**
+```javascript
+// Save any remaining buffer (last rule in file)
+if (keepCurrentRule && currentRule.length > 0) {
+  filteredLines.push(...currentRule);
+}
+
+return filteredLines.join('\n');
+```
+
+**Result:** All CSS rules now preserved, including last rule (`border-w-2-0-0` no longer lost).
+
+**Files:**
+- Script: `scripts/post-processing/component-splitter.js` (lines 628-631)
 
 ### Working with the Dashboard
 
@@ -688,6 +921,11 @@ const { metadata, analysis } = await response.json()
 - **Chunks not consolidating**: Only applies in Chunk Mode; check if design triggered chunking (large/complex), verify chunks/ directory exists and metadata.xml structure
 - **Screenshot failed**: Check Puppeteer/Chromium installed, verify preview URL accessible
 - **Usage tracking issues**: Check data/figma-usage.json exists and is valid JSON
+- **CSS classes missing in components/**: Classes exist in Component-optimized.css but not in components/*.css. This was a bug fixed in Jan 2025 - ensure you're using latest version with sync-optimizer.js
+- **Last CSS rule missing in dist/ files**: Fixed in Jan 2025 (component-splitter.js lines 628-631). Update to latest version or manually add buffer save after filterCSSClasses() loop
+- **TSX/CSS class name mismatch**: Component styled incorrectly after optimization. Caused by desynchronization between TSX and CSS. Run sync-optimizer.js to apply same transformMap to both files
+- **border-w-* classes misclassified**: Fixed in Jan 2025 (dist-generator.js). Update to generic section-based reorganizeComponentCSS() instead of strict prefix categorization
+- **Overlay elements losing absolute positioning**: Fixed in Jan 2025 (position-fixes.js lines 296-330). Update to version with parent aria-hidden detection
 - **Responsive merge: "Missing modular/ directory"**: Export was not split. Re-export with `--split-components` flag
 - **Responsive merge: "No common components found"**: Component names don't match across breakpoints. Ensure Figma layer names are identical
 - **Responsive merge: "Invalid breakpoint order"**: Breakpoint widths must be descending (Desktop > Tablet > Mobile)

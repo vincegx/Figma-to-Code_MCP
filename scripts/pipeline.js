@@ -8,6 +8,7 @@ import parser from '@babel/parser'
 import generate from '@babel/generator'
 
 // Import all transforms
+import * as addMissingDataNames from './transformations/add-missing-data-names.js'
 import * as fontDetection from './transformations/font-detection.js'
 import * as autoLayout from './transformations/auto-layout.js'
 import * as astCleaning from './transformations/ast-cleaning.js'
@@ -23,6 +24,7 @@ import * as extractProps from './transformations/extract-props.js'
 
 // Register all transforms
 const ALL_TRANSFORMS = [
+  addMissingDataNames,
   fontDetection,
   autoLayout,
   astCleaning,
