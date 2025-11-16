@@ -736,6 +736,7 @@ function transformToPageComponent(sourceCode, parentName, extractedComponents, e
   })
 
   // STEP 2: Traverse and replace div[data-name] with component calls
+  // BUT ONLY in the main exported function (not in helper functions like Fotter, BrandIdentity)
   traverse.default(ast, {
     JSXElement(path) {
       const openingElement = path.node.openingElement
@@ -746,6 +747,13 @@ function transformToPageComponent(sourceCode, parentName, extractedComponents, e
         if (extractedComponents.includes(componentName)) {
           componentsToImport.add(componentName)
         }
+      }
+
+      // IMPORTANT: Only replace divs in the MAIN exported function (parentName)
+      // Skip helper functions (Fotter, BrandIdentity, etc.) - they should keep their inline content
+      const enclosingFunction = path.getFunctionParent()
+      if (!enclosingFunction || enclosingFunction.node?.id?.name !== parentName) {
+        return // Skip replacements in helper functions
       }
 
       // Check if it's a div with data-node-id attribute (replace with component)
@@ -763,15 +771,11 @@ function transformToPageComponent(sourceCode, parentName, extractedComponents, e
         )
 
         let componentName = null
-        let matchMethod = null
 
         // PRIORITY 1: Match by data-node-id via component-mapping.json
         if (dataNodeIdAttr) {
           const nodeId = dataNodeIdAttr.value.value
           componentName = componentMapping[nodeId]
-          if (componentName) {
-            matchMethod = 'node-id'
-          }
         }
 
         // PRIORITY 2: Fallback to data-name matching
@@ -779,27 +783,45 @@ function transformToPageComponent(sourceCode, parentName, extractedComponents, e
           const dataName = dataNameAttr.value.value
           const pascalDataName = toPascalCase(dataName)
           componentName = dataNameMap.get(pascalDataName.toLowerCase())
-          if (componentName) {
-            matchMethod = 'data-name'
-          }
         }
 
         // Replace div with component if match found
+        // BUT skip the root div (the one returned by parent function)
+        // AND verify component file actually exists in components/
         if (componentName && extractedComponents.includes(componentName)) {
-          componentsToImport.add(componentName)
+          // Verify component file exists before replacement
+          const componentFilePath = pathModule.join(exportDir, 'components', `${componentName}.tsx`)
+          const componentFileExists = fs.existsSync(componentFilePath)
 
-          path.replaceWith({
-            type: 'JSXElement',
-            openingElement: {
-              type: 'JSXOpeningElement',
-              name: { type: 'JSXIdentifier', name: componentName },
-              attributes: [],
-              selfClosing: true
-            },
-            closingElement: null,
-            children: []
-          })
+          if (!componentFileExists) {
+            console.log(`    ⚠️  Component file not found: components/${componentName}.tsx - keeping inline content`)
+            return // Skip replacement, keep original div with inline content
+          }
 
+          // Check if this is the DIRECT root div (immediate child of return statement in parent function)
+          let isRootDiv = false
+          if (path.parentPath?.isReturnStatement()) {
+            const fn = path.getFunctionParent()
+            if (fn?.node?.id?.name === parentName) {
+              isRootDiv = true
+            }
+          }
+
+          if (!isRootDiv) {
+            componentsToImport.add(componentName)
+
+            path.replaceWith({
+              type: 'JSXElement',
+              openingElement: {
+                type: 'JSXOpeningElement',
+                name: { type: 'JSXIdentifier', name: componentName },
+                attributes: [],
+                selfClosing: true
+              },
+              closingElement: null,
+              children: []
+            })
+          }
         }
       }
     }
