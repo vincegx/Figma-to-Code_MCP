@@ -63,7 +63,7 @@ export async function runPipeline(sourceCode, contextData = {}, config = {}) {
     ...contextData,
     stats: {},
     rootContainerProcessed: false,
-    customCSSClasses: new Map(),
+    customCSSClasses: contextData.customCSSClasses || new Map(),
     analysis: {
       sections: [],
       totalNodes: 0,

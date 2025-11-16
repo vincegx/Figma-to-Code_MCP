@@ -198,8 +198,15 @@ export function execute(ast, context) {
     }
   })
 
-  // Store customCSSClasses in context for CSS generation
-  context.customCSSClasses = customCSSClasses
+  // Merge customCSSClasses into context (don't overwrite existing classes!)
+  if (!context.customCSSClasses) {
+    context.customCSSClasses = new Map()
+  }
+
+  // Copy all classes from local Map to context Map
+  for (const [className, classData] of customCSSClasses) {
+    context.customCSSClasses.set(className, classData)
+  }
 
   return { varsConverted, customClassesGenerated: customCSSClasses.size }
 }

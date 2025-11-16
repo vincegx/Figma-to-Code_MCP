@@ -674,15 +674,18 @@ if (context.customCSSClasses && context.customCSSClasses.size > 0) {
     const colorClasses = new Map()
     const dimensionClasses = new Map()
     const spacingClasses = new Map()
+    const maskClasses = new Map()
     const otherClasses = new Map()
     const figmaVarClasses = new Map()
 
     // Categorize classes
     for (const [className, classData] of context.customCSSClasses) {
-      const { type, fontFamily, fontWeight, property, value } = classData
+      const { type, fontFamily, fontWeight, property, value, rules} = classData
 
       if (type === 'font') {
         fontClasses.set(className, { fontFamily, fontWeight })
+      } else if (type === 'mask') {
+        maskClasses.set(className, { rules })
       } else if (type === 'clean') {
         if (property === 'background-color' || property === 'color' || property === 'border-color') {
           colorClasses.set(className, { property, value })
@@ -706,6 +709,17 @@ if (context.customCSSClasses && context.customCSSClasses.size > 0) {
         cssContent += `.${className} {\n`
         cssContent += `  font-family: "${fontFamily}", sans-serif;\n`
         cssContent += `  font-weight: ${fontWeight};\n`
+        cssContent += `}\n\n`
+      }
+    }
+
+    if (maskClasses.size > 0) {
+      cssContent += `\n/* ===== 3.5. Mask Classes (for masked images) ===== */\n`
+      for (const [className, { rules }] of maskClasses) {
+        cssContent += `.${className} {\n`
+        for (const { property, value } of rules) {
+          cssContent += `  ${property}: ${value};\n`
+        }
         cssContent += `}\n\n`
       }
     }

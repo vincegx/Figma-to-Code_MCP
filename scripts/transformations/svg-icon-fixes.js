@@ -44,7 +44,8 @@ export const meta = {
 export function execute(ast, context) {
   const stats = {
     wrappersFlattened: 0,
-    compositesInlined: 0 // Désactivé - maintenant géré par consolidate-svg-groups.js
+    compositesInlined: 0, // Désactivé - maintenant géré par consolidate-svg-groups.js
+    maskImagesConverted: 0
   }
 
   // Traverse: flatten wrappers only
@@ -54,6 +55,15 @@ export function execute(ast, context) {
     JSXElement(path) {
       if (flattenAbsoluteImgWrappers(path)) {
         stats.wrappersFlattened++
+      }
+    }
+  })
+
+  // NEW: Generate CSS for maskImage properties
+  traverse.default(ast, {
+    JSXElement(path) {
+      if (convertMaskImageToImg(path, context)) {
+        stats.maskImagesConverted++
       }
     }
   })
@@ -528,4 +538,148 @@ function findImportPathInProgram(astPath, importName) {
   })
 
   return importDecl ? importDecl.source.value : null
+}
+
+/**
+ * Convert mask-* classes to inline styles
+ *
+ * PROBLÈME 3: Figma exporte certaines images avec maskImage CSS
+ * <div className="bg-[#1f1f1f] h-[192px] mask-alpha mask-intersect..."
+ *      style={{ maskImage: `url('${imgImage21}')` }} />
+ *
+ * → Les classes mask-* CSS ne s'appliquent pas car inline style a priorité
+ * → Le masque ne fonctionne pas correctement
+ *
+ * SOLUTION 3: Convertir mask-* classes en inline styles complets
+ * Toutes les propriétés mask dans le même inline style = même spécificité
+ *
+ * @param {object} path - JSX element path
+ * @param {object} context - Transform context
+ * @returns {boolean} - True if transformation was applied
+ */
+function convertMaskImageToImg(path, context) {
+  const node = path.node
+
+  // Must be a JSX element
+  if (!t.isJSXElement(node)) return false
+
+  // Must be a div
+  const openingElement = node.openingElement
+  if (!t.isJSXIdentifier(openingElement.name, { name: 'div' })) return false
+
+  // Must have style attribute with maskImage
+  const styleAttr = openingElement.attributes.find(
+    attr => t.isJSXAttribute(attr) && t.isJSXIdentifier(attr.name, { name: 'style' })
+  )
+
+  if (!styleAttr || !t.isJSXExpressionContainer(styleAttr.value)) return false
+
+  const styleExpression = styleAttr.value.expression
+  if (!t.isObjectExpression(styleExpression)) return false
+
+  // Check if style has maskImage property
+  const maskImageProp = styleExpression.properties.find(
+    prop => t.isObjectProperty(prop) && t.isIdentifier(prop.key, { name: 'maskImage' })
+  )
+
+  if (!maskImageProp) return false
+
+  // Get className and extract mask-* classes
+  const className = getClassNameValue(node) || ''
+  const classes = className.split(/\s+/).filter(Boolean)
+
+  // Find mask-* classes and convert to inline style properties
+  const maskClasses = classes.filter(cls => cls.startsWith('mask-'))
+  if (maskClasses.length === 0) return false
+
+  // Generate inline style properties from mask classes
+  const maskStyleProps = generateMaskInlineStyles(maskClasses)
+  if (maskStyleProps.length === 0) return false
+
+  // Add WebkitMaskImage (duplicate of maskImage for browser compatibility)
+  styleExpression.properties.push(
+    t.objectProperty(t.identifier('WebkitMaskImage'), maskImageProp.value)
+  )
+
+  // Add mask properties to existing style object
+  for (const { key, value } of maskStyleProps) {
+    styleExpression.properties.push(
+      t.objectProperty(t.identifier(key), t.stringLiteral(value))
+    )
+  }
+
+  // Remove mask-* classes from className
+  const classNameAttr = openingElement.attributes.find(
+    attr => t.isJSXAttribute(attr) && t.isJSXIdentifier(attr.name, { name: 'className' })
+  )
+
+  if (classNameAttr && t.isStringLiteral(classNameAttr.value)) {
+    const newClasses = classes.filter(cls => !cls.startsWith('mask-'))
+    classNameAttr.value.value = newClasses.join(' ')
+  }
+
+  return true
+}
+
+/**
+ * Generate inline style properties from mask-* classes
+ * Returns array of { key, value } objects for React inline styles
+ *
+ * Example input: ['mask-alpha', 'mask-intersect', 'mask-size-[607px_192px]']
+ * Example output: [
+ *   { key: 'maskMode', value: 'alpha' },
+ *   { key: 'WebkitMaskMode', value: 'alpha' },
+ *   { key: 'maskComposite', value: 'intersect' },
+ *   { key: 'WebkitMaskComposite', value: 'source-in' },
+ *   { key: 'maskSize', value: 'cover' },
+ *   { key: 'WebkitMaskSize', value: 'cover' },
+ *   ...
+ * ]
+ */
+function generateMaskInlineStyles(maskClasses) {
+  const props = []
+
+  for (const maskClass of maskClasses) {
+    // Standard mask classes
+    if (maskClass === 'mask-alpha') {
+      props.push(
+        { key: 'maskMode', value: 'alpha' },
+        { key: 'WebkitMaskMode', value: 'alpha' }
+      )
+    } else if (maskClass === 'mask-intersect') {
+      props.push(
+        { key: 'maskComposite', value: 'intersect' },
+        { key: 'WebkitMaskComposite', value: 'source-in' }
+      )
+    } else if (maskClass === 'mask-no-clip') {
+      props.push(
+        { key: 'maskClip', value: 'border-box' },
+        { key: 'WebkitMaskClip', value: 'border-box' }
+      )
+    } else if (maskClass === 'mask-no-repeat') {
+      props.push(
+        { key: 'maskRepeat', value: 'no-repeat' },
+        { key: 'WebkitMaskRepeat', value: 'no-repeat' }
+      )
+    } else if (maskClass.startsWith('mask-position-')) {
+      // Handle mask-position-[value] or mask-position-0px
+      const positionMatch = maskClass.match(/^mask-position-(?:\[(.+)\]|(.+))$/)
+      if (positionMatch) {
+        const value = positionMatch[1] || positionMatch[2]
+        props.push(
+          { key: 'maskPosition', value },
+          { key: 'WebkitMaskPosition', value }
+        )
+      }
+    } else if (maskClass.startsWith('mask-size-')) {
+      // Handle mask-size-[widthxheight] or mask-size-607px-192px
+      // Always use 'cover' to match Figma's behavior
+      props.push(
+        { key: 'maskSize', value: 'cover' },
+        { key: 'WebkitMaskSize', value: 'cover' }
+      )
+    }
+  }
+
+  return props
 }
