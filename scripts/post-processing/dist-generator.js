@@ -782,23 +782,38 @@ function transformToPageComponent(sourceCode, parentName, extractedComponents, e
     }
   })
 
-  // STEP 3: NOW collect helpers used in the MODIFIED AST
+  // STEP 3: NOW collect helpers used in the MODIFIED AST (RECURSIVELY)
   const usedHelpers = new Set()
-  traverse.default(ast, {
-    FunctionDeclaration(path) {
-      const functionName = path.node.id?.name
-      if (functionName === 'Page' || functionName === parentName) {
-        // Find all JSX components used in this function
-        path.traverse({
-          JSXOpeningElement(innerPath) {
-            if (innerPath.node.name.type === 'JSXIdentifier') {
-              usedHelpers.add(innerPath.node.name.name)
+  const processed = new Set()
+
+  // Recursive function to collect all helpers used by a component
+  function collectUsedHelpers(componentName) {
+    if (processed.has(componentName)) return
+    processed.add(componentName)
+
+    // Find this component's declaration
+    traverse.default(ast, {
+      FunctionDeclaration(path) {
+        if (path.node.id?.name === componentName) {
+          // Find all JSX components used in THIS component
+          path.traverse({
+            JSXOpeningElement(innerPath) {
+              if (innerPath.node.name.type === 'JSXIdentifier') {
+                const usedComponent = innerPath.node.name.name
+                usedHelpers.add(usedComponent)
+                // Recursively collect helpers used by this component
+                collectUsedHelpers(usedComponent)
+              }
             }
-          }
-        })
+          })
+        }
       }
-    }
-  })
+    })
+  }
+
+  // Start from main component (Page or parent name)
+  const mainComponent = parentName || 'Page'
+  collectUsedHelpers(mainComponent)
 
   // STEP 4: Remove unused helper functions
   traverse.default(ast, {
