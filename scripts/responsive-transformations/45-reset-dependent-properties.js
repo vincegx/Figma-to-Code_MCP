@@ -342,11 +342,6 @@ function resetChildrenOfFlexColParents(className, parentHasFlexCol) {
       resets.push('max-md:basis-auto');
     }
 
-    // Reset grow
-    if (classes.includes('grow') && !classes.includes('max-md:grow-0')) {
-      resets.push('max-md:grow-0');
-    }
-
     // Reset shrink si présent
     if (classes.includes('shrink-0') && !classes.includes('max-md:shrink-1')) {
       resets.push('max-md:shrink-1');
@@ -366,6 +361,10 @@ function resetChildrenOfFlexColParents(className, parentHasFlexCol) {
         break;
       }
     }
+
+    // NOTE: Flex grow/basis resets are now handled in 40-merge-desktop-first.js
+    // CRITICAL FIX 2 section, which properly detects when these properties
+    // disappear between breakpoints (Desktop → Mobile)
   }
 
   return resets;

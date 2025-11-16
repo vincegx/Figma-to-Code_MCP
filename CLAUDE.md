@@ -193,10 +193,10 @@ The system includes a **responsive merge** feature that combines 3 Figma exports
 **Pipeline Phases:**
 
 **Phase 1: Detection & Validation**
-- Validate all 3 exports have `modular/` directory
+- Validate all 3 exports have `components/` directory
 - Detect common components across breakpoints
 - Extract component order from Desktop `metadata.xml`
-- Extract helper functions from Desktop `Component-clean.tsx`
+- Extract helper functions from Desktop `Component-optimized.tsx` (or `Component-clean.tsx` as fallback)
 
 **Phase 2: Component Merging (Responsive AST Pipeline)**
 - Parse Desktop, Tablet, Mobile `.tsx` files into AST
@@ -212,13 +212,14 @@ The system includes a **responsive merge** feature that combines 3 Figma exports
 - Fix image paths (`./img/` → `../img/`)
 
 **Phase 3: CSS Merging**
-- Parse all 3 CSS files into sections (imports, :root, utilities, custom)
+- Parse all 3 CSS files from `components/` directory into sections (imports, :root, utilities, custom)
+- Uses `Component-optimized.css` (or `Component-clean.css` as fallback)
 - Desktop styles = baseline (no media query)
 - Tablet overrides = differences from Desktop (`@media (max-width: 960px)`)
 - Mobile overrides = differences from Tablet (`@media (max-width: 420px)`)
 
 **Phase 4: Page Generation**
-- Merge Page structure from all 3 `Component-clean.tsx` files
+- Merge Page structure from all 3 `Component-optimized.tsx` files (or `Component-clean.tsx` as fallback)
 - Replace `<div data-name="...">` with `<ComponentName />`
 - Generate `Page.tsx` with component imports
 - Generate `Page.css` with media queries
@@ -231,13 +232,14 @@ The system includes a **responsive merge** feature that combines 3 Figma exports
 responsive-merger-{timestamp}/
 ├── Page.tsx                      # Main page
 ├── Page.css                      # Consolidated CSS with media queries
-├── Subcomponents/                # Responsive components
+├── components/                   # Responsive components
 │   ├── Header.tsx
 │   ├── Header.css
 │   └── ...
 ├── img/                          # Images (from Desktop)
 ├── puck/                         # Puck editor components
-│   ├── components/
+│   ├── components/               # Puck-ready components
+│   ├── Page.css                  # CSS with fixed imports (../components/)
 │   ├── config.tsx
 │   └── data.json
 ├── responsive-metadata.json      # Merge stats
@@ -926,9 +928,29 @@ const { metadata, analysis } = await response.json()
 - **TSX/CSS class name mismatch**: Component styled incorrectly after optimization. Caused by desynchronization between TSX and CSS. Run sync-optimizer.js to apply same transformMap to both files
 - **border-w-* classes misclassified**: Fixed in Jan 2025 (dist-generator.js). Update to generic section-based reorganizeComponentCSS() instead of strict prefix categorization
 - **Overlay elements losing absolute positioning**: Fixed in Jan 2025 (position-fixes.js lines 296-330). Update to version with parent aria-hidden detection
-- **Responsive merge: "Missing modular/ directory"**: Export was not split. Re-export with `--split-components` flag
+- **Responsive merge: "Missing modular/ directory"**: DEPRECATED - System now uses `components/` directory. This error should not occur with Nov 2025 version
+- **Responsive merge: "Missing components/ directory"**: Export was not split. Re-export with `--split-components` flag
 - **Responsive merge: "No common components found"**: Component names don't match across breakpoints. Ensure Figma layer names are identical
 - **Responsive merge: "Invalid breakpoint order"**: Breakpoint widths must be descending (Desktop > Tablet > Mobile)
 - **Responsive merge: CSS classes not compiling**: Check `responsive-css-compiler.js` is running, verify `Page.css` includes compiled classes
 - **Responsive merge: Puck editor not loading**: Check `puck/config.tsx` exists and `puck/data.json` is valid JSON
+- **Responsive merge: Puck CSS import error**: Fixed in Nov 2025 (puck-generator.js lines 769-770). CSS imports now use `../components/` instead of `./components/`
 - **Responsive merge: Images not loading in subcomponents**: Images copied from Desktop only, subcomponents use `../img/` path
+
+## Recent Changes (November 2025)
+
+### Responsive Merge Updates
+**Date**: November 15, 2025
+**Changes**:
+1. **Component-optimized.tsx integration**: Responsive merge now uses `Component-optimized.tsx` (or fallback to `Component-clean.tsx`) to benefit from sync-optimizer.js transformations
+2. **Directory structure update**: Changed from `modular/` to `components/` directory for consistency with single-screen export process
+3. **Puck CSS imports fix**: Fixed relative path issue in puck/Page.css (`./components/` → `../components/`)
+
+**Affected files**:
+- `scripts/responsive-merger.js` (lines 475, 774-785, 1138-1165, 1363-1370)
+- `scripts/puck-generator.js` (lines 769-770)
+
+**Migration notes**:
+- Exports created before Nov 15, 2025 may still use `modular/` directory - system maintains backward compatibility
+- New exports use `components/` directory and `Component-optimized.*` files
+- Responsive merge automatically detects and uses the correct file structure

@@ -43,6 +43,16 @@ function extractDataName(jsxElement) {
 }
 
 /**
+ * Extract data-node-id attribute from JSX element
+ */
+function extractNodeId(jsxElement) {
+  const nodeIdAttr = jsxElement?.openingElement?.attributes.find(
+    attr => attr.type === 'JSXAttribute' && attr.name?.name === 'data-node-id'
+  );
+  return nodeIdAttr?.value?.value || null;
+}
+
+/**
  * Get element type (tag name)
  */
 function getElementType(jsxElement) {
@@ -155,27 +165,45 @@ function calculateSimilarity(className1, className2) {
 
 /**
  * Find matching element using hybrid strategy:
- * Level 1: Match by data-name (existing behavior)
- * Level 2: Match by position + similarity (for elements without data-name)
- * Level 3: Return null if no match
+ * Level 1: Match by node-id (most precise - exact match when IDs preserved)
+ * Level 2: Match by data-name + element type (prevent parent/child collision)
+ * Level 3: Match by position + similarity (for elements without data-name)
+ * Level 4: Return null if no match
  */
-function findMatchingElement(ast, dataName, elementPath, desktopClassName, elementType) {
-  // Level 1: Match by data-name (existing behavior - most reliable)
-  if (dataName) {
+function findMatchingElement(ast, nodeId, dataName, elementPath, desktopClassName, elementType) {
+  // Level 1: Match by node-id (most precise - works when Figma preserves IDs)
+  if (nodeId) {
+    let found = null;
+    traverseDefault(ast, {
+      JSXElement(path) {
+        if (found) return;
+        const targetNodeId = extractNodeId(path.node);
+        if (targetNodeId === nodeId) {
+          found = extractClassName(path.node);
+        }
+      }
+    });
+    if (found) return found; // Exact match by node-id
+  }
+
+  // Level 2: Match by data-name + element type (prevent parent/child collision with same data-name)
+  if (dataName && elementType) {
     let found = null;
     traverseDefault(ast, {
       JSXElement(path) {
         if (found) return;
         const targetDataName = extractDataName(path.node);
-        if (targetDataName === dataName) {
+        const targetElementType = getElementType(path.node);
+        // Match BOTH data-name AND element type to avoid collision
+        if (targetDataName === dataName && targetElementType === elementType) {
           found = extractClassName(path.node);
         }
       }
     });
-    return found;
+    if (found) return found;
   }
 
-  // Level 2: Match by position + similarity (for elements without data-name)
+  // Level 3: Match by position + similarity (for elements without data-name)
   if (elementPath && desktopClassName && elementType) {
     const index = buildElementIndex(ast);
     const candidate = index.get(elementPath);
@@ -194,7 +222,7 @@ function findMatchingElement(ast, dataName, elementPath, desktopClassName, eleme
     }
   }
 
-  // Level 3: No match found
+  // Level 4: No match found
   return null;
 }
 
@@ -267,6 +295,7 @@ export function execute(context) {
   traverseDefault(desktopAST, {
     JSXElement(path) {
       // Extract element info from desktop
+      const nodeId = extractNodeId(path.node);
       const dataName = extractDataName(path.node);
       const desktopClassName = extractClassName(path.node);
       const elementType = getElementType(path.node);
@@ -275,6 +304,7 @@ export function execute(context) {
       // Try to find matching elements in tablet and mobile using hybrid strategy
       const tabletClassName = findMatchingElement(
         tabletAST,
+        nodeId,
         dataName,
         elementPath,
         desktopClassName,
@@ -283,6 +313,7 @@ export function execute(context) {
 
       const mobileClassName = findMatchingElement(
         mobileAST,
+        nodeId,
         dataName,
         elementPath,
         desktopClassName,
@@ -433,6 +464,7 @@ export function execute(context) {
           }
         }
       }
+
 
       // Update Desktop AST with merged className
       const mergedClassName = Array.from(result).join(' ');

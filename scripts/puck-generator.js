@@ -188,12 +188,26 @@ function generatePuckComponent(componentName, originalCode, extractedProps) {
     plugins: ['jsx', 'typescript']
   });
 
-  // Build props interface
+  // Build props interface with deduplication
+  const allProps = [
+    ...extractedProps.texts.map(p => ({ ...p, type: 'string' })),
+    ...extractedProps.images.map(p => ({ ...p, type: 'string' })),
+    ...extractedProps.visibility.map(p => ({ ...p, type: 'boolean' }))
+  ];
+
+  // Deduplicate by propName (keep first occurrence)
+  const uniquePropsMap = new Map();
+  for (const prop of allProps) {
+    if (!uniquePropsMap.has(prop.propName)) {
+      uniquePropsMap.set(prop.propName, prop);
+    }
+  }
+
+  const uniqueProps = Array.from(uniquePropsMap.values());
+
   const propsInterface = `interface ${componentName}Props {
   className?: string;
-${extractedProps.texts.map(p => `  ${p.propName}?: string;`).join('\n')}
-${extractedProps.images.map(p => `  ${p.propName}?: string;`).join('\n')}
-${extractedProps.visibility.map(p => `  ${p.propName}?: boolean;`).join('\n')}
+${uniqueProps.map(p => `  ${p.propName}?: ${p.type};`).join('\n')}
 }`;
 
   // Remove image imports and React/CSS imports (will be re-added)
@@ -347,29 +361,31 @@ ${extractedProps.visibility.map(p => `  ${p.propName}?: boolean;`).join('\n')}
       const funcDecl = path.node.declaration;
 
       if (funcDecl.type === 'FunctionDeclaration') {
-        // Build destructuring with defaults
-        const defaultProps = [
-          'className',
-          ...extractedProps.texts.map(p => `${p.propName} = ${JSON.stringify(p.defaultValue)}`),
-          ...extractedProps.images.map(p => `${p.propName} = ${JSON.stringify(p.defaultValue)}`),
-          ...extractedProps.visibility.map(p => `${p.propName} = ${p.defaultValue}`)
+        // Collect all unique prop names (deduplicate across texts, images, visibility)
+        const allProps = [
+          ...extractedProps.texts,
+          ...extractedProps.images,
+          ...extractedProps.visibility
         ];
 
-        // Update params - simple destructuring pattern
+        // Deduplicate by propName (keep first occurrence)
+        const uniquePropsMap = new Map();
+        uniquePropsMap.set('className', { propName: 'className' }); // Always include className
+
+        for (const prop of allProps) {
+          if (!uniquePropsMap.has(prop.propName)) {
+            uniquePropsMap.set(prop.propName, prop);
+          }
+        }
+
+        const uniqueProps = Array.from(uniquePropsMap.values());
+
+        // Update params - simple destructuring pattern with unique props only
         funcDecl.params = [
           t.objectPattern(
-            [
-              t.objectProperty(t.identifier('className'), t.identifier('className'), false, true),
-              ...extractedProps.texts.map(p =>
-                t.objectProperty(t.identifier(p.propName), t.identifier(p.propName), false, true)
-              ),
-              ...extractedProps.images.map(p =>
-                t.objectProperty(t.identifier(p.propName), t.identifier(p.propName), false, true)
-              ),
-              ...extractedProps.visibility.map(p =>
-                t.objectProperty(t.identifier(p.propName), t.identifier(p.propName), false, true)
-              )
-            ]
+            uniqueProps.map(p =>
+              t.objectProperty(t.identifier(p.propName), t.identifier(p.propName), false, true)
+            )
           )
         ];
       }
@@ -763,8 +779,11 @@ function generatePuckPage(originalPagePath, outputDir) {
   const pageCssPath = originalPagePath.replace('.tsx', '.css');
   if (fs.existsSync(pageCssPath)) {
     let cssContent = fs.readFileSync(pageCssPath, 'utf8');
-    // Replace ./Subcomponents/ → ./components/ in CSS imports
-    cssContent = cssContent.replace(/\.\/Subcomponents\//g, './components/');
+    // Fix relative paths for puck/ directory (up one level)
+    // Replace ./Subcomponents/ → ../components/ in CSS imports
+    // Replace ./components/ → ../components/ in CSS imports
+    cssContent = cssContent.replace(/\.\/Subcomponents\//g, '../components/');
+    cssContent = cssContent.replace(/\.\/components\//g, '../components/');
     fs.writeFileSync(
       path.join(outputDir, 'Page.css'),
       cssContent

@@ -21,7 +21,7 @@ import { parseStringPromise } from 'xml2js';
 import { parse as babelParse } from '@babel/parser';
 import traverseLib from '@babel/traverse';
 import generateLib from '@babel/generator';
-import { compileResponsiveClasses } from './responsive-css-compiler.js';
+import { compileResponsiveClasses, compileResponsiveClassesPerComponent } from './responsive-css-compiler.js';
 import { execute as extractPropsExecute } from './transformations/extract-props.js';
 
 const traverseDefault = traverseLib.default || traverseLib;
@@ -472,7 +472,7 @@ function indentCSS(css) {
 // ═══════════════════════════════════════════════════════════════
 
 function readCSS(dir, componentName) {
-  const cssPath = path.join(dir, 'modular', `${componentName}.css`);
+  const cssPath = path.join(dir, 'components', `${componentName}.css`);
   return fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
 }
 
@@ -768,17 +768,21 @@ async function mergeTSXStructure(desktopTSX, tabletTSX, mobileTSX, breakpoints) 
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Extract helper functions from Component-clean.tsx
+ * Extract helper functions from Component-optimized.tsx (or Component-clean.tsx as fallback)
  * Returns Map<helperName, { code, imports }>
  */
 function extractHelperFunctions(testDir, mainComponentNames) {
-  const componentCleanPath = path.join(testDir, 'Component-clean.tsx');
+  // Try Component-optimized.tsx first (new process), fallback to Component-clean.tsx
+  let componentPath = path.join(testDir, 'Component-optimized.tsx');
+  if (!fs.existsSync(componentPath)) {
+    componentPath = path.join(testDir, 'Component-clean.tsx');
+  }
 
-  if (!fs.existsSync(componentCleanPath)) {
+  if (!fs.existsSync(componentPath)) {
     return new Map();
   }
 
-  const sourceCode = fs.readFileSync(componentCleanPath, 'utf8');
+  const sourceCode = fs.readFileSync(componentPath, 'utf8');
 
   try {
     const ast = babelParse(sourceCode, {
@@ -1053,6 +1057,7 @@ async function extractPropsFromCode(sourceCode, componentName) {
   }
 }
 
+
 // ═══════════════════════════════════════════════════════════════
 // COMPONENT MERGER
 // ═══════════════════════════════════════════════════════════════
@@ -1132,15 +1137,26 @@ const DATA_NAME_TO_COMPONENT = {
 };
 
 async function generatePage(components, desktop, tablet, mobile, outputDir, breakpoints) {
-  console.log('\n📝 Generating Page.tsx from Component-clean.tsx (3 breakpoints)...');
+  console.log('\n📝 Generating Page.tsx from Component-optimized.tsx (3 breakpoints)...');
 
-  // Read all 3 Component-clean.tsx files
-  const desktopPath = path.join(desktop.testDir, 'Component-clean.tsx');
-  const tabletPath = path.join(tablet.testDir, 'Component-clean.tsx');
-  const mobilePath = path.join(mobile.testDir, 'Component-clean.tsx');
+  // Read all 3 Component-optimized.tsx files (fallback to Component-clean.tsx)
+  let desktopPath = path.join(desktop.testDir, 'Component-optimized.tsx');
+  if (!fs.existsSync(desktopPath)) {
+    desktopPath = path.join(desktop.testDir, 'Component-clean.tsx');
+  }
+
+  let tabletPath = path.join(tablet.testDir, 'Component-optimized.tsx');
+  if (!fs.existsSync(tabletPath)) {
+    tabletPath = path.join(tablet.testDir, 'Component-clean.tsx');
+  }
+
+  let mobilePath = path.join(mobile.testDir, 'Component-optimized.tsx');
+  if (!fs.existsSync(mobilePath)) {
+    mobilePath = path.join(mobile.testDir, 'Component-clean.tsx');
+  }
 
   if (!fs.existsSync(desktopPath)) {
-    console.error('   ❌ Desktop Component-clean.tsx not found, falling back to simple structure');
+    console.error('   ❌ Desktop Component-optimized.tsx or Component-clean.tsx not found, falling back to simple structure');
     generateSimplePage(components, outputDir);
     return;
   }
@@ -1305,6 +1321,37 @@ ${jsxComponents}
 // PAGE.CSS GENERATION
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * Extract all className values from Page.tsx
+ * @param {string} pageTsxPath - Path to Page.tsx file
+ * @returns {Set<string>} - Set of class names used in Page.tsx
+ */
+function extractClassNamesFromPageTSX(pageTsxPath) {
+  if (!fs.existsSync(pageTsxPath)) {
+    return new Set();
+  }
+
+  const tsxContent = fs.readFileSync(pageTsxPath, 'utf8');
+  const classNames = new Set();
+
+  // Match all className="..." and className='...'
+  const classNameRegex = /className=["']([^"']+)["']/g;
+  let match;
+
+  while ((match = classNameRegex.exec(tsxContent)) !== null) {
+    const classNameValue = match[1];
+    // Split by whitespace and add each class
+    const classes = classNameValue.trim().split(/\s+/);
+    classes.forEach(cls => {
+      if (cls) {
+        classNames.add(cls);
+      }
+    });
+  }
+
+  return classNames;
+}
+
 function generatePageCSS(components, desktop, tablet, mobile, outputDir, breakpoints) {
   log.task('📝', 'Generating Page.css');
 
@@ -1313,17 +1360,22 @@ function generatePageCSS(components, desktop, tablet, mobile, outputDir, breakpo
     .map(name => `@import './components/${name}.css';`)
     .join('\n');
 
-  // 2. Read Component-clean.css from all 3 breakpoints
+  // 2. Extract classes used in Page.tsx
+  const pageTsxPath = path.join(outputDir, 'Page.tsx');
+  const usedClasses = extractClassNamesFromPageTSX(pageTsxPath);
+  log.info(`   Found ${usedClasses.size} CSS classes used in Page.tsx`);
+
+  // 3. Read Component-clean.css from all 3 breakpoints
   const desktopCSS = readComponentCSS(desktop.testDir);
   const tabletCSS = readComponentCSS(tablet.testDir);
   const mobileCSS = readComponentCSS(mobile.testDir);
 
-  // 3. Extract parent container CSS (everything NOT in modular components)
-  const desktopParentCSS = extractParentCSS(desktopCSS);
-  const tabletParentCSS = extractParentCSS(tabletCSS);
-  const mobileParentCSS = extractParentCSS(mobileCSS);
+  // 4. Extract parent container CSS (filtered by used classes)
+  const desktopParentCSS = extractParentCSS(desktopCSS, usedClasses);
+  const tabletParentCSS = extractParentCSS(tabletCSS, usedClasses);
+  const mobileParentCSS = extractParentCSS(mobileCSS, usedClasses);
 
-  // 4. Merge parent CSS with media queries
+  // 5. Merge parent CSS with media queries
   const responsiveParentCSS = mergeCSS(
     desktopParentCSS,
     tabletParentCSS,
@@ -1332,43 +1384,188 @@ function generatePageCSS(components, desktop, tablet, mobile, outputDir, breakpo
     breakpoints
   );
 
-  // 5. Compile responsive classes (max-md:*, max-lg:*) from ALL generated TSX files
-  log.task('🎨', 'Compiling responsive classes to CSS');
-  const compiledCSS = compileResponsiveClasses(outputDir);
-
-  // 6. Combine imports + parent CSS + compiled responsive CSS
-  const pageCSS = compiledCSS
-    ? `/* Auto-generated Page.css */\n/* Component imports */\n${cssImports}\n\n${responsiveParentCSS}\n\n${compiledCSS}`
-    : `/* Auto-generated Page.css */\n/* Component imports */\n${cssImports}\n\n${responsiveParentCSS}`;
+  // 6. Combine imports + parent CSS (NO compiled responsive CSS - now in components)
+  const pageCSS = `/* Auto-generated Page.css */\n/* Component imports */\n${cssImports}\n\n${responsiveParentCSS}`;
 
   fs.writeFileSync(path.join(outputDir, 'Page.css'), pageCSS);
-  log.success('Page.css generated with component imports + parent CSS + compiled responsive classes');
+  log.success('Page.css generated with component imports + parent CSS (responsive classes in components)');
 }
 
 function readComponentCSS(testDir) {
-  const cssPath = path.join(testDir, 'Component-clean.css');
+  // Try Component-optimized.css first (new process), fallback to Component-clean.css
+  let cssPath = path.join(testDir, 'Component-optimized.css');
+  if (!fs.existsSync(cssPath)) {
+    cssPath = path.join(testDir, 'Component-clean.css');
+  }
   return fs.existsSync(cssPath) ? fs.readFileSync(cssPath, 'utf8') : '';
 }
 
 /**
  * Extract CSS for parent containers (global classes, not component-specific)
  * This includes classes like .bg-custom-fcfcfc, layout containers, etc.
+ * @param {string} css - CSS content
+ * @param {Set<string>} usedClasses - Set of class names used in Page.tsx (optional)
+ * @returns {string} - Filtered parent CSS
  */
-function extractParentCSS(css) {
+function extractParentCSS(css, usedClasses = null) {
   if (!css) return '';
 
   const sections = parseCSSIntoSections(css);
 
-  // Return imports + root + utilities + custom classes
-  // (The custom classes contain the parent container styles)
+  // If usedClasses provided, filter customClasses to only include used ones
+  let filteredCustomClasses = sections.customClasses;
+  if (usedClasses && sections.customClasses) {
+    filteredCustomClasses = filterCSSByUsedClasses(sections.customClasses, usedClasses);
+  }
+
+  // Return imports + root + utilities + filtered custom classes
   let parentCSS = '';
 
   if (sections.imports) parentCSS += sections.imports + '\n\n';
   if (sections.root) parentCSS += sections.root + '\n\n';
   if (sections.utilities) parentCSS += sections.utilities + '\n\n';
-  if (sections.customClasses) parentCSS += sections.customClasses;
+  if (filteredCustomClasses) parentCSS += filteredCustomClasses;
 
   return parentCSS;
+}
+
+/**
+ * Filter CSS to only include classes that are used
+ * @param {string} css - CSS content with class definitions
+ * @param {Set<string>} usedClasses - Set of class names used
+ * @returns {string} - Filtered CSS
+ */
+function filterCSSByUsedClasses(css, usedClasses) {
+  const lines = css.split('\n');
+  const filteredLines = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Keep comments and empty lines
+    if (trimmed.startsWith('/*') || trimmed === '') {
+      filteredLines.push(line);
+      i++;
+      continue;
+    }
+
+    // Check if this is a CSS class definition
+    if (trimmed.startsWith('.')) {
+      // Extract class name
+      const classMatch = trimmed.match(/^\.([a-zA-Z0-9_-]+)/);
+      if (classMatch) {
+        const className = classMatch[1];
+
+        // Only keep if this class is used
+        if (usedClasses.has(className)) {
+          // Keep this rule
+          filteredLines.push(line);
+          i++;
+
+          // If it's a single-line rule (ends with }), continue
+          if (trimmed.endsWith('}')) {
+            continue;
+          }
+
+          // Otherwise, keep lines until closing }
+          while (i < lines.length) {
+            filteredLines.push(lines[i]);
+            if (lines[i].trim().endsWith('}')) {
+              i++;
+              break;
+            }
+            i++;
+          }
+        } else {
+          // Skip this rule
+          i++;
+          if (trimmed.endsWith('}')) {
+            continue;
+          }
+          while (i < lines.length) {
+            if (lines[i].trim().endsWith('}')) {
+              i++;
+              break;
+            }
+            i++;
+          }
+        }
+        continue;
+      }
+    }
+
+    // Default: keep the line
+    filteredLines.push(line);
+    i++;
+  }
+
+  // Clean up excessive blank lines
+  let result = filteredLines.join('\n');
+  result = result.replace(/\n{3,}/g, '\n\n');
+
+  // Remove empty section comments (sections with no CSS rules after them)
+  result = removeEmptySections(result);
+
+  return result;
+}
+
+/**
+ * Remove empty CSS section comments (headers with no content)
+ * @param {string} css - CSS content
+ * @returns {string} - CSS without empty sections
+ */
+function removeEmptySections(css) {
+  const lines = css.split('\n');
+  const result = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Check if this is a section comment (/* ===== N. ... ===== */)
+    if (line.match(/\/\* ===== \d+\./)) {
+      // Look ahead to see if there's any CSS content before next section or EOF
+      let hasContent = false;
+      let j = i + 1;
+
+      while (j < lines.length) {
+        const nextLine = lines[j].trim();
+
+        // If we hit another section comment or end, stop
+        if (nextLine.match(/\/\* ===== \d+\./)) {
+          break;
+        }
+
+        // If we find a CSS rule (starts with . or other non-comment), section has content
+        if (nextLine && !nextLine.startsWith('/*') && nextLine !== '') {
+          hasContent = true;
+          break;
+        }
+
+        j++;
+      }
+
+      // Only keep section comment if it has content
+      if (hasContent) {
+        result.push(line);
+      }
+    } else {
+      result.push(line);
+    }
+
+    i++;
+  }
+
+  // Clean up excessive blank lines again (max 2 consecutive)
+  let cleaned = result.join('\n');
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+  // Remove trailing whitespace
+  cleaned = cleaned.trim();
+
+  return cleaned;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1643,6 +1840,10 @@ async function mergeResponsive() {
 
   // 10. Generate Page.css with imports + parent CSS
   generatePageCSS(orderedComponents, desktop, tablet, mobile, mergedDir, breakpointWidths);
+
+  // 10.5. Compile responsive classes per component (add to each component's CSS)
+  log.task('🎨', 'Compiling responsive classes per component');
+  compileResponsiveClassesPerComponent(mergedDir);
 
   // 11. Generate metadata with transformation statistics
   log.task('📄', 'Generating metadata');

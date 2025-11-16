@@ -265,10 +265,29 @@ function generateResponsiveCSS(classes) {
  * @returns {string} CSS généré
  */
 export function compileResponsiveClasses(outputDir) {
-  console.log(`[CSS Compiler] Scanning ${outputDir} for responsive classes...`);
+  console.log(`[CSS Compiler] Scanning all TSX files for responsive classes...`);
 
-  // Scanner tous les fichiers TSX
-  const allClasses = scanDirectory(outputDir);
+  // Scanner tous les fichiers .tsx récursivement
+  const allClasses = new Set();
+
+  function scanDirectory(dir) {
+    if (!fs.existsSync(dir)) return;
+
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        scanDirectory(fullPath);
+      } else if (entry.isFile() && entry.name.endsWith('.tsx')) {
+        const classes = extractClassesFromFile(fullPath);
+        classes.forEach(cls => allClasses.add(cls));
+      }
+    }
+  }
+
+  scanDirectory(outputDir);
 
   console.log(`[CSS Compiler] Found ${allClasses.size} unique responsive classes`);
 
@@ -282,6 +301,75 @@ export function compileResponsiveClasses(outputDir) {
   console.log(`[CSS Compiler] Generated ${css.split('\n').length} lines of CSS`);
 
   return css;
+}
+
+/**
+ * Compile les classes responsive pour chaque composant individuellement
+ * et ajoute le CSS compilé à la fin de chaque fichier CSS de composant
+ *
+ * @param {string} outputDir - Dossier de sortie contenant components/
+ */
+export function compileResponsiveClassesPerComponent(outputDir) {
+  const componentsDir = path.join(outputDir, 'components');
+
+  if (!fs.existsSync(componentsDir)) {
+    console.log('[CSS Compiler] No components/ directory found, skipping per-component compilation');
+    return;
+  }
+
+  console.log('[CSS Compiler] Compiling responsive classes per component...');
+
+  const files = fs.readdirSync(componentsDir);
+  const tsxFiles = files.filter(f => f.endsWith('.tsx'));
+
+  let totalCompiled = 0;
+
+  for (const tsxFile of tsxFiles) {
+    const componentName = tsxFile.replace('.tsx', '');
+    const tsxPath = path.join(componentsDir, tsxFile);
+    const cssPath = path.join(componentsDir, `${componentName}.css`);
+
+    // Extraire les classes responsive de ce composant
+    const classes = extractClassesFromFile(tsxPath);
+
+    if (classes.size === 0) {
+      console.log(`   ⏭️  ${componentName}: no responsive classes`);
+      continue;
+    }
+
+    // Générer le CSS pour ces classes
+    const compiledCSS = generateResponsiveCSS(classes);
+
+    if (!compiledCSS) {
+      continue;
+    }
+
+    // Lire le CSS existant du composant
+    let existingCSS = '';
+    if (fs.existsSync(cssPath)) {
+      existingCSS = fs.readFileSync(cssPath, 'utf8');
+    }
+
+    // Vérifier si le CSS compilé existe déjà (éviter les doublons)
+    if (existingCSS.includes('/* RESPONSIVE CSS - Auto-generated */')) {
+      // Supprimer l'ancien CSS compilé
+      existingCSS = existingCSS.replace(
+        /\/\* =========================================.*?(?=\/\*|$)/gs,
+        ''
+      ).trim();
+    }
+
+    // Ajouter le CSS compilé à la fin
+    const finalCSS = existingCSS + '\n\n' + compiledCSS;
+
+    // Écrire le fichier CSS mis à jour
+    fs.writeFileSync(cssPath, finalCSS);
+
+    console.log(`   ✅ ${componentName}: ${classes.size} responsive classes compiled`);
+    totalCompiled += classes.size;
+  }
+
+  console.log(`[CSS Compiler] Compiled ${totalCompiled} responsive classes across ${tsxFiles.length} components`);
 }
 
 /**
