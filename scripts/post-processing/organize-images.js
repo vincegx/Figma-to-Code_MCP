@@ -611,9 +611,16 @@ if (allImageDeclarations.length > 0) {
     const lines = componentCode.split('\n')
     let insertPosition = 0
     let foundImports = false
+    let hasImageImportsComment = false
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
+
+      // Check if "// Image imports" already exists
+      if (line === '// Image imports') {
+        hasImageImportsComment = true
+      }
+
       // Only consider actual import statements, NOT export statements
       if (line.startsWith('import ')) {
         insertPosition = i + 1
@@ -625,7 +632,13 @@ if (allImageDeclarations.length > 0) {
     }
 
     // Insert imports at the determined position
-    lines.splice(insertPosition, 0, '', '// Image imports', importStatements, '')
+    if (hasImageImportsComment) {
+      // Comment already exists, just add imports without duplicate comment
+      lines.splice(insertPosition, 0, importStatements)
+    } else {
+      // No comment yet, add it with imports
+      lines.splice(insertPosition, 0, '', '// Image imports', importStatements, '')
+    }
     componentCode = lines.join('\n')
 
     // Write final code

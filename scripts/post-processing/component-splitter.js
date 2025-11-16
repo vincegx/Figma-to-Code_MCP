@@ -49,178 +49,131 @@ const EXCLUDE_PATTERNS = [
 ];
 
 /**
- * Parse metadata.xml to get Figma components (instances) + top-level frames
+ * Parse metadata.xml to build full hierarchy with levels + frameChildren + totalChildren
+ * @returns Map<nodeId, { level, frameChildren, totalChildren, parent, name, type, isInstance, children }>
+ */
+function parseXMLHierarchy(xml) {
+  const hierarchy = new Map();
+  const lines = xml.split('\n');
+  const stack = []; // Track parent chain
+
+  for (const line of lines) {
+    // Skip empty lines
+    if (!line.trim()) continue;
+
+    // Calculate level from indentation (2 spaces = 1 level)
+    const indent = line.match(/^(\s*)/)[1].length;
+    const level = indent / 2;
+
+    // Extract tag type (frame, instance, text, etc.)
+    const tagMatch = line.match(/<(\w+)\s/);
+    if (!tagMatch) continue;
+
+    const tagType = tagMatch[1];
+
+    // Extract id and name
+    const idMatch = line.match(/id="([^"]+)"/);
+    const nameMatch = line.match(/name="([^"]+)"/);
+
+    if (!idMatch || !nameMatch) continue;
+
+    const nodeId = idMatch[1];
+    const name = nameMatch[1];
+
+    // Update stack (pop parents deeper than current level)
+    while (stack.length > level) {
+      stack.pop();
+    }
+
+    const parent = stack[stack.length - 1] || null;
+
+    // Store node metadata
+    hierarchy.set(nodeId, {
+      level,
+      name,
+      type: tagType,
+      isInstance: tagType === 'instance',
+      parent: parent,
+      frameChildren: 0, // Will be calculated in second pass
+      totalChildren: 0, // Will be calculated in second pass
+      children: []
+    });
+
+    // Add to parent's children list
+    if (parent && hierarchy.has(parent)) {
+      hierarchy.get(parent).children.push(nodeId);
+    }
+
+    // Push to stack if not self-closing tag
+    if (!line.includes('/>')) {
+      stack.push(nodeId);
+    }
+  }
+
+  // Second pass: count totalChildren + frameChildren
+  for (const [nodeId, node] of hierarchy.entries()) {
+    // Count ALL children (frames + instances + text + etc.)
+    node.totalChildren = node.children.length;
+
+    // Count only frame children (for backward compatibility)
+    node.frameChildren = node.children.filter(childId => {
+      const child = hierarchy.get(childId);
+      return child && child.type === 'frame';
+    }).length;
+  }
+
+  return hierarchy;
+}
+
+/**
+ * Parse metadata.xml to get Figma components (instances) + top-level frames + full hierarchy
  */
 function parseFigmaComponents(testDir) {
   const metadataPath = path.join(testDir, 'metadata.xml');
 
   if (!fs.existsSync(metadataPath)) {
-    return { instances: [], topLevelFrames: [] };
+    return { instances: [], topLevelFrames: [], hierarchy: new Map() };
   }
 
   const xml = fs.readFileSync(metadataPath, 'utf8');
+
+  // Parse full hierarchy
+  const hierarchy = parseXMLHierarchy(xml);
+
+  // Extract instances and top-level frames from hierarchy
   const instances = [];
   const topLevelFrames = [];
 
-  // Extract <instance id="..." name="..." /> elements (Figma components)
-  const instanceRegex = /<instance[^>]*id="([^"]+)"[^>]*name="([^"]+)"[^>]*\/>/g;
-  let match;
+  for (const [nodeId, node] of hierarchy.entries()) {
+    // Collect instances
+    if (node.isInstance) {
+      instances.push({
+        nodeId: nodeId,
+        name: node.name,
+        type: 'instance'
+      });
+    }
 
-  while ((match = instanceRegex.exec(xml)) !== null) {
-    instances.push({
-      nodeId: match[1],
-      name: match[2],
-      type: 'instance'
-    });
+    // Collect top-level frames (level 1)
+    if (node.level === 1 && node.type === 'frame') {
+      // Auto-rename generic "Frame XXXXXX" names
+      let displayName = node.name;
+      if (node.name.match(/^Frame\s+\d+$/)) {
+        displayName = '__GENERIC_FRAME__';
+      }
+
+      topLevelFrames.push({
+        nodeId: nodeId,
+        name: node.name,
+        displayName: displayName,
+        type: 'top-level-frame'
+      });
+    }
   }
 
-  // Extract top-level <frame> elements (direct children of root)
-  // Pattern: ^  <frame (2 spaces = level 1)
-  const topLevelFrameRegex = /^  <frame id="([^"]+)" name="([^"]+)"/gm;
-
-  while ((match = topLevelFrameRegex.exec(xml)) !== null) {
-    const frameName = match[2];
-
-    // Auto-rename generic "Frame XXXXXX" names
-    let displayName = frameName;
-    if (frameName.match(/^Frame\s+\d+$/)) {
-      // Will be renamed later with section index
-      displayName = '__GENERIC_FRAME__';
-    }
-
-    topLevelFrames.push({
-      nodeId: match[1],
-      name: frameName,        // Original name
-      displayName: displayName, // Name for component generation
-      type: 'top-level-frame'
-    });
-  }
-
-  return { instances, topLevelFrames };
+  return { instances, topLevelFrames, hierarchy };
 }
 
-/**
- * Detect layout wrappers: top-level frames that contain multiple extractible children
- * Strategy: Parse JSX tree, for each top-level frame, count how many direct descendants
- * would be extracted by our rules. If >= 2, it's a layout wrapper.
- */
-function detectLayoutWrappers(tsxCode, figmaComponents) {
-  const ast = parse(tsxCode, {
-    sourceType: 'module',
-    plugins: ['jsx', 'typescript']
-  });
-
-  const wrappers = new Set();
-  const functionNames = new Set();
-
-  // First, collect function component names
-  traverse.default(ast, {
-    FunctionDeclaration(path) {
-      const functionName = path.node.id?.name;
-      if (functionName) {
-        functionNames.add(functionName.toLowerCase());
-      }
-    }
-  });
-
-  // Then, analyze JSX tree
-  traverse.default(ast, {
-    ReturnStatement(path) {
-      const rootJSX = path.node.argument;
-      if (!rootJSX) return;
-
-      // Helper: recursively traverse JSX tree and detect wrappers
-      function analyzeNode(jsxNode) {
-        if (!jsxNode || jsxNode.type !== 'JSXElement') return;
-
-        const dataNameAttr = jsxNode.openingElement?.attributes?.find(
-          attr => attr.type === 'JSXAttribute' && attr.name?.name === 'data-name'
-        );
-        const dataName = dataNameAttr?.value?.type === 'StringLiteral' ? dataNameAttr.value.value : null;
-
-        const nodeIdAttr = jsxNode.openingElement?.attributes?.find(
-          attr => attr.type === 'JSXAttribute' && attr.name?.name === 'data-node-id'
-        );
-        const nodeId = nodeIdAttr?.value?.type === 'StringLiteral' ? nodeIdAttr.value.value : null;
-
-        // Check if this is a top-level frame
-        if (dataName && nodeId) {
-          const isTopLevel = figmaComponents.topLevelFrames.some(f => f.nodeId === nodeId);
-
-          if (isTopLevel) {
-            // Count extractible descendants
-            let extractibleCount = countAllExtractibleDescendants(jsxNode, dataName);
-
-            // If this top-level frame has 3+ extractible descendants, it's a wrapper
-            // (2 is too low - Footer might have 2 children but should still be extracted as one component)
-            if (extractibleCount >= 3) {
-              wrappers.add(nodeId);
-            }
-          }
-        }
-
-        // Recurse through children
-        if (jsxNode.children) {
-          for (const child of jsxNode.children) {
-            analyzeNode(child, dataName);
-          }
-        }
-      }
-
-      // Helper: recursively count all extractible descendants
-      function countAllExtractibleDescendants(jsxNode, parentName = null) {
-        if (!jsxNode || jsxNode.type !== 'JSXElement') return 0;
-
-        let count = 0;
-
-        if (jsxNode.children) {
-          for (const child of jsxNode.children) {
-            if (child.type !== 'JSXElement') continue;
-
-            const childDataNameAttr = child.openingElement?.attributes?.find(
-              attr => attr.type === 'JSXAttribute' && attr.name?.name === 'data-name'
-            );
-            const childDataName = childDataNameAttr?.value?.type === 'StringLiteral' ? childDataNameAttr.value.value : null;
-
-            const childNodeIdAttr = child.openingElement?.attributes?.find(
-              attr => attr.type === 'JSXAttribute' && attr.name?.name === 'data-node-id'
-            );
-            const childNodeId = childNodeIdAttr?.value?.type === 'StringLiteral' ? childNodeIdAttr.value.value : null;
-
-            if (!childDataName || !childNodeId) {
-              // No data-name, recurse deeper
-              count += countAllExtractibleDescendants(child, parentName);
-              continue;
-            }
-
-            // Simulate shouldExtract() rules
-            // Rule 2: Direct children of "Container"
-            if (parentName === 'Container' || childDataName === 'Container') {
-              // If parent is Container OR this is Container, recurse to count its children
-              if (childDataName === 'Container') {
-                count += countAllExtractibleDescendants(child, childDataName);
-              } else {
-                // This child is extractible
-                count++;
-              }
-              continue;
-            }
-
-            // Recurse to descendants
-            count += countAllExtractibleDescendants(child, childDataName);
-          }
-        }
-
-        return count;
-      }
-
-      // Start analysis from root
-      analyzeNode(rootJSX);
-    }
-  });
-
-  return wrappers;
-}
 
 /**
  * Main entry point
@@ -241,15 +194,23 @@ export async function splitComponent(testDir) {
   const cleanCode = fs.readFileSync(optimizedPath, 'utf8');
   const globalCSS = fs.readFileSync(cssPath, 'utf8');
 
-  // 2. Parse Figma components from metadata.xml
+  // 2. Parse Figma components from metadata.xml (includes full hierarchy)
   const figmaComponents = parseFigmaComponents(testDir);
 
-  // 3. Detect layout wrappers (top-level frames with multiple extractible children)
-  const layoutWrappers = detectLayoutWrappers(cleanCode, figmaComponents);
-  figmaComponents.layoutWrappers = layoutWrappers;
+  // DEBUG: Log hierarchy
+  console.log('\n📊 HIERARCHY DEBUG:');
+  for (const [nodeId, node] of figmaComponents.hierarchy.entries()) {
+    if (node.level <= 2) {
+      console.log(`  ${nodeId}: "${node.name}" - L${node.level}, type=${node.type}, instance=${node.isInstance}, frameChildren=${node.frameChildren}, totalChildren=${node.totalChildren}`);
+    }
+  }
 
-  // 4. Detect sections using Figma data + wrapper detection
+  // 3. Detect sections using hierarchy-based rules (R1-R8)
   const sections = detectSections(cleanCode, figmaComponents);
+
+  // DEBUG: Log extracted sections
+  console.log('\n✅ EXTRACTED SECTIONS:');
+  sections.forEach(s => console.log(`  - ${s.name} (${s.nodeId}): "${s.originalName}"`));
 
   // 3. Create components/ directory
   const componentsDir = path.join(testDir, 'components');
@@ -325,15 +286,7 @@ export async function splitComponent(testDir) {
 }
 
 /**
- * Extract parent component name from Component-clean.tsx
- */
-function getParentComponentName(tsxCode) {
-  const match = tsxCode.match(/export default function (\w+)\(\)/);
-  return match ? match[1] : null;
-}
-
-/**
- * Detect sections using Figma data
+ * Detect sections using Figma data (hierarchy-based R1-R8 rules)
  */
 function detectSections(tsxCode, figmaComponents) {
   const ast = parse(tsxCode, {
@@ -342,46 +295,19 @@ function detectSections(tsxCode, figmaComponents) {
   });
 
   const sections = [];
-  const functionNames = new Set();
+  const functionNames = new Set(); // Reserved for future use (helper function tracking)
+  const extractedNodes = new Set(); // Track extracted nodeIds for R3
 
-  // Get parent component name (to skip it)
-  const parentComponentName = getParentComponentName(tsxCode);
-
-  // Rule 1: Detect React function components (except main component and utility components)
-  traverse.default(ast, {
-    FunctionDeclaration(path) {
-      const functionName = path.node.id?.name;
-      if (!functionName) return;
-
-      // Skip parent component (detected from export default)
-      if (parentComponentName && functionName === parentComponentName) return;
-
-      // Skip utility components (Icon*, etc.)
-      if (functionName.match(/^Icon[A-Z]/)) return;
-
-      // Track function names to avoid duplicates
-      functionNames.add(functionName.toLowerCase());
-
-      sections.push({
-        name: functionName,
-        type: 'function',
-        jsx: generate.default(path.node).code
-      });
-    }
-  });
-
-  // Rules 2 & 3: Detect inline sections with data-name
-  const extractedSections = new Set();
+  // Apply hierarchy-based extraction rules (R1-R8)
+  // No longer extract React functions automatically - they're handled by hierarchy or kept as helpers
 
   traverse.default(ast, {
     ReturnStatement(path) {
       const rootJSX = path.node.argument;
       if (!rootJSX) return;
 
-      // Traverse JSX tree with parent tracking and depth limit
-      // Max depth = 2 levels of extracted components to avoid over-granularity
-      // Example: Level 0 (skip wrappers), Level 1 (Header, Footer), Level 2 (title section, Quick actions)
-      function findSections(jsxNode, parentName = null, extractedDepth = 0) {
+      // Traverse JSX tree using hierarchy-based extraction rules
+      function findSections(jsxNode) {
         if (!jsxNode || jsxNode.type !== 'JSXElement') return;
 
         // Get data-name attribute
@@ -402,21 +328,10 @@ function detectSections(tsxCode, figmaComponents) {
           ? nodeIdAttr.value.value
           : null;
 
-        // Check extraction rules
-        const shouldExtractThisNode = dataName && nodeId && shouldExtract(dataName, nodeId, parentName, functionNames, figmaComponents);
+        // Check extraction rules (NEW: uses hierarchy-based R1-R8)
+        const shouldExtractThisNode = dataName && nodeId && shouldExtract(dataName, nodeId, functionNames, figmaComponents, extractedNodes);
 
         if (shouldExtractThisNode) {
-          // Check depth limit (max 2 levels of extracted components)
-          const MAX_EXTRACTED_DEPTH = 2;
-          if (extractedDepth >= MAX_EXTRACTED_DEPTH) {
-            // Too deep - skip extraction but continue traversing children
-            if (jsxNode.children) {
-              // Don't increment depth since we didn't extract
-              jsxNode.children.forEach(child => findSections(child, dataName, extractedDepth));
-            }
-            return;
-          }
-
           // Extract this component
           let componentName = dataName;
           if (dataName.match(/^Frame\s+\d+$/)) {
@@ -443,17 +358,16 @@ function detectSections(tsxCode, figmaComponents) {
             originalName: dataName  // Store original Figma name for reference
           });
 
-          // Track that this section is extracted (to skip its children)
-          extractedSections.add(dataName);
+          // Track that this node is extracted (for R3: parent extracted check)
+          extractedNodes.add(nodeId);
 
           // DON'T recurse into children - they're already included in this extracted section
           return;
         }
 
         // Only recurse through children if we DIDN'T extract this node
-        // Keep same depth since we didn't extract
         if (jsxNode.children) {
-          jsxNode.children.forEach(child => findSections(child, dataName, extractedDepth));
+          jsxNode.children.forEach(child => findSections(child));
         }
       }
 
@@ -465,48 +379,83 @@ function detectSections(tsxCode, figmaComponents) {
 }
 
 /**
- * Determine if a section should be extracted
+ * Determine if a section should be extracted (NEW: R1-R8 rules based on hierarchy)
  * @param {string} dataName - Current node's data-name
  * @param {string} nodeId - Current node's data-node-id
- * @param {string} parentName - Immediate parent's data-name
  * @param {Set} functionNames - Set of extracted function component names
- * @param {Object} figmaComponents - Parsed Figma metadata
+ * @param {Object} figmaComponents - Parsed Figma metadata (with hierarchy Map)
+ * @param {Set} extractedNodes - Set of already extracted nodeIds
  */
-function shouldExtract(dataName, nodeId, parentName, functionNames, figmaComponents) {
+function shouldExtract(dataName, nodeId, functionNames, figmaComponents, extractedNodes) {
   // Skip if explicitly excluded
   if (EXCLUDE_PATTERNS.some(pattern => pattern.test(dataName))) {
     return false;
   }
 
-  // Note: No need to check if ancestor is extracted - that's handled by early return in findSections()
-  // If a parent was extracted, we never recurse into its children, so we never reach here
-
   // Skip if duplicate of a function component (case-insensitive)
-  // Ex: If function "Header" exists, skip inline "header"
   if (functionNames.has(dataName.toLowerCase())) {
     return false;
   }
 
-  // Rule 2: Direct children of "Container"
-  if (parentName === 'Container') {
+  // Get node from hierarchy
+  const node = figmaComponents.hierarchy.get(nodeId);
+  if (!node) return false;
+
+  const { level, totalChildren, parent, type } = node;
+
+  // ========================================
+  // R1: Instances top-level (L1-L2 only)
+  // ========================================
+  if (node.isInstance && level >= 1 && level <= 2) {
     return true;
   }
 
-  // Rule 3: Match exact Figma component (instance) by node-id
-  if (figmaComponents.instances.some(comp => comp.nodeId === nodeId && comp.name === dataName)) {
+  // ========================================
+  // R2: Root (skip)
+  // ========================================
+  if (level === 0) {
+    return false;
+  }
+
+  // ========================================
+  // R3: Parent already extracted (avoid over-granularity)
+  // ========================================
+  if (parent && extractedNodes.has(parent)) {
+    return false;
+  }
+
+  // ========================================
+  // R4: Level 1 (top-level frames)
+  // ========================================
+  if (level === 1 && type === 'frame') {
+    // Wrapper detection: 2+ children (frames + instances) → descend
+    if (totalChildren >= 2) return false;
+    // Semantic component: < 2 children → extract
     return true;
   }
 
-  // Rule 4: Top-level frames (but skip layout wrappers)
-  // Extract direct children of root (level 1 frames), unless they're layout wrappers
-  if (figmaComponents.topLevelFrames.some(frame => frame.nodeId === nodeId)) {
-    // Skip if this frame is a detected layout wrapper
-    if (figmaComponents.layoutWrappers && figmaComponents.layoutWrappers.has(nodeId)) {
-      return false;
+  // ========================================
+  // R5: Level 2 (children of L1 wrappers)
+  // ========================================
+  if (level === 2 && type === 'frame') {
+    const parentNode = figmaComponents.hierarchy.get(parent);
+    // If parent L1 is wrapper (totalChildren >= 2) → extract this L2
+    if (parentNode && parentNode.level === 1 && parentNode.totalChildren >= 2) {
+      return true;
     }
-    return true;
+    return false;
   }
 
+  // ========================================
+  // R6: Level 3+ (max depth - atomic design limit)
+  // ========================================
+  if (level >= 3) {
+    return false;
+  }
+
+  // ========================================
+  // Fallback: Other cases → skip
+  // ========================================
   return false;
 }
 
