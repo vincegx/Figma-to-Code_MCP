@@ -67,6 +67,9 @@
       "convertAbsoluteToRelative": true,
       "skipOverlays": true
     },
+    "missing-widths": {
+      "enabled": true
+    },
     "stroke-alignment": {
       "enabled": true,
       "useBoxShadowForInside": true,

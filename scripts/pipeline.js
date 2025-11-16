@@ -16,6 +16,7 @@ import * as svgIconFixes from './transformations/svg-icon-fixes.js'
 import * as svgConsolidation from './transformations/svg-consolidation.js'
 import * as postFixes from './transformations/post-fixes.js'
 import * as positionFixes from './transformations/position-fixes.js'
+import * as missingWidths from './transformations/missing-widths.js'
 import * as strokeAlignment from './transformations/stroke-alignment.js'
 import * as cssVars from './transformations/css-vars.js'
 import * as tailwindOptimizer from './transformations/tailwind-optimizer.js'
@@ -32,6 +33,7 @@ const ALL_TRANSFORMS = [
   svgConsolidation,
   postFixes,
   positionFixes,
+  missingWidths,
   strokeAlignment,
   cssVars,
   tailwindOptimizer,
