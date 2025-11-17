@@ -248,8 +248,16 @@ class ExportReprocessor {
       console.log(`${colors.cyan}📊${colors.reset} ${colors.dim}Dashboard:${colors.reset} ${colors.blue}http://localhost:${this.vitePort}${colors.reset}\n`);
 
     } catch (error) {
-      log.error(`ERREUR lors du retraitement: ${error.message}`);
-      console.log(`${colors.dim}${error.stack}${colors.reset}`);
+      // Detect duplicate identifier errors (corrupted Figma file)
+      if (error.message.includes('has already been declared') ||
+          error.message.includes('Identifier') && error.message.includes('already')) {
+        log.error('FICHIER FIGMA CORROMPU');
+        console.log(`\n${colors.yellow}Le fichier source généré par Figma contient des imports dupliqués.${colors.reset}`);
+        console.log(`${colors.dim}Solution: Renommez les layers dupliqués dans Figma et ré-exportez.${colors.reset}\n`);
+      } else {
+        log.error(`ERREUR lors du retraitement: ${error.message}`);
+        console.log(`${colors.dim}${error.stack}${colors.reset}`);
+      }
       process.exit(1);
     }
   }
