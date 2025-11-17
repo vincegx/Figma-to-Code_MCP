@@ -569,7 +569,8 @@ async function copyComponents(sourceDir, distDir, config) {
           'post-fixes': { enabled: false },          // Already applied
           'stroke-alignment': { enabled: false },    // Already applied
           'css-vars': { enabled: false },            // Already applied
-          'tailwind-optimizer': { enabled: false }   // Already applied
+          'tailwind-optimizer': { enabled: false },  // Already applied
+          'svg-icon-fixes': { enabled: false }       // Already applied + removes wrappers with pos-custom-*
         }
         try {
           const result = await runPipeline(content, { componentName }, pipelineConfig)
