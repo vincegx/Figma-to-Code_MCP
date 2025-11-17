@@ -328,28 +328,64 @@ function fixCommonPatterns(path, stats) {
     }
   }
 
-  // Pattern 2: absolute with percentage positions → convert to margin
+  // Pattern 2: absolute with percentage positions → convert to margin OR inset-0 for SVG
   const percentPositions = className.match(/(?:left|right|top|bottom)-\[[\d.]+%\]/g)
   if (percentPositions && className.includes('absolute')) {
-    // Convert percentage positions to margins
-    percentPositions.forEach(pos => {
-      const [direction, value] = pos.split('-')
-      const percent = value.slice(1, -1) // Remove [ and ]
+    // Check if this is an SVG wrapper by searching for img recursively
+    // Limit depth to 5 levels to avoid performance issues
+    function hasImgDescendant(node, depth = 0) {
+      if (depth > 5 || !t.isJSXElement(node)) return false
 
-      const marginMap = {
-        'left': `ml-[${percent}]`,
-        'right': `mr-[${percent}]`,
-        'top': `mt-[${percent}]`,
-        'bottom': `mb-[${percent}]`
+      // Direct img
+      if (t.isJSXIdentifier(node.openingElement.name, { name: 'img' })) return true
+
+      // Check children recursively
+      return node.children.some(child => hasImgDescendant(child, depth + 1))
+    }
+
+    const isSVGWrapper = path.node.children.some(child => hasImgDescendant(child, 0))
+
+    if (isSVGWrapper) {
+      // For SVG wrappers: Replace all positioning with inset-0
+      percentPositions.forEach(pos => {
+        className = className.replace(pos, '')
+      })
+      // Also remove left-0, right-0, top-0, bottom-0 (non-percentage)
+      className = className.replace(/\b(?:left|right|top|bottom)-0\b/g, '')
+
+      // Remove fixed dimensions (h-*, w-*) to let SVG adapt to container
+      // This fixes rotated SVGs where Figma exports wrong dimensions
+      className = className.replace(/\b[hw]-\[[\d.]+px\]/g, '')
+
+      // Keep absolute, add inset-0
+      if (!className.includes('inset-0')) {
+        className = className + ' inset-0'
       }
+      // Clean up extra spaces
+      className = className.replace(/\s+/g, ' ').trim()
+      modified = true
+      stats.percentageFixed++
+    } else {
+      // For non-SVG elements: Convert to margins (original behavior)
+      percentPositions.forEach(pos => {
+        const [direction, value] = pos.split('-')
+        const percent = value.slice(1, -1) // Remove [ and ]
 
-      className = className.replace(pos, marginMap[direction] || '')
-    })
+        const marginMap = {
+          'left': `ml-[${percent}]`,
+          'right': `mr-[${percent}]`,
+          'top': `mt-[${percent}]`,
+          'bottom': `mb-[${percent}]`
+        }
 
-    // Remove absolute
-    className = className.replace('absolute', 'relative')
-    modified = true
-    stats.percentageFixed++
+        className = className.replace(pos, marginMap[direction] || '')
+      })
+
+      // Remove absolute
+      className = className.replace('absolute', 'relative')
+      modified = true
+      stats.percentageFixed++
+    }
   }
 
 
