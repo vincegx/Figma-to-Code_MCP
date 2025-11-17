@@ -331,6 +331,17 @@ function fixCommonPatterns(path, stats) {
   // Pattern 2: absolute with percentage positions → convert to margin OR inset-0 for SVG
   const percentPositions = className.match(/(?:left|right|top|bottom)-\[[\d.]+%\]/g)
   if (percentPositions && className.includes('absolute')) {
+    // IMPORTANT: Skip elements with complex 4-value inset positioning (used for SVG consolidation)
+    // Example: inset-[14.88%_31.34%_44.03%_54.94%]
+    const hasComplexInset = /inset-\[[\d.]+%_[\d.]+%_[\d.]+%_[\d.]+%\]/.test(className)
+
+    if (hasComplexInset) {
+      // DO NOT modify - this positioning is needed for SVG path consolidation
+      // The svg-consolidation.js transform will use these precise positions
+      // to calculate SVG transform attributes (translate + scale)
+      return false
+    }
+
     // Check if this is an SVG wrapper by searching for img recursively
     // Limit depth to 5 levels to avoid performance issues
     function hasImgDescendant(node, depth = 0) {

@@ -125,8 +125,19 @@ function findSVGGroups(ast, importMap, context = {}) {
       // Find <img> children at depth 1-2 only (not recursive through entire tree)
       const svgElements = []
 
+      // Helper to extract className from a JSX node
+      const getClassName = (node) => {
+        if (!t.isJSXElement(node)) return null
+        const classNameAttr = node.openingElement.attributes.find(
+          attr => attr.name && attr.name.name === 'className'
+        )
+        return classNameAttr && t.isStringLiteral(classNameAttr.value)
+          ? classNameAttr.value.value
+          : null
+      }
+
       // Check direct children and find positioned containers with SVG images
-      const checkNode = (node, depth, parentClassName, grandparentClassName) => {
+      const checkNode = (node, depth, parentNode, grandparentNode) => {
         if (depth > 3) return
 
         if (!node.children) return
@@ -135,14 +146,9 @@ function findSVGGroups(ast, importMap, context = {}) {
           if (!t.isJSXElement(child)) continue
 
           const childName = child.openingElement.name.name
-
-          // Get this element's className
-          const classNameAttr = child.openingElement.attributes.find(
-            attr => attr.name && attr.name.name === 'className'
-          )
-          const currentClassName = classNameAttr && t.isStringLiteral(classNameAttr.value)
-            ? classNameAttr.value.value
-            : null
+          const currentClassName = getClassName(child)
+          const parentClassName = parentNode ? getClassName(parentNode) : null
+          const grandparentClassName = grandparentNode ? getClassName(grandparentNode) : null
 
           if (childName === 'img') {
             const srcAttr = child.openingElement.attributes.find(
@@ -159,10 +165,22 @@ function findSVGGroups(ast, importMap, context = {}) {
                 )
                 const dataName = imgDataNameAttr?.value?.value || filename.replace('.svg', '')
 
-                // Use grandparent's className if parent is just "inset-0", otherwise use parent
-                const positionClass = (parentClassName && parentClassName.includes('inset-0'))
-                  ? grandparentClassName
-                  : parentClassName
+                // Get position class from parent/grandparent
+                // Structure: Container > PositionedDiv (depth 1) > InsetDiv (depth 2) > Img (depth 3)
+                // We want PositionedDiv's className (grandparent from img's perspective)
+
+                let positionClass = parentClassName
+
+                // If parent has "inset-0" or is just a style wrapper, use grandparent's position
+                if (parentClassName && (parentClassName.includes('inset-0') || parentClassName.includes('style'))) {
+                  positionClass = grandparentClassName
+                }
+
+                // If we still don't have position and grandparent exists, use it
+                if (!positionClass && grandparentClassName) {
+                  positionClass = grandparentClassName
+                }
+
 
                 svgElements.push({
                   varName,
@@ -187,8 +205,8 @@ function findSVGGroups(ast, importMap, context = {}) {
               continue
             }
 
-            // Continue traversing, passing className hierarchy
-            checkNode(child, depth + 1, currentClassName || parentClassName, parentClassName || grandparentClassName)
+            // Continue traversing, passing node hierarchy
+            checkNode(child, depth + 1, node, parentNode)
           }
         }
       }
@@ -247,16 +265,17 @@ function parsePositionAndTransform(cssPosition, containerWidth, containerHeight,
     const values = insetMatch[1].split('_').map(v => parseFloat(v))
     ;[top, right, bottom, left] = values
   } else {
-    // Parse individual left/right/top/bottom
-    const leftMatch = cssPosition.match(/left-\[([^\]]+)\]/)
-    const rightMatch = cssPosition.match(/right-\[([^\]]+)\]/)
-    const topMatch = cssPosition.match(/top-\[([^\]]+)\]/)
-    const bottomMatch = cssPosition.match(/bottom-\[([^\]]+)\]/)
+    // Parse individual left/right/top/bottom (with or without brackets)
+    // Matches: left-[64.64%] or left-0
+    const leftMatch = cssPosition.match(/left-(?:\[([^\]]+)\]|(\d+(?:\.\d+)?%?))/)
+    const rightMatch = cssPosition.match(/right-(?:\[([^\]]+)\]|(\d+(?:\.\d+)?%?))/)
+    const topMatch = cssPosition.match(/top-(?:\[([^\]]+)\]|(\d+(?:\.\d+)?%?))/)
+    const bottomMatch = cssPosition.match(/bottom-(?:\[([^\]]+)\]|(\d+(?:\.\d+)?%?))/)
 
-    if (leftMatch) left = parseFloat(leftMatch[1])
-    if (rightMatch) right = parseFloat(rightMatch[1])
-    if (topMatch) top = parseFloat(topMatch[1])
-    if (bottomMatch) bottom = parseFloat(bottomMatch[1])
+    if (leftMatch) left = parseFloat(leftMatch[1] || leftMatch[2] || '0')
+    if (rightMatch) right = parseFloat(rightMatch[1] || rightMatch[2] || '0')
+    if (topMatch) top = parseFloat(topMatch[1] || topMatch[2] || '0')
+    if (bottomMatch) bottom = parseFloat(bottomMatch[1] || bottomMatch[2] || '0')
   }
 
   // Calculate absolute position
@@ -287,6 +306,49 @@ function consolidateGroup(group, testDir) {
   const consolidatedFilename = `${safeGroupName}.svg`
   const consolidatedPath = path.join(imgDir, consolidatedFilename)
 
+  // Determine container dimensions FIRST (needed for transform calculations)
+  let width = group.containerWidth || 100
+  let height = group.containerHeight || 100
+
+  // Calculate aspect ratio for SVG viewBox
+  let aspectRatio = 1
+
+  // Special handling for horizontal/vertical logos
+  // Horizontal logos are typically wide (2.8:1 ratio like 140x49.551)
+  // Vertical logos are typically tall (0.7:1 ratio like 55x80)
+  if (group.groupName.includes('horizontal')) {
+    aspectRatio = 2.826 // 140/49.551 ratio
+  } else if (group.groupName.includes('vertical')) {
+    aspectRatio = 0.695 // 55.588/80 ratio
+  }
+
+  // Get first SVG viewBox for reference size
+  const firstSvgPath = path.join(imgDir, group.svgElements[0].filename)
+  if (fs.existsSync(firstSvgPath)) {
+    const content = fs.readFileSync(firstSvgPath, 'utf-8')
+    const $ = cheerio.load(content, { xmlMode: true })
+    const viewBox = $('svg').attr('viewBox')
+    if (viewBox) {
+      const [, , vbW, vbH] = viewBox.split(' ').map(Number)
+
+      // Calculate dimensions that maintain the container's aspect ratio
+      // while using a reasonable scale based on the SVG viewBox
+      if (aspectRatio > 1) {
+        // Wide container (like horizontal logo)
+        width = vbW
+        height = vbW / aspectRatio
+      } else if (aspectRatio < 1) {
+        // Tall container (like vertical logo)
+        height = vbH
+        width = vbH * aspectRatio
+      } else {
+        // Square or unknown - use viewBox as-is
+        width = vbW
+        height = vbH
+      }
+    }
+  }
+
   const svgGroups = []
 
   // Extract paths from each SVG file with transform info
@@ -307,8 +369,8 @@ function consolidateGroup(group, testDir) {
     // Calculate transform if position info available
     const transform = parsePositionAndTransform(
       svg.cssPosition,
-      group.containerWidth,
-      group.containerHeight,
+      width,  // Use computed width instead of group.containerWidth
+      height, // Use computed height instead of group.containerHeight
       viewBox
     )
 
@@ -342,11 +404,9 @@ function consolidateGroup(group, testDir) {
   }
 
   // Create consolidated SVG with container dimensions
-  const width = group.containerWidth || 100
-  const height = group.containerHeight || 100
   const viewBox = `0 0 ${width} ${height}`
 
-  console.log(`[svg-consolidation] Creating ${consolidatedFilename} with ${svgGroups.length} SVG groups`)
+  console.log(`[svg-consolidation] Creating ${consolidatedFilename} with ${svgGroups.length} SVG groups (${width}x${height})`)
 
   let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">\n`
 
