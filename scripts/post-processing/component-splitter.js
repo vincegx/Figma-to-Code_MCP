@@ -522,9 +522,17 @@ function extractUsedImages(jsx) {
 
 /**
  * Extract helper functions used in JSX from source code
+ * INCLUDES: TypeScript types/interfaces + function declarations
+ * RECURSIVE: Extracts helpers used by other helpers
  */
 function extractHelperFunctions(jsx, sourceCode) {
-  // Find all component calls in JSX: <ComponentName ...>
+  // Parse source code once
+  const ast = parse(sourceCode, {
+    sourceType: 'module',
+    plugins: ['jsx', 'typescript']
+  });
+
+  // STEP 1: Find all component calls in initial JSX
   const componentRegex = /<([A-Z]\w+)[\s/>]/g;
   const usedComponents = new Set();
   let match;
@@ -537,26 +545,82 @@ function extractHelperFunctions(jsx, sourceCode) {
     return '';
   }
 
-  // Parse source code to find function definitions
-  const ast = parse(sourceCode, {
-    sourceType: 'module',
-    plugins: ['jsx', 'typescript']
-  });
+  // STEP 2: Recursively collect all nested helper components
+  const allHelpers = new Set(usedComponents);
+  const processed = new Set();
 
+  function findNestedHelpers(componentName) {
+    if (processed.has(componentName)) return;
+    processed.add(componentName);
+
+    // Find this component's function declaration
+    traverse.default(ast, {
+      FunctionDeclaration(path) {
+        if (path.node.id?.name === componentName) {
+          // Extract JSX from this function
+          const functionCode = generate.default(path.node).code;
+
+          // Find components used in this function
+          const nestedRegex = /<([A-Z]\w+)[\s/>]/g;
+          let nestedMatch;
+          while ((nestedMatch = nestedRegex.exec(functionCode)) !== null) {
+            const nestedComponent = nestedMatch[1];
+            if (!allHelpers.has(nestedComponent)) {
+              allHelpers.add(nestedComponent);
+              findNestedHelpers(nestedComponent); // Recursive call
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Start recursive collection
+  for (const component of usedComponents) {
+    findNestedHelpers(component);
+  }
+
+  const helperTypes = [];
   const helperFunctions = [];
 
+  // STEP 3: Extract TypeScript types/interfaces for ALL helpers (including nested)
+  traverse.default(ast, {
+    TSTypeAliasDeclaration(path) {
+      const typeName = path.node.id.name;
+      if (typeName.endsWith('Props')) {
+        const componentName = typeName.replace(/Props$/, '');
+        if (allHelpers.has(componentName)) {
+          const typeCode = generate.default(path.node).code;
+          helperTypes.push(typeCode);
+        }
+      }
+    },
+    TSInterfaceDeclaration(path) {
+      const interfaceName = path.node.id.name;
+      if (interfaceName.endsWith('Props')) {
+        const componentName = interfaceName.replace(/Props$/, '');
+        if (allHelpers.has(componentName)) {
+          const interfaceCode = generate.default(path.node).code;
+          helperTypes.push(interfaceCode);
+        }
+      }
+    }
+  });
+
+  // STEP 4: Extract ALL function declarations (including nested helpers)
   traverse.default(ast, {
     FunctionDeclaration(path) {
       const functionName = path.node.id?.name;
-      if (functionName && usedComponents.has(functionName)) {
-        // Generate the function code
+      if (functionName && allHelpers.has(functionName)) {
         const functionCode = generate.default(path.node).code;
         helperFunctions.push(functionCode);
       }
     }
   });
 
-  return helperFunctions.join('\n\n');
+  // Combine types + functions in correct order
+  const combined = [...helperTypes, ...helperFunctions];
+  return combined.join('\n');
 }
 
 /**

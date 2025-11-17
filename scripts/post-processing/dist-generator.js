@@ -876,24 +876,34 @@ function transformToPageComponent(sourceCode, parentName, extractedComponents, e
     }
   })
 
-  // STEP 4.5: Remove orphan TypeScript types (belong to extracted components)
+  // STEP 4.5: Remove ALL orphan TypeScript types (extracted components + unused helpers)
   traverse.default(ast, {
     TSTypeAliasDeclaration(path) {
       const typeName = path.node.id.name
-      // Remove types that match extracted component names (ComponentNameProps)
+      // Remove types for: (1) extracted components OR (2) unused helper functions
       if (typeName.endsWith('Props')) {
         const componentName = typeName.replace(/Props$/, '')
-        if (extractedComponents.includes(componentName)) {
+        // Keep ONLY if: helper is USED in Page AND NOT extracted as separate component
+        const isUsedHelper = usedHelpers.has(componentName)
+        const isExtracted = extractedComponents.includes(componentName)
+        const shouldRemove = isExtracted || !isUsedHelper
+
+        if (shouldRemove) {
           path.remove()
         }
       }
     },
     TSInterfaceDeclaration(path) {
       const interfaceName = path.node.id.name
-      // Remove interfaces that match extracted component names (ComponentNameProps)
+      // Remove interfaces for: (1) extracted components OR (2) unused helper functions
       if (interfaceName.endsWith('Props')) {
         const componentName = interfaceName.replace(/Props$/, '')
-        if (extractedComponents.includes(componentName)) {
+        // Keep ONLY if: helper is USED in Page AND NOT extracted as separate component
+        const isUsedHelper = usedHelpers.has(componentName)
+        const isExtracted = extractedComponents.includes(componentName)
+        const shouldRemove = isExtracted || !isUsedHelper
+
+        if (shouldRemove) {
           path.remove()
         }
       }
