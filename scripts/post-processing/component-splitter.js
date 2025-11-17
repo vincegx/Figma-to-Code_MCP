@@ -197,13 +197,13 @@ export async function splitComponent(testDir) {
   // 2. Parse Figma components from metadata.xml (includes full hierarchy)
   const figmaComponents = parseFigmaComponents(testDir);
 
-  // DEBUG: Log hierarchy
-  console.log('\n📊 HIERARCHY DEBUG:');
-  for (const [nodeId, node] of figmaComponents.hierarchy.entries()) {
-    if (node.level <= 2) {
-      console.log(`  ${nodeId}: "${node.name}" - L${node.level}, type=${node.type}, instance=${node.isInstance}, frameChildren=${node.frameChildren}, totalChildren=${node.totalChildren}`);
-    }
-  }
+  // DEBUG: Log hierarchy (disabled for cleaner output)
+  // console.log('\n📊 HIERARCHY DEBUG:');
+  // for (const [nodeId, node] of figmaComponents.hierarchy.entries()) {
+  //   if (node.level <= 2) {
+  //     console.log(`  ${nodeId}: "${node.name}" - L${node.level}, type=${node.type}, instance=${node.isInstance}, frameChildren=${node.frameChildren}, totalChildren=${node.totalChildren}`);
+  //   }
+  // }
 
   // 3. Detect sections using hierarchy-based rules (R1-R8)
   const sections = detectSections(cleanCode, figmaComponents);

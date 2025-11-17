@@ -54,7 +54,7 @@ export function execute(ast, context) {
   const nodeIdToWidthMap = buildNodeIdWidthMap(context);
 
   if (Object.keys(nodeIdToWidthMap).length === 0) {
-    console.log('   ⚠️  No metadata.xml found, skipping missing-widths');
+    // Skip silently if no metadata.xml (normal in reprocessing)
     stats.executionTime = Date.now() - startTime;
     return stats;
   }

@@ -231,6 +231,15 @@ function wrapInFlexContainer(path, stats) {
     if (parentClassAttr && t.isStringLiteral(parentClassAttr.value)) {
       const parentClasses = parentClassAttr.value.value
 
+      // IMPORTANT: Do NOT add flex to SVG consolidation containers
+      // SVG containers have fixed dimensions (h-[...px] w-[...px]) and need absolute positioning preserved
+      const hasFixedDimensions = /[hw]-\[\d+(?:\.\d+)?px\]/.test(parentClasses)
+
+      if (hasFixedDimensions) {
+        // This is likely an SVG group (logo, icon, etc.) - do NOT add flex
+        return false
+      }
+
       // Add flex if not already present
       if (!parentClasses.includes('flex')) {
         parentClassAttr.value = t.stringLiteral(parentClasses + ' flex flex-wrap gap-4')
@@ -317,6 +326,31 @@ function fixCommonPatterns(path, stats) {
         )
         if (parentClassAttr && t.isStringLiteral(parentClassAttr.value)) {
           const parentClasses = parentClassAttr.value.value
+
+          // IMPORTANT: Do NOT modify positioning if this is part of an SVG consolidation group
+          // SVG consolidation groups have:
+          // 1. Fixed dimensions (h-[...px] w-[...px])
+          // 2. Multiple absolutely positioned children (vectors/paths)
+          const parentSiblings = parent.children?.filter(child => t.isJSXElement(child)) || []
+          const absoluteSiblings = parentSiblings.filter(sibling => {
+            const siblingClassAttr = sibling.openingElement?.attributes.find(
+              attr => attr.name && attr.name.name === 'className'
+            )
+            if (siblingClassAttr && t.isStringLiteral(siblingClassAttr.value)) {
+              return siblingClassAttr.value.value.includes('absolute')
+            }
+            return false
+          })
+
+          // Check if parent has fixed dimensions (indicates SVG container)
+          const hasFixedDimensions = /[hw]-\[\d+(?:\.\d+)?px\]/.test(parentClasses)
+
+          // If parent has fixed dimensions AND 5+ absolutely positioned children,
+          // it's likely an SVG consolidation group - DO NOT modify positioning
+          if (hasFixedDimensions && absoluteSiblings.length >= 5) {
+            return false
+          }
+
           // If parent is grid or flex, child doesn't need absolute
           if (parentClasses.includes('grid') || parentClasses.includes('flex')) {
             className = className.replace('absolute', '').trim()

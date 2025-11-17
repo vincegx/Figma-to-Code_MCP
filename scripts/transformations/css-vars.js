@@ -159,8 +159,7 @@ export function convertCSSVarsInClass(classString) {
         fallback: fallback.trim()
       })
     } else {
-      // Unknown prefix - fallback to extracting the value
-      console.warn(`⚠️  Unknown Tailwind prefix: ${prefix} in ${match}`)
+      // Unknown prefix - fallback to extracting the value (silently)
       return `${prefix}-[${fallback.trim()}]`
     }
 

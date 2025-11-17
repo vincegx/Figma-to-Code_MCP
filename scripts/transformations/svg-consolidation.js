@@ -100,7 +100,9 @@ function findSVGGroups(ast, importMap, context = {}) {
       )
       const containerDataName = dataNameAttr?.value?.value
 
-      // Check if this container is a Figma instance (should NOT be consolidated)
+      // Check if this container is a Figma instance
+      // EXCEPTION: SVG groups (logos/icons) with fixed dimensions should still be consolidated
+      // even if they're Figma instances, because they contain multiple SVG paths that need merging
       if (containerDataName && context.metadata && context.metadata.instances) {
         const instanceNames = context.metadata.instances
 
@@ -116,8 +118,23 @@ function findSVGGroups(ast, importMap, context = {}) {
             .replace(/[^a-z0-9]/g, '')
 
           if (normalizedContainerName === normalizedInstanceName) {
-            console.log(`   ⏭️  [svg-consolidation] Skipped Figma instance: ${containerDataName}`)
-            return // Skip this container - it's a Figma instance component
+            // Check if this instance has fixed dimensions (indicates SVG group like logo/icon)
+            const classNameAttr = openingElement.attributes.find(
+              attr => attr.name && attr.name.name === 'className'
+            )
+            const className = classNameAttr && t.isStringLiteral(classNameAttr.value)
+              ? classNameAttr.value.value
+              : ''
+
+            const hasFixedDimensions = /[hw]-\[\d+(?:\.\d+)?px\]/.test(className)
+
+            if (!hasFixedDimensions) {
+              // Skip non-SVG instances (complex components)
+              console.log(`   ⏭️  [svg-consolidation] Skipped Figma instance: ${containerDataName}`)
+              return
+            }
+            // SVG instances with fixed dimensions will continue to be processed
+            console.log(`   ✓  [svg-consolidation] Processing SVG instance: ${containerDataName}`)
           }
         }
       }
@@ -213,11 +230,15 @@ function findSVGGroups(ast, importMap, context = {}) {
 
       checkNode(path.node, 0, null, null)
 
+      console.log(`[svg-consolidation] Container "${containerDataName ||'unnamed'}" has ${svgElements.length} SVG elements`)
+
       // Only consolidate groups with 5+ SVG elements
       if (svgElements.length >= 5) {
         const groupName = containerDataName
           ? containerDataName.replace(/\s+/g, '-').toLowerCase()
           : `group-${groups.length + 1}`
+
+        console.log(`[svg-consolidation] Found SVG group "${groupName}" with ${svgElements.length} elements`)
 
         // Extract container dimensions from className (e.g., w-[140px] h-[49.551px])
         let containerWidth = null
@@ -311,15 +332,18 @@ function consolidateGroup(group, testDir) {
   let height = group.containerHeight || 100
 
   // Calculate aspect ratio for SVG viewBox
+  // Use container dimensions if available, otherwise detect from group name
   let aspectRatio = 1
 
-  // Special handling for horizontal/vertical logos
-  // Horizontal logos are typically wide (2.8:1 ratio like 140x49.551)
-  // Vertical logos are typically tall (0.7:1 ratio like 55x80)
-  if (group.groupName.includes('horizontal')) {
-    aspectRatio = 2.826 // 140/49.551 ratio
+  if (group.containerWidth && group.containerHeight) {
+    // Calculate from actual container dimensions
+    aspectRatio = group.containerWidth / group.containerHeight
+  } else if (group.groupName.includes('horizontal')) {
+    // Fallback: horizontal logos are typically wide (2.8:1 ratio)
+    aspectRatio = 2.826
   } else if (group.groupName.includes('vertical')) {
-    aspectRatio = 0.695 // 55.588/80 ratio
+    // Fallback: vertical logos are typically tall (0.7:1 ratio)
+    aspectRatio = 0.695
   }
 
   // Get first SVG viewBox for reference size

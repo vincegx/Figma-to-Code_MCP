@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Reprocess all Figma exports (skips 'backup' folder)
+# Usage: ./cli/figma-reprocess-all [--clean]
+
+CLEAN_FLAG=""
+[ "$1" == "--clean" ] && CLEAN_FLAG="--clean"
+
+# Get export folders
+EXPORT_DIR="src/generated/export_figma"
+FOLDERS=$(ls -1 "$EXPORT_DIR" | grep "^node-" || true)
+
+if [ -z "$FOLDERS" ]; then
+  echo "❌ No export folders found"
+  exit 1
+fi
+
+# Count and display
+TOTAL=$(echo "$FOLDERS" | wc -l | xargs)
+echo ""
+echo "🔄 Found $TOTAL export(s) to reprocess"
+[ -n "$CLEAN_FLAG" ] && echo "✨ Clean mode enabled"
+echo ""
+echo "$FOLDERS"
+echo ""
+echo "Continue? [y/N] "
+read -r CONFIRM
+
+[[ ! "$CONFIRM" =~ ^[Yy]$ ]] && exit 0
+
+# Process each
+CURRENT=0
+echo ""
+echo "$FOLDERS" | while read -r EXPORT_ID; do
+  CURRENT=$((CURRENT + 1))
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "[$CURRENT/$TOTAL] $EXPORT_ID"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  docker exec mcp-figma-v1 node scripts/figma-export-reprocess.js "$EXPORT_ID" $CLEAN_FLAG
+  echo ""
+done
+
+echo "✅ Done!"

@@ -577,7 +577,8 @@ async function copyComponents(sourceDir, distDir, config) {
           content = result.code
           const stats = result.context.stats['extract-props']
           if (stats && stats.propsExtracted > 0) {
-            console.log(`    ✅ ${file} - ${stats.propsExtracted} props extracted`)
+            // Silently extract props (less verbose output)
+            // console.log(`    ✅ ${file} - ${stats.propsExtracted} props extracted`)
           }
         } catch (error) {
           console.log(`    ⚠️  ${file} - props extraction skipped: ${error.message}`)
