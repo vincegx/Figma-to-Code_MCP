@@ -376,6 +376,18 @@ function fixCommonPatterns(path, stats) {
       return false
     }
 
+    // ALSO skip elements with 4 separate position values (left+right+top+bottom)
+    // These are precise positions that shouldn't be simplified to inset-0
+    const hasLeft = /(?:left)-(?:\[[\d.]+%\]|0\b)/.test(className)
+    const hasRight = /(?:right)-(?:\[[\d.]+%\]|0\b)/.test(className)
+    const hasTop = /(?:top)-(?:\[[\d.]+%\]|0\b)/.test(className)
+    const hasBottom = /(?:bottom)-(?:\[[\d.]+%\]|0\b)/.test(className)
+
+    if (hasLeft && hasRight && hasTop && hasBottom) {
+      // Has all 4 positions - this is precise positioning, don't simplify
+      return false
+    }
+
     // Check if this is an SVG wrapper by searching for img recursively
     // Limit depth to 5 levels to avoid performance issues
     function hasImgDescendant(node, depth = 0) {
