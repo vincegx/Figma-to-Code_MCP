@@ -10,6 +10,9 @@ echo ""
 export ELECTRON_MODE=true
 export NODE_ENV=production
 
+# Add Python to PATH (required for electron-builder DMG creation on macOS)
+export PATH="/opt/homebrew/opt/python@3.14/libexec/bin:$PATH"
+
 # Install dependencies
 echo "📦 Installing dependencies..."
 npm install

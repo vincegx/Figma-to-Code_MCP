@@ -57,7 +57,7 @@ mac:
 
 # DMG configuration
 dmg:
-  title: "${productName} ${version}"
+  title: "MCP-Figma-to-Code-${version}"
   icon: build/Collections.icns
   background: build/background.png
   contents:
