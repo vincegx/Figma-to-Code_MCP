@@ -1,27 +1,10 @@
-![Dashboard Interface](docs/images/intro.png)
-
-# 🎨 MCP Figma to Code
-
-https://github.com/user-attachments/assets/823e50c7-fb4d-4ea2-a6da-b2a8413bf1a7
-
-> Transform your Figma designs into pixel-perfect React + Tailwind components using the Model Context Protocol
-
 <div align="center">
 
-```ascii
-╔════════════════════════════════════════════════════════════╗
-║                                                            ║
-║     ┌─────────┐                         ┌─────────┐        ║
-║     │  FIGMA  │  ─── MCP Protocol ───>  │  REACT  │        ║
-║     │ DESIGN  │                         │   CODE  │        ║
-║     └─────────┘                         └─────────┘        ║
-║          │  1. Extract via MCP               │             ║
-║          │  2. AST Processing                │             ║
-║          │  3. Visual Validation             │             ║
-║          └───── Code Fidelity ───────────────┘             ║
-║                                                            ║
-╚════════════════════════════════════════════════════════════╝
-```
+![Dashboard Interface](docs/images/intro.png)
+
+# MCP Figma to Code
+
+**Transform Figma designs into pixel-perfect React + Tailwind components using the Model Context Protocol**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://reactjs.org/)
@@ -31,6 +14,8 @@ https://github.com/user-attachments/assets/823e50c7-fb4d-4ea2-a6da-b2a8413bf1a7
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
+
+https://github.com/user-attachments/assets/823e50c7-fb4d-4ea2-a6da-b2a8413bf1a7
 
 </div>
 
